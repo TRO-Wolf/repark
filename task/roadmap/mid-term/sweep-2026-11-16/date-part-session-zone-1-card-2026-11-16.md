@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-16. **Filed by:** the records clerk (`claude-haiku-5-5`), from Fable's simplifier audit of 2026-11-16 (difference 9). Measured before #1341 and #1345, on main's package `pkg-ddu1-7b21bde3` against Spark 4.1.2. The sweep re-run on main `e50ed17f` does not cover this audit cell; it was not re-measured on that main.
 
-**Status:** fixed 2026-11-23 on branch `fix/date-part-session-zone-1` (merge pending; S1, label-blocking, ruled 2026-11-16). `SparkDatePart` + `SparkExtractDatePart` route `date_part`, `datepart`, and `extract` over `TIMESTAMP`/`DATE`/`NULL` through `session_wall::extract_calendar_part` with no UTC year preimage.
+**Status:** fixed 2026-11-23 on branch `fix/date-part-session-zone-1` (merge pending; S1, label-blocking, ruled 2026-11-16). `SparkDatePart` + `SparkExtractDatePart` route `date_part`, `datepart`, and `extract` over `TIMESTAMP`/`DATE`/`STRING`/`INTERVAL`/`NULL` through `session_wall::extract_calendar_part` (and stock `date_part` for `INTERVAL`) with no UTC year preimage, exact 38 Spark temporal fields + `[INVALID_EXTRACT_FIELD]`, pre-optimizer `[NON_FOLDABLE_ARGUMENT]`, and 1-based `extract(DOW)`/`extract(DAYOFWEEK)` over `DATE` and `TIMESTAMP_NTZ`.
 
 **Severity:** S1, label-blocking, ruled 2026-11-16. A silent wrong calendar field on an ordinary `extract` in a session that is not UTC.
 

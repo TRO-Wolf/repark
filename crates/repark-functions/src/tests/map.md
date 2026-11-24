@@ -8,15 +8,18 @@ Only tests; `mod.rs` is the module manifest.
 ## Contents
 
 - `mod.rs` — module manifest.
-- `spark_date_part.rs` — **DATE-PART-SESSION-ZONE-1 (2026-11-23):** pins `date_part`, `datepart`,
-  and `extract` through `SparkDatePart` + `SparkExtractDatePart` (with double analysis via
-  `analyze_eagerly`): the card row (`2024-01-01T02:00:00Z`) in `America/New_York` and `UTC` under
-  both ANSI modes; all 38 Spark calendar field spellings and aliases; `Asia/Kolkata` half-hour
-  shift, New York DST spring-forward/fall-back/gap literal, 1880 LMT seconds offset, leap day,
-  pre-1970, post-2038, and post-2099 horizon (`2100`, `2500`); `Dictionary`-encoded timestamps,
+- `spark_date_part.rs` — **DATE-PART-SESSION-ZONE-1 (2026-11-23, delta 1):** pins `date_part`,
+  `datepart`, and `extract` through `SparkDatePart` + `SparkExtractDatePart` (with double analysis
+  via `analyze_eagerly`): the card row (`2024-01-01T02:00:00Z`) in `America/New_York` and `UTC`
+  under both ANSI modes; all 38 exact Spark calendar field spellings and aliases; `Asia/Kolkata`
+  half-hour shift, New York DST spring-forward/fall-back/gap literal, 1880 LMT seconds offset, leap
+  day, pre-1970, post-2038, and post-2099 horizon (`2100`, `2500`); `Dictionary`-encoded timestamps,
   non-UTC stored tag (`Europe/Paris`), and `Second`/`Millisecond`/`Nanosecond` units; `WHERE`
-  filters on `year` and `hour` (no UTC preimage), `GROUP BY`, and `JOIN` keys; plus `TIMESTAMP_NTZ`,
-  `DATE`, `NULL`, invalid field strings, and `EXTRACT(YEAR FROM <string|interval>)` controls.
+  filters on `year` and `hour` (no UTC preimage), `GROUP BY`, and `JOIN` keys; `TIMESTAMP_NTZ`,
+  `DATE` (calendar invariant, 1-based `extract(DOW/DAYOFWEEK)`), and `NULL` controls; plus delta-1
+  pins for `INTERVAL` and `STRING` (date vs session-zone timestamp coercion, ANSI on/off), non-Spark
+  field refusals (`[INVALID_EXTRACT_FIELD]` across timestamp/date/string/interval/NULL/empty tables),
+  and pre-optimizer `[NON_FOLDABLE_ARGUMENT]` vs foldable field expressions (`lower('HOUR')`).
 - `spark_string_timestamp.rs` — **CAST-TS-STRING-1 (2026-09-19):** the kernel against Spark
   4.1.2's measured answers: year-only and single-digit fields, fraction truncation and padding,
   time-only strings against a fixed clock, the zone position rule, the trim set, digit counts,

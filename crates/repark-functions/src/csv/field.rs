@@ -505,7 +505,7 @@ fn days_in_month(year: i64, month: i64) -> i64 {
     }
 }
 
-fn spark_string_to_date(bytes: &[u8]) -> Option<i32> {
+pub(crate) fn spark_string_to_date(bytes: &[u8]) -> Option<i32> {
     let start = bytes.iter().position(|byte| !is_spark_trimmable(*byte))?;
     let end = bytes.iter().rposition(|byte| !is_spark_trimmable(*byte))? + 1;
     let mut index = start;

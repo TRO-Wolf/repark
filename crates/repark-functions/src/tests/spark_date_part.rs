@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use arrow::array::{
-    Array, AsArray, Date32Array, DictionaryArray, Int32Array, RecordBatch,
-    TimestampMicrosecondArray, TimestampMillisecondArray, TimestampNanosecondArray,
-    TimestampSecondArray,
+    Array, AsArray, Date32Array, DictionaryArray, Int32Array, IntervalDayTimeArray,
+    IntervalYearMonthArray, RecordBatch, StringArray, TimestampMicrosecondArray,
+    TimestampMillisecondArray, TimestampNanosecondArray, TimestampSecondArray,
 };
-use arrow::datatypes::{DataType, Field, Int32Type, Schema, TimeUnit};
+use arrow::datatypes::{DataType, Field, Int32Type, IntervalDayTime, Schema, TimeUnit};
 use chrono::DateTime;
 use datafusion::prelude::{SessionConfig, SessionContext};
 
@@ -154,9 +154,9 @@ async fn date_part_datepart_and_extract_read_session_zone_on_card_row() {
 
         let ex = run_int32_row(
             &ny,
-            "SELECT extract(YEAR FROM ts), extract(ISOYEAR FROM ts), extract(QUARTER FROM ts), \
+            "SELECT extract(YEAR FROM ts), extract(QUARTER FROM ts), \
              extract(MONTH FROM ts), extract(WEEK FROM ts), extract(DAY FROM ts), \
-             extract(DAYOFWEEK FROM ts), extract(DOW FROM ts), extract(ISODOW FROM ts), \
+             extract(DAYOFWEEK FROM ts), extract(DOW FROM ts), \
              extract(DOY FROM ts), extract(HOUR FROM ts), extract(MINUTE FROM ts), \
              extract(SECOND FROM ts) FROM t",
         )
@@ -165,14 +165,12 @@ async fn date_part_datepart_and_extract_read_session_zone_on_card_row() {
             ex,
             vec![
                 Some(2023),
-                Some(2023),
                 Some(4),
                 Some(12),
                 Some(52),
                 Some(31),
                 Some(1),
                 Some(1),
-                Some(7),
                 Some(365),
                 Some(21),
                 Some(0),
@@ -623,13 +621,15 @@ async fn ntz_date_null_invalid_and_non_temporal_controls() {
         "SELECT date_part('', TIMESTAMP '2024-01-01 02:00:00 UTC')",
         "SELECT date_part('bogus', TIMESTAMP '2024-01-01 02:00:00 UTC')",
     ] {
-        let df = ny.sql(bad).await.expect("plan bad");
-        let err = df
-            .collect()
-            .await
-            .expect_err("invalid field must error")
-            .to_string();
-        assert!(err.contains("not supported"), "{bad}: {err}");
+        let err = match ny.sql(bad).await {
+            Err(err) => err.to_string(),
+            Ok(df) => df
+                .collect()
+                .await
+                .expect_err("invalid field must error")
+                .to_string(),
+        };
+        assert!(err.contains("INVALID_EXTRACT_FIELD"), "{bad}: {err}");
     }
 
     assert_eq!(
@@ -640,4 +640,282 @@ async fn ntz_date_null_invalid_and_non_temporal_controls() {
         run_int32_row(&ny, "SELECT extract(YEAR FROM INTERVAL '2' YEAR)").await,
         vec![Some(2)]
     );
+}
+
+async fn run_err(ctx: &SessionContext, sql: &str) -> String {
+    match ctx.sql(sql).await {
+        Err(err) => err.to_string(),
+        Ok(df) => df
+            .collect()
+            .await
+            .expect_err(&format!("expected error for: {sql}"))
+            .to_string(),
+    }
+}
+
+#[tokio::test]
+async fn a1_interval_inputs_follow_spark_semantics() {
+    let ny_ansi = spark_context(NEW_YORK, true);
+
+    assert_eq!(
+        run_int32_row(
+            &ny_ansi,
+            "SELECT date_part('year', INTERVAL '2' YEAR), date_part('y', INTERVAL '2' YEAR), \
+             date_part('month', INTERVAL '14' MONTH), date_part('day', INTERVAL '5' DAY), \
+             date_part('hour', INTERVAL '3' HOUR), date_part('h', INTERVAL '3' HOUR), \
+             date_part('minute', INTERVAL '45' MINUTE), date_part('mins', INTERVAL '45' MINUTE), \
+             date_part('second', INTERVAL '12' SECOND), date_part('secs', INTERVAL '12' SECOND)"
+        )
+        .await,
+        vec![
+            Some(2),
+            Some(2),
+            Some(2),
+            Some(5),
+            Some(3),
+            Some(3),
+            Some(45),
+            Some(45),
+            Some(12),
+            Some(12),
+        ]
+    );
+
+    let iv_schema = Arc::new(Schema::new(vec![
+        Field::new(
+            "ym",
+            DataType::Interval(arrow::datatypes::IntervalUnit::YearMonth),
+            true,
+        ),
+        Field::new(
+            "dt",
+            DataType::Interval(arrow::datatypes::IntervalUnit::DayTime),
+            true,
+        ),
+    ]));
+    let iv_batch = RecordBatch::try_new(
+        iv_schema,
+        vec![
+            Arc::new(IntervalYearMonthArray::from(vec![Some(26), None])),
+            Arc::new(IntervalDayTimeArray::from(vec![
+                Some(IntervalDayTime::new(5, 3 * 3_600_000)),
+                None,
+            ])),
+        ],
+    )
+    .expect("interval batch");
+    ny_ansi
+        .register_batch("t_iv", iv_batch)
+        .expect("register intervals");
+    assert_eq!(
+        run_int32_col(&ny_ansi, "SELECT date_part('year', ym) FROM t_iv").await,
+        vec![Some(2), None]
+    );
+    assert_eq!(
+        run_int32_col(&ny_ansi, "SELECT date_part('month', ym) FROM t_iv").await,
+        vec![Some(2), None]
+    );
+    assert_eq!(
+        run_int32_col(&ny_ansi, "SELECT date_part('day', dt) FROM t_iv").await,
+        vec![Some(5), None]
+    );
+    assert_eq!(
+        run_int32_col(&ny_ansi, "SELECT date_part('hour', dt) FROM t_iv").await,
+        vec![Some(3), None]
+    );
+    assert!(
+        run_err(&ny_ansi, "SELECT date_part('day', ym) FROM t_iv")
+            .await
+            .contains("INVALID_EXTRACT_FIELD")
+    );
+    assert!(
+        run_err(&ny_ansi, "SELECT date_part('year', dt) FROM t_iv")
+            .await
+            .contains("INVALID_EXTRACT_FIELD")
+    );
+    assert!(
+        run_err(&ny_ansi, "SELECT date_part('epoch', INTERVAL '5' DAY)")
+            .await
+            .contains("INVALID_EXTRACT_FIELD")
+    );
+}
+
+#[tokio::test]
+async fn a1_string_inputs_follow_spark_semantics() {
+    let ny_ansi = spark_context(NEW_YORK, true);
+    let ny_off = spark_context(NEW_YORK, false);
+    let kolkata = spark_context(KOLKATA, true);
+
+    assert_eq!(
+        run_int32_row(
+            &ny_ansi,
+            "SELECT date_part('year', '2024-01-01'), date_part('hour', '2024-01-01'), \
+             date_part('hour', '2024-01-01 02:30:45'), date_part('hour', '2024-01-01T02:30:45Z'), \
+             date_part('day', '2024-01-01T02:30:45Z'), date_part('year', '2024-01-01T02:30:45Z'), \
+             date_part('hour', '2024-01-01 02:30:45+05:30'), \
+             date_part('hour', '2024-03-10 02:30:00'), \
+             date_part('year', CAST(NULL AS STRING))"
+        )
+        .await,
+        vec![
+            Some(2024),
+            Some(0),
+            Some(2),
+            Some(21),
+            Some(1),
+            Some(2024),
+            Some(16),
+            Some(3),
+            None,
+        ]
+    );
+    assert_eq!(
+        run_int32_row(
+            &kolkata,
+            "SELECT date_part('hour', '2024-01-01T02:30:45Z'), \
+             date_part('minute', '2024-01-01T02:30:45Z'), \
+             date_part('hour', '2024-01-01 02:30:45+05:30')"
+        )
+        .await,
+        vec![Some(8), Some(0), Some(2)]
+    );
+
+    let s_schema = Arc::new(Schema::new(vec![Field::new("s", DataType::Utf8, false)]));
+    let s_batch = RecordBatch::try_new(
+        s_schema,
+        vec![Arc::new(StringArray::from(vec![
+            "2024-01-01T02:30:45Z",
+            "not-a-date",
+        ]))],
+    )
+    .expect("string batch");
+    ny_off
+        .register_batch("t_str", s_batch.clone())
+        .expect("register str off");
+    ny_ansi
+        .register_batch("t_str", s_batch)
+        .expect("register str on");
+    assert_eq!(
+        run_int32_col(&ny_off, "SELECT date_part('hour', s) FROM t_str").await,
+        vec![Some(21), None]
+    );
+    assert_eq!(
+        run_int32_col(&ny_off, "SELECT date_part('day', s) FROM t_str").await,
+        vec![Some(1), None]
+    );
+    assert!(
+        run_err(&ny_ansi, "SELECT date_part('hour', s) FROM t_str")
+            .await
+            .contains("CAST_INVALID_INPUT")
+    );
+    assert!(
+        run_err(&ny_ansi, "SELECT date_part('year', s) FROM t_str")
+            .await
+            .contains("CAST_INVALID_INPUT")
+    );
+}
+
+#[tokio::test]
+async fn a2_non_spark_fields_refuse_loudly_across_sources_and_empty_tables() {
+    let ny = spark_context(NEW_YORK, true);
+    register_timestamps(&ny, "t_ts", &[Some("2024-01-01T02:00:00Z")], Some("UTC"));
+    register_timestamps(&ny, "t_empty", &[], Some("UTC"));
+
+    let rejected = [
+        "year_iso",
+        "isoyear",
+        "quarters",
+        "isoweek",
+        "isodow",
+        "dayofyear",
+        "millisecond",
+        "milliseconds",
+        "ms",
+        "microsecond",
+        "microseconds",
+        "us",
+        "nanosecond",
+        "nanoseconds",
+        "ns",
+        "epoch",
+        "century",
+        "decade",
+        "millennium",
+        " year ",
+        "'year'",
+        "\"year\"",
+        "",
+        "bogus",
+    ];
+    for field in rejected {
+        let escaped = field.replace('\'', "''");
+        for sql in [
+            format!("SELECT date_part('{escaped}', ts) FROM t_ts"),
+            format!("SELECT date_part('{escaped}', ts) FROM t_empty"),
+            format!("SELECT date_part('{escaped}', NULL)"),
+            format!("SELECT date_part('{escaped}', DATE '2024-01-01')"),
+            format!("SELECT date_part('{escaped}', '2024-01-01 02:00:00')"),
+        ] {
+            let err = run_err(&ny, &sql).await;
+            assert!(err.contains("INVALID_EXTRACT_FIELD"), "{sql}: {err}");
+        }
+    }
+    for sql in [
+        "SELECT extract(ISOYEAR FROM ts) FROM t_ts",
+        "SELECT extract(ISODOW FROM ts) FROM t_ts",
+        "SELECT extract(EPOCH FROM ts) FROM t_ts",
+        "SELECT extract(MILLISECOND FROM NULL)",
+        "SELECT extract(MICROSECOND FROM NULL)",
+    ] {
+        let err = run_err(&ny, sql).await;
+        assert!(err.contains("INVALID_EXTRACT_FIELD"), "{sql}: {err}");
+    }
+}
+
+#[tokio::test]
+async fn a3_non_foldable_field_refuses_before_optimizer_while_foldable_exprs_answer() {
+    let ny = spark_context(NEW_YORK, true);
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("f", DataType::Utf8, false),
+        Field::new(
+            "ts",
+            DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into())),
+            false,
+        ),
+    ]));
+    let batch = RecordBatch::try_new(
+        schema,
+        vec![
+            Arc::new(StringArray::from(vec!["hour"])),
+            Arc::new(
+                TimestampMicrosecondArray::from(vec![utc_micros("2024-01-01T02:00:00Z")])
+                    .with_timezone("UTC"),
+            ),
+        ],
+    )
+    .expect("fold batch");
+    ny.register_batch("t_fold", batch).expect("register fold");
+
+    for sql in [
+        "SELECT date_part(f, ts) FROM (SELECT 'hour' AS f, ts FROM t_fold) s",
+        "SELECT date_part(f, ts) FROM t_fold",
+        "SELECT date_part(concat(f, ''), ts) FROM t_fold",
+        "SELECT date_part(CASE WHEN f = 'hour' THEN 'hour' ELSE 'hour' END, ts) FROM t_fold",
+        "SELECT date_part(CASE WHEN rand() >= 0 THEN 'hour' ELSE 'day' END, ts) FROM t_fold",
+    ] {
+        let err = run_err(&ny, sql).await;
+        assert!(err.contains("NON_FOLDABLE_ARGUMENT"), "{sql}: {err}");
+    }
+
+    assert_eq!(
+        run_int32_row(
+            &ny,
+            "SELECT date_part(lower('HOUR'), ts), date_part(concat('ho', 'ur'), ts), \
+             date_part(CASE WHEN 1 = 1 THEN 'hour' ELSE 'day' END, ts) FROM t_fold"
+        )
+        .await,
+        vec![Some(21), Some(21), Some(21)]
+    );
+    let err = run_err(&ny, "SELECT date_part(lower('EPOCH'), ts) FROM t_fold").await;
+    assert!(err.contains("INVALID_EXTRACT_FIELD"), "lower epoch: {err}");
 }

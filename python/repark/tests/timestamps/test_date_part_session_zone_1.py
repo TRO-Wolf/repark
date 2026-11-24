@@ -160,10 +160,291 @@ def test_null_inputs_and_invalid_fields(tmp_path: Path) -> None:
             assert pa.types.is_int32(field.type), (field.name, field.type)
             assert table.column(field.name).to_pylist() == [None]
         lit_expr = ts_literal(ROWS_TS[2][1])
-        with pytest.raises(Exception, match="not supported"):
+        with pytest.raises(Exception, match="INVALID_EXTRACT_FIELD"):
             session.sql(f"SELECT date_part(' year ', {lit_expr})").collect()
-        with pytest.raises(Exception, match="not supported"):
+        with pytest.raises(Exception, match="INVALID_EXTRACT_FIELD"):
             session.sql(f"SELECT date_part('bogus', {lit_expr})").collect()
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+
+
+def test_a1_interval_inputs_across_typed_facade_and_sql(tmp_path: Path) -> None:
+    session = _new_session("date-part-a1-interval", tmp_path / "wh")
+    try:
+        session.conf.set("spark.sql.session.timeZone", "America/New_York")
+        session.conf.set("spark.sql.ansi.enabled", "true")
+        cases = [
+            ("INTERVAL '2' YEAR", "year", 2),
+            ("INTERVAL '2' YEAR", "y", 2),
+            ("INTERVAL '2' YEAR", "yr", 2),
+            ("INTERVAL '2' YEAR", "years", 2),
+            ("INTERVAL '14' MONTH", "month", 2),
+            ("INTERVAL '14' MONTH", "mon", 2),
+            ("INTERVAL '5' DAY", "day", 5),
+            ("INTERVAL '5' DAY", "d", 5),
+            ("INTERVAL '3' HOUR", "hour", 3),
+            ("INTERVAL '3' HOUR", "h", 3),
+            ("INTERVAL '3' HOUR", "hrs", 3),
+            ("INTERVAL '45' MINUTE", "minute", 45),
+            ("INTERVAL '45' MINUTE", "mins", 45),
+            ("INTERVAL '12' SECOND", "second", 12),
+            ("INTERVAL '12' SECOND", "secs", 12),
+        ]
+        for iv_sql, field, expected in cases:
+            frame = session.sql(f"SELECT {iv_sql} AS iv")
+            typed = frame.select(
+                spark_functions.date_part(
+                    spark_functions.lit(field), spark_functions.col("iv")
+                ).alias("a"),
+                spark_functions.datepart(
+                    spark_functions.lit(field), spark_functions.col("iv")
+                ).alias("b"),
+                spark_functions.extract(
+                    spark_functions.lit(field), spark_functions.col("iv")
+                ).alias("c"),
+            ).to_arrow()
+            for col_name in ("a", "b", "c"):
+                assert pa.types.is_int32(typed.schema.field(col_name).type), (
+                    iv_sql,
+                    field,
+                    col_name,
+                )
+                assert typed.column(col_name).to_pylist() == [expected], (iv_sql, field, col_name)
+            sql_table = session.sql(f"SELECT date_part('{field}', {iv_sql}) AS v").to_arrow()
+            assert pa.types.is_int32(sql_table.schema.field("v").type)
+            assert sql_table.column("v").to_pylist() == [expected], (iv_sql, field)
+        for extract_sql, expected in [
+            ("SELECT extract(YEAR FROM INTERVAL '2' YEAR) AS v", 2),
+            ("SELECT extract(DAY FROM INTERVAL '5' DAY) AS v", 5),
+            ("SELECT extract(HOUR FROM INTERVAL '3' HOUR) AS v", 3),
+        ]:
+            table = session.sql(extract_sql).to_arrow()
+            assert table.column("v").to_pylist() == [expected]
+        for bad_field in ("quarter", "week", "dow", "doy", "epoch", "millisecond", "nanosecond"):
+            with pytest.raises(Exception, match="INVALID_EXTRACT_FIELD"):
+                session.sql("SELECT INTERVAL '5' DAY AS iv").select(
+                    spark_functions.date_part(
+                        spark_functions.lit(bad_field), spark_functions.col("iv")
+                    )
+                ).collect()
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+
+
+def test_a1_string_inputs_across_zones_and_ansi_modes(tmp_path: Path) -> None:
+    session = _new_session("date-part-a1-string", tmp_path / "wh")
+    try:
+        expected_by_zone = {
+            "UTC": [
+                ("2024-01-01", "year", 2024),
+                ("2024-01-01", "hour", 0),
+                ("2020-02-29", "day", 29),
+                ("2024-01-01 02:30:45", "hour", 2),
+                ("2024-01-01T02:30:45Z", "hour", 2),
+                ("2024-01-01T02:30:45Z", "day", 1),
+                ("2024-01-01T02:30:45Z", "year", 2024),
+                ("2024-01-01 02:30:45+05:30", "hour", 21),
+                ("2024-01-01 02:30:45-05:00", "hour", 7),
+                ("2024-03-10 02:30:00", "hour", 2),
+            ],
+            "America/New_York": [
+                ("2024-01-01", "year", 2024),
+                ("2024-01-01", "hour", 0),
+                ("2020-02-29", "day", 29),
+                ("2024-01-01 02:30:45", "hour", 2),
+                ("2024-01-01T02:30:45Z", "hour", 21),
+                ("2024-01-01T02:30:45Z", "day", 1),
+                ("2024-01-01T02:30:45Z", "year", 2024),
+                ("2024-01-01 02:30:45+00:00", "hour", 21),
+                ("2024-01-01 02:30:45+05:30", "hour", 16),
+                ("2024-01-01 02:30:45-05:00", "hour", 2),
+                ("2024-03-10 02:30:00", "hour", 3),
+            ],
+            "Asia/Kolkata": [
+                ("2024-01-01", "year", 2024),
+                ("2024-01-01 02:30:45", "hour", 2),
+                ("2024-01-01T02:30:45Z", "hour", 8),
+                ("2024-01-01T02:30:45Z", "minute", 0),
+                ("2024-01-01T02:30:45Z", "day", 1),
+                ("2024-01-01 02:30:45+05:30", "hour", 2),
+                ("2024-01-01 02:30:45-05:00", "hour", 13),
+            ],
+        }
+        for zone, cases in expected_by_zone.items():
+            session.conf.set("spark.sql.session.timeZone", zone)
+            for ansi in ("false", "true"):
+                session.conf.set("spark.sql.ansi.enabled", ansi)
+                for text, field, expected in cases:
+                    frame = session.sql(f"SELECT '{text}' AS s")
+                    typed = frame.select(
+                        spark_functions.date_part(
+                            spark_functions.lit(field), spark_functions.col("s")
+                        ).alias("a"),
+                        spark_functions.datepart(
+                            spark_functions.lit(field), spark_functions.col("s")
+                        ).alias("b"),
+                        spark_functions.extract(
+                            spark_functions.lit(field), spark_functions.col("s")
+                        ).alias("c"),
+                    ).to_arrow()
+                    for col_name in ("a", "b", "c"):
+                        assert pa.types.is_int32(typed.schema.field(col_name).type)
+                        assert typed.column(col_name).to_pylist() == [expected], (
+                            zone,
+                            ansi,
+                            text,
+                            field,
+                            col_name,
+                        )
+                    sql_table = session.sql(
+                        f"SELECT date_part('{field}', '{text}') AS dp, "
+                        f"extract({field} FROM '{text}') AS ex"
+                    ).to_arrow()
+                    assert sql_table.column("dp").to_pylist() == [expected], (
+                        zone,
+                        ansi,
+                        text,
+                        field,
+                    )
+                    assert sql_table.column("ex").to_pylist() == [expected], (
+                        zone,
+                        ansi,
+                        text,
+                        field,
+                    )
+        session.conf.set("spark.sql.session.timeZone", "America/New_York")
+        session.conf.set("spark.sql.ansi.enabled", "false")
+        bad_frame = session.sql("SELECT 'not-a-date' AS s UNION ALL SELECT '' AS s")
+        off_table = bad_frame.select(
+            spark_functions.date_part(spark_functions.lit("year"), spark_functions.col("s")).alias(
+                "y"
+            ),
+            spark_functions.date_part(spark_functions.lit("hour"), spark_functions.col("s")).alias(
+                "h"
+            ),
+        ).to_arrow()
+        assert off_table.column("y").to_pylist() == [None, None]
+        assert off_table.column("h").to_pylist() == [None, None]
+        null_table = (
+            session.sql("SELECT CAST(NULL AS STRING) AS s")
+            .select(
+                spark_functions.date_part(
+                    spark_functions.lit("hour"), spark_functions.col("s")
+                ).alias("h")
+            )
+            .to_arrow()
+        )
+        assert null_table.column("h").to_pylist() == [None]
+        session.conf.set("spark.sql.ansi.enabled", "true")
+        for field in ("year", "hour"):
+            with pytest.raises(Exception, match="CAST_INVALID_INPUT"):
+                bad_frame.select(
+                    spark_functions.date_part(spark_functions.lit(field), spark_functions.col("s"))
+                ).collect()
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+
+
+def test_a2_non_spark_fields_refuse_with_invalid_extract_field(tmp_path: Path) -> None:
+    session = _new_session("date-part-a2-fields", tmp_path / "wh")
+    try:
+        session.conf.set("spark.sql.session.timeZone", "America/New_York")
+        session.conf.set("spark.sql.ansi.enabled", "true")
+        lit_expr = ts_literal(ROWS_TS[2][1])
+        df_ts = session.sql(f"SELECT {lit_expr} AS ts, DATE '2024-01-01' AS d, '2024-01-01' AS s")
+        df_ts.createOrReplaceTempView("a2_t")
+        df_ts.limit(0).createOrReplaceTempView("a2_empty")
+        rejected = (
+            "dayofyear",
+            "isoweek",
+            "quarters",
+            "epoch",
+            "nanosecond",
+            "nanoseconds",
+            "ns",
+            "year_iso",
+            "isoyear",
+            "isodow",
+            "millisecond",
+            "milliseconds",
+            "ms",
+            "microsecond",
+            "microseconds",
+            "us",
+            " year ",
+            "'year'",
+            "",
+            "bogus",
+        )
+        for field in rejected:
+            esc = field.replace("'", "''")
+            for sql in (
+                f"SELECT date_part('{esc}', ts) FROM a2_t",
+                f"SELECT date_part('{esc}', ts) FROM a2_empty",
+                f"SELECT date_part('{esc}', NULL)",
+                f"SELECT date_part('{esc}', d) FROM a2_t",
+                f"SELECT date_part('{esc}', s) FROM a2_t",
+            ):
+                with pytest.raises(Exception, match="INVALID_EXTRACT_FIELD"):
+                    session.sql(sql).collect()
+            with pytest.raises(Exception, match="INVALID_EXTRACT_FIELD"):
+                df_ts.select(
+                    spark_functions.date_part(spark_functions.lit(field), spark_functions.col("ts"))
+                ).collect()
+        for extract_sql in (
+            "SELECT extract(ISOYEAR FROM ts) FROM a2_t",
+            "SELECT extract(ISODOW FROM ts) FROM a2_t",
+            "SELECT extract(EPOCH FROM ts) FROM a2_t",
+            "SELECT extract(MILLISECOND FROM NULL)",
+            "SELECT extract(MICROSECOND FROM NULL)",
+        ):
+            with pytest.raises(Exception, match="INVALID_EXTRACT_FIELD"):
+                session.sql(extract_sql).collect()
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+
+
+def test_a3_non_foldable_field_refuses_before_optimizer(tmp_path: Path) -> None:
+    session = _new_session("date-part-a3-foldable", tmp_path / "wh")
+    try:
+        session.conf.set("spark.sql.session.timeZone", "America/New_York")
+        session.conf.set("spark.sql.ansi.enabled", "true")
+        lit_expr = ts_literal(ROWS_TS[2][1])
+        pq_path = tmp_path / "fold.parquet"
+        session.sql(f"SELECT 'hour' AS f, {lit_expr} AS ts").write.parquet(str(pq_path))
+        frame = session.read.parquet(str(pq_path))
+        frame.createOrReplaceTempView("a3_pq")
+        for sql in (
+            f"SELECT date_part(f, ts) FROM (SELECT 'hour' AS f, {lit_expr} AS ts) s",
+            "SELECT date_part(f, ts) FROM a3_pq",
+            "SELECT date_part(concat(f, ''), ts) FROM a3_pq",
+            "SELECT date_part(CASE WHEN f = 'hour' THEN 'hour' ELSE 'hour' END, ts) FROM a3_pq",
+            "SELECT date_part(CASE WHEN rand() >= 0 THEN 'hour' ELSE 'day' END, ts) FROM a3_pq",
+        ):
+            with pytest.raises(Exception, match="NON_FOLDABLE_ARGUMENT"):
+                session.sql(sql).collect()
+        with pytest.raises(Exception, match="NON_FOLDABLE_ARGUMENT"):
+            frame.select(
+                spark_functions.date_part(spark_functions.col("f"), spark_functions.col("ts"))
+            ).collect()
+        foldable = session.sql(
+            "SELECT date_part(lower('HOUR'), ts) AS a, "
+            "date_part(concat('ho', 'ur'), ts) AS b, "
+            "date_part(CASE WHEN 1 = 1 THEN 'hour' ELSE 'day' END, ts) AS c FROM a3_pq"
+        ).to_arrow()
+        assert foldable.column("a").to_pylist() == [21]
+        assert foldable.column("b").to_pylist() == [21]
+        assert foldable.column("c").to_pylist() == [21]
+        typed_fold = frame.select(
+            spark_functions.date_part(
+                spark_functions.lower(spark_functions.lit("HOUR")), spark_functions.col("ts")
+            ).alias("h")
+        ).to_arrow()
+        assert typed_fold.column("h").to_pylist() == [21]
     finally:
         session.stop()
         _reset_active_session_for_tests()

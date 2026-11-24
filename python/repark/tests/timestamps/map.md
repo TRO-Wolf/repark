@@ -11,7 +11,7 @@ Part of FACADE-TESTS-LAYOUT-1 (2026-10-19); rules live in [../map.md](../map.md)
 ## Contents
 
 - [test_cast_ts_string_1.py](test_cast_ts_string_1.py) — CAST-TS-STRING-1 — `CAST(<string> AS TIMESTAMP)` answers Spark 4.1.2.
-- [test_current_date_session_zone_1.py](test_current_date_session_zone_1.py) — CURRENT-DATE-SESSION-ZONE-1 — `current_date()` answers session-zone date. DATE-PART-SESSION-ZONE-1: [test_date_part_session_zone_1.py](test_date_part_session_zone_1.py), [_record_date_part_session_zone_1.py](_record_date_part_session_zone_1.py), [date_part_session_zone_1_spark_oracle.json](date_part_session_zone_1_spark_oracle.json).
+- [test_current_date_session_zone_1.py](test_current_date_session_zone_1.py) — CURRENT-DATE-SESSION-ZONE-1. DATE-PART-SESSION-ZONE-1 (+delta 1): [test_date_part_session_zone_1.py](test_date_part_session_zone_1.py), [_record_date_part_session_zone_1.py](_record_date_part_session_zone_1.py), [date_part_session_zone_1_spark_oracle.json](date_part_session_zone_1_spark_oracle.json).
 - [test_ice_ntz_nested_refuse_1.py](test_ice_ntz_nested_refuse_1.py) — ICE-NTZ-NESTED-REFUSE-1: instant for nested NTZ refuses outside UTC (DataFrame writers, 174 Spark cells, live re-derivation). **ZONE-SEAM-1 (2026-10-22, ZS-4):** container cast of an instant stores session wall (`1767305045123456` in NY) on all seven writers.
 - [test_ice_tsns_coercion_1.py](test_ice_tsns_coercion_1.py) — The ICE-TSNS-COERCION-1 slice 0 fixture is complete and matches its summary.
 - [test_ice_tsns_floor_doors_1.py](test_ice_tsns_floor_doors_1.py) — ICE-TSNS-FLOOR-DOORS-1: every write door stores the nanosecond floor in the session zone.

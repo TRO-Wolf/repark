@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-use arrow::array::{ArrayRef, Float64Array, Int32Array, Int64Array};
-use arrow::compute::DatePart;
-use arrow::datatypes::{DataType, Field, FieldRef};
+use arrow::array::{Array, ArrayRef, AsArray, Date32Array};
+use arrow::compute::{DatePart, cast};
+use arrow::datatypes::{DataType, Field, FieldRef, IntervalUnit};
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
 use datafusion::common::types::{logical_date, logical_string};
 use datafusion::common::utils::take_function_args;
-use datafusion::common::{DFSchema, Result, ScalarValue, exec_err, internal_err};
+use datafusion::common::{DFSchema, DataFusionError, Result, ScalarValue, internal_err};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::{
@@ -16,9 +16,11 @@ use datafusion::logical_expr::{
 };
 use datafusion::optimizer::AnalyzerRule;
 
-use crate::session_time_zone::session_time_zone_from_options;
+use crate::ansi::spark_ansi_enabled_from_options;
+use crate::csv::field::spark_string_to_date;
+use crate::spark_string_timestamp::{StringCastFailure, cast_strings_to_ltz, is_string_type};
 
-use super::session_wall::{extract_calendar_part, resolve_instant_in_zone, unpack_dictionary};
+use super::session_wall::{extract_calendar_part, extraction_time_zone, unpack_dictionary};
 
 #[must_use]
 pub fn date_part_udf() -> Arc<ScalarUDF> {
@@ -49,6 +51,14 @@ impl SparkDatePart {
                         Coercion::new_exact(TypeSignatureClass::Native(logical_string())),
                         Coercion::new_exact(TypeSignatureClass::Native(logical_date())),
                     ]),
+                    TypeSignature::Coercible(vec![
+                        Coercion::new_exact(TypeSignatureClass::Native(logical_string())),
+                        Coercion::new_exact(TypeSignatureClass::Native(logical_string())),
+                    ]),
+                    TypeSignature::Coercible(vec![
+                        Coercion::new_exact(TypeSignatureClass::Native(logical_string())),
+                        Coercion::new_exact(TypeSignatureClass::Interval),
+                    ]),
                 ],
                 Volatility::Immutable,
             ),
@@ -58,114 +68,196 @@ impl SparkDatePart {
 }
 
 #[derive(Clone, Copy)]
-enum FieldKind {
-    Calendar(DatePart, i32),
-    SubSecond,
-    Epoch,
+struct CalendarField {
+    part: DatePart,
+    shift: i32,
+    needs_timestamp_for_string: bool,
+}
+
+impl CalendarField {
+    const fn date(part: DatePart, shift: i32) -> Self {
+        Self {
+            part,
+            shift,
+            needs_timestamp_for_string: false,
+        }
+    }
+
+    const fn time(part: DatePart) -> Self {
+        Self {
+            part,
+            shift: 0,
+            needs_timestamp_for_string: true,
+        }
+    }
 }
 
 fn normalize_part(raw: &str) -> String {
-    raw.trim_matches(|ch| ch == '\'' || ch == '"')
-        .to_ascii_lowercase()
+    raw.to_ascii_lowercase()
 }
 
-fn is_nanosecond_part(normalized: &str) -> bool {
-    matches!(
-        normalized,
-        "nanosecond" | "nanoseconds" | "ns" | "nsec" | "nsecond" | "nseconds"
-    )
+fn unwrap_dictionary_type(data_type: &DataType) -> &DataType {
+    match data_type {
+        DataType::Dictionary(_, value) => value.as_ref(),
+        other => other,
+    }
 }
 
-fn resolve_field(normalized: &str) -> Option<FieldKind> {
+fn resolve_field(normalized: &str) -> Option<CalendarField> {
     match normalized {
-        "year" | "y" | "years" | "yr" | "yrs" => Some(FieldKind::Calendar(DatePart::Year, 0)),
-        "yearofweek" | "year_iso" | "isoyear" => Some(FieldKind::Calendar(DatePart::YearISO, 0)),
-        "quarter" | "qtr" | "quarters" => Some(FieldKind::Calendar(DatePart::Quarter, 0)),
-        "month" | "mon" | "mons" | "months" => Some(FieldKind::Calendar(DatePart::Month, 0)),
-        "week" | "w" | "weeks" | "isoweek" => Some(FieldKind::Calendar(DatePart::WeekISO, 0)),
-        "day" | "d" | "days" => Some(FieldKind::Calendar(DatePart::Day, 0)),
-        "dayofweek" | "dow" => Some(FieldKind::Calendar(DatePart::DayOfWeekSunday0, 1)),
-        "dayofweek_iso" | "dow_iso" | "isodow" => {
-            Some(FieldKind::Calendar(DatePart::DayOfWeekMonday0, 1))
-        }
-        "doy" | "dayofyear" => Some(FieldKind::Calendar(DatePart::DayOfYear, 0)),
-        "hour" | "h" | "hours" | "hr" | "hrs" => Some(FieldKind::Calendar(DatePart::Hour, 0)),
-        "minute" | "m" | "min" | "mins" | "minutes" => {
-            Some(FieldKind::Calendar(DatePart::Minute, 0))
-        }
-        "second" | "s" | "sec" | "secs" | "seconds" => {
-            Some(FieldKind::Calendar(DatePart::Second, 0))
-        }
-        "millisecond" | "milliseconds" | "ms" | "msec" | "msecond" | "mseconds" | "microsecond"
-        | "microseconds" | "us" | "usec" | "usecond" | "useconds" | "nanosecond"
-        | "nanoseconds" | "ns" | "nsec" | "nsecond" | "nseconds" => Some(FieldKind::SubSecond),
-        "epoch" => Some(FieldKind::Epoch),
+        "year" | "y" | "years" | "yr" | "yrs" => Some(CalendarField::date(DatePart::Year, 0)),
+        "yearofweek" => Some(CalendarField::date(DatePart::YearISO, 0)),
+        "quarter" | "qtr" => Some(CalendarField::date(DatePart::Quarter, 0)),
+        "month" | "mon" | "mons" | "months" => Some(CalendarField::date(DatePart::Month, 0)),
+        "week" | "w" | "weeks" => Some(CalendarField::date(DatePart::WeekISO, 0)),
+        "day" | "d" | "days" => Some(CalendarField::date(DatePart::Day, 0)),
+        "dayofweek" | "dow" => Some(CalendarField::date(DatePart::DayOfWeekSunday0, 1)),
+        "dayofweek_iso" | "dow_iso" => Some(CalendarField::date(DatePart::DayOfWeekMonday0, 1)),
+        "doy" => Some(CalendarField::date(DatePart::DayOfYear, 0)),
+        "hour" | "h" | "hours" | "hr" | "hrs" => Some(CalendarField::time(DatePart::Hour)),
+        "minute" | "m" | "min" | "mins" | "minutes" => Some(CalendarField::time(DatePart::Minute)),
+        "second" | "s" | "sec" | "secs" | "seconds" => Some(CalendarField::time(DatePart::Second)),
         _ => None,
     }
 }
 
-fn null_array_for_type(data_type: &DataType, len: usize) -> ArrayRef {
-    match data_type {
-        DataType::Float64 => Arc::new(Float64Array::new_null(len)),
-        DataType::Int64 => Arc::new(Int64Array::new_null(len)),
-        _ => Arc::new(Int32Array::new_null(len)),
-    }
-}
-
-fn null_scalar_for_type(data_type: &DataType) -> ScalarValue {
-    match data_type {
-        DataType::Float64 => ScalarValue::Float64(None),
-        DataType::Int64 => ScalarValue::Int64(None),
-        _ => ScalarValue::Int32(None),
-    }
-}
-
-fn forward_to_stock(
-    part_arg: ColumnarValue,
-    value_arg: ColumnarValue,
-    resolve_zone: bool,
-    args: ScalarFunctionArgs,
-) -> Result<ColumnarValue> {
-    let return_type = args.return_field.data_type().clone();
-    let zone = session_time_zone_from_options(args.config_options.as_ref());
-    let prepared = match value_arg {
-        ColumnarValue::Array(array) => {
-            let unpacked = unpack_dictionary(&array)?;
-            if matches!(unpacked.data_type(), DataType::Null) {
-                return Ok(ColumnarValue::Array(null_array_for_type(
-                    &return_type,
-                    unpacked.len(),
-                )));
-            }
-            let ready = if resolve_zone {
-                resolve_instant_in_zone(&unpacked, zone)?
-            } else {
-                unpacked
-            };
-            ColumnarValue::Array(ready)
+fn resolve_interval_field(normalized: &str, unit: IntervalUnit) -> Option<&'static str> {
+    let canonical = match normalized {
+        "year" | "y" | "yr" | "yrs" | "years" => "year",
+        "month" | "mon" | "mons" | "months" => "month",
+        "day" | "d" | "days" => "day",
+        "hour" | "h" | "hr" | "hrs" | "hours" => "hour",
+        "minute" | "m" | "min" | "mins" | "minutes" => "minute",
+        "second" | "s" | "sec" | "secs" | "seconds" => "second",
+        _ => return None,
+    };
+    match unit {
+        IntervalUnit::YearMonth => matches!(canonical, "year" | "month").then_some(canonical),
+        IntervalUnit::DayTime => {
+            matches!(canonical, "day" | "hour" | "minute" | "second").then_some(canonical)
         }
-        ColumnarValue::Scalar(scalar) => {
-            if matches!(scalar.data_type(), DataType::Null) {
-                return Ok(ColumnarValue::Scalar(null_scalar_for_type(&return_type)));
+        IntervalUnit::MonthDayNano => Some(canonical),
+    }
+}
+
+fn invalid_extract_field_plan_err(raw: &str) -> DataFusionError {
+    DataFusionError::Plan(format!(
+        "[INVALID_EXTRACT_FIELD] Cannot extract `{raw}`. SQLSTATE: 42601"
+    ))
+}
+
+fn invalid_extract_field_exec_err(raw: &str) -> DataFusionError {
+    DataFusionError::Execution(format!(
+        "[INVALID_EXTRACT_FIELD] Cannot extract `{raw}`. SQLSTATE: 42601"
+    ))
+}
+
+fn non_foldable_field_plan_err() -> DataFusionError {
+    DataFusionError::Plan(String::from(
+        "[NON_FOLDABLE_ARGUMENT] The function `date_part` requires the parameter `field` to be a \
+         foldable expression of the type \"STRING\", but the actual argument is a non-foldable. \
+         SQLSTATE: 42K08",
+    ))
+}
+
+fn non_foldable_field_exec_err() -> DataFusionError {
+    DataFusionError::Execution(String::from(
+        "[NON_FOLDABLE_ARGUMENT] The function `date_part` requires the parameter `field` to be a \
+         foldable expression of the type \"STRING\", but the actual argument is a non-foldable. \
+         SQLSTATE: 42K08",
+    ))
+}
+
+fn spark_sql_string_value(text: &str) -> String {
+    format!("'{}'", text.replace('\\', "\\\\").replace('\'', "\\'"))
+}
+
+fn cast_invalid_input_date(text: &str) -> DataFusionError {
+    DataFusionError::Execution(format!(
+        "[CAST_INVALID_INPUT] The value {} of the type \"STRING\" cannot be cast to \
+         \"DATE\" because it is malformed. Correct the value as per the syntax, or change \
+         its target type. Use `try_cast` to tolerate malformed input and return NULL instead. \
+         SQLSTATE: 22018",
+        spark_sql_string_value(text)
+    ))
+}
+
+fn cast_strings_to_date32(strings: &ArrayRef, failure: StringCastFailure) -> Result<ArrayRef> {
+    let texts = cast(strings.as_ref(), &DataType::Utf8)?;
+    let texts = texts.as_string::<i32>();
+    let mut builder = Date32Array::builder(texts.len());
+    for row in 0..texts.len() {
+        if texts.is_null(row) {
+            builder.append_null();
+            continue;
+        }
+        let text = texts.value(row);
+        match spark_string_to_date(text.as_bytes()) {
+            Some(days) => builder.append_value(days),
+            None if failure == StringCastFailure::Raise => {
+                return Err(cast_invalid_input_date(text));
             }
-            let array = scalar.to_array()?;
-            let unpacked = unpack_dictionary(&array)?;
-            let ready = if resolve_zone {
-                resolve_instant_in_zone(&unpacked, zone)?
+            None => builder.append_null(),
+        }
+    }
+    Ok(Arc::new(builder.finish()))
+}
+
+fn forward_interval_to_stock(
+    canonical_part: &str,
+    value_arg: ColumnarValue,
+    arg_fields: &[FieldRef],
+    number_rows: usize,
+    return_field: FieldRef,
+    config_options: Arc<ConfigOptions>,
+) -> Result<ColumnarValue> {
+    let prepared = match value_arg {
+        ColumnarValue::Array(array) => ColumnarValue::Array(unpack_dictionary(&array)?),
+        ColumnarValue::Scalar(scalar) => {
+            if matches!(scalar.data_type(), DataType::Dictionary(_, _)) {
+                let unpacked = unpack_dictionary(&scalar.to_array()?)?;
+                ColumnarValue::Scalar(ScalarValue::try_from_array(unpacked.as_ref(), 0)?)
             } else {
-                unpacked
-            };
-            ColumnarValue::Scalar(ScalarValue::try_from_array(ready.as_ref(), 0)?)
+                ColumnarValue::Scalar(scalar)
+            }
         }
     };
+    let value_type = prepared.data_type();
+    let value_nullable = arg_fields.get(1).is_none_or(|field| field.is_nullable());
     let forwarded = ScalarFunctionArgs {
-        args: vec![part_arg, prepared],
-        arg_fields: args.arg_fields,
-        number_rows: args.number_rows,
-        return_field: args.return_field,
-        config_options: args.config_options,
+        args: vec![
+            ColumnarValue::Scalar(ScalarValue::Utf8(Some(canonical_part.to_owned()))),
+            prepared,
+        ],
+        arg_fields: vec![
+            Arc::new(Field::new("part", DataType::Utf8, false)),
+            Arc::new(Field::new("value", value_type, value_nullable)),
+        ],
+        number_rows,
+        return_field,
+        config_options,
     };
     datafusion::functions::datetime::date_part().invoke_with_args(forwarded)
+}
+
+fn extract_from_strings(
+    array: &ArrayRef,
+    options: &ConfigOptions,
+    field: CalendarField,
+) -> Result<ArrayRef> {
+    let unpacked = unpack_dictionary(array)?;
+    let failure = if spark_ansi_enabled_from_options(options) {
+        StringCastFailure::Raise
+    } else {
+        StringCastFailure::Null
+    };
+    let temporal = if field.needs_timestamp_for_string {
+        let zone = extraction_time_zone(options)?;
+        cast_strings_to_ltz(&unpacked, zone, failure)?
+    } else {
+        cast_strings_to_date32(&unpacked, failure)?
+    };
+    extract_calendar_part(&temporal, options, field.part, field.shift)
 }
 
 impl ScalarUDFImpl for SparkDatePart {
@@ -187,22 +279,22 @@ impl ScalarUDFImpl for SparkDatePart {
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs) -> Result<FieldRef> {
-        let [field, _] = take_function_args(self.name(), args.scalar_arguments)?;
-        let nullable = args.arg_fields.iter().any(|item| item.is_nullable());
-        let data_type = match field.and_then(|scalar| scalar.try_as_str().flatten()) {
-            Some(raw) => {
-                let normalized = normalize_part(raw);
-                if normalized == "epoch" {
-                    DataType::Float64
-                } else if is_nanosecond_part(&normalized) {
-                    DataType::Int64
-                } else {
-                    DataType::Int32
-                }
+        let [field_scalar, _] = take_function_args(self.name(), args.scalar_arguments)?;
+        let [_, source_field] = take_function_args(self.name(), args.arg_fields)?;
+        let source_type = unwrap_dictionary_type(source_field.data_type());
+        if let Some(raw) = field_scalar.and_then(|scalar| scalar.try_as_str().flatten()) {
+            let normalized = normalize_part(raw);
+            let valid = match source_type {
+                DataType::Interval(unit) => resolve_interval_field(&normalized, *unit).is_some(),
+                _ => resolve_field(&normalized).is_some(),
+            };
+            if !valid {
+                return Err(invalid_extract_field_plan_err(raw));
             }
-            None => DataType::Int32,
-        };
-        Ok(Arc::new(Field::new(self.name(), data_type, nullable)))
+        }
+        let nullable =
+            args.arg_fields.iter().any(|item| item.is_nullable()) || is_string_type(source_type);
+        Ok(Arc::new(Field::new(self.name(), DataType::Int32, nullable)))
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
@@ -215,49 +307,51 @@ impl ScalarUDFImpl for SparkDatePart {
         } = args;
         let [part_arg, value_arg] = take_function_args(self.name(), call_args)?;
         let ColumnarValue::Scalar(scalar) = &part_arg else {
-            return exec_err!("First argument of `DATE_PART` must be non-null scalar Utf8");
+            return Err(non_foldable_field_exec_err());
         };
         let Some(text) = scalar.try_as_str().flatten() else {
-            return exec_err!("First argument of `DATE_PART` must be non-null scalar Utf8");
+            return Err(DataFusionError::Execution(String::from(
+                "First argument of `DATE_PART` must be non-null scalar Utf8",
+            )));
         };
         let raw_part = text.to_owned();
         let normalized = normalize_part(&raw_part);
-        let Some(kind) = resolve_field(&normalized) else {
-            return exec_err!("Date part '{raw_part}' not supported");
+        let value_type = value_arg.data_type();
+        let inner_type = unwrap_dictionary_type(&value_type);
+        if let DataType::Interval(unit) = inner_type {
+            let Some(canonical) = resolve_interval_field(&normalized, *unit) else {
+                return Err(invalid_extract_field_exec_err(&raw_part));
+            };
+            return forward_interval_to_stock(
+                canonical,
+                value_arg,
+                &arg_fields,
+                number_rows,
+                return_field,
+                config_options,
+            );
+        }
+        let Some(field) = resolve_field(&normalized) else {
+            return Err(invalid_extract_field_exec_err(&raw_part));
         };
-        match kind {
-            FieldKind::Calendar(part, shift) => {
-                let is_scalar = matches!(&value_arg, ColumnarValue::Scalar(_));
-                let array = match value_arg {
-                    ColumnarValue::Array(array) => array,
-                    ColumnarValue::Scalar(scalar) => scalar.to_array()?,
-                };
-                let extracted =
-                    extract_calendar_part(&array, config_options.as_ref(), part, shift)?;
-                if is_scalar {
-                    Ok(ColumnarValue::Scalar(ScalarValue::try_from_array(
-                        extracted.as_ref(),
-                        0,
-                    )?))
-                } else {
-                    Ok(ColumnarValue::Array(extracted))
-                }
-            }
-            FieldKind::SubSecond | FieldKind::Epoch => {
-                let rest = ScalarFunctionArgs {
-                    args: Vec::new(),
-                    arg_fields,
-                    number_rows,
-                    return_field,
-                    config_options,
-                };
-                forward_to_stock(
-                    part_arg,
-                    value_arg,
-                    matches!(kind, FieldKind::SubSecond),
-                    rest,
-                )
-            }
+        let is_scalar = matches!(&value_arg, ColumnarValue::Scalar(_));
+        let is_str = is_string_type(inner_type);
+        let array = match value_arg {
+            ColumnarValue::Array(array) => array,
+            ColumnarValue::Scalar(scalar) => scalar.to_array()?,
+        };
+        let extracted = if is_str {
+            extract_from_strings(&array, config_options.as_ref(), field)?
+        } else {
+            extract_calendar_part(&array, config_options.as_ref(), field.part, field.shift)?
+        };
+        if is_scalar {
+            Ok(ColumnarValue::Scalar(ScalarValue::try_from_array(
+                extracted.as_ref(),
+                0,
+            )?))
+        } else {
+            Ok(ColumnarValue::Array(extracted))
         }
     }
 }
@@ -277,14 +371,39 @@ impl AnalyzerRule for SparkExtractDatePart {
 }
 
 fn is_spark_date_part_source(data_type: &DataType) -> bool {
-    let inner = match data_type {
-        DataType::Dictionary(_, value) => value.as_ref(),
-        other => other,
-    };
     matches!(
-        inner,
-        DataType::Timestamp(_, _) | DataType::Date32 | DataType::Date64 | DataType::Null
+        unwrap_dictionary_type(data_type),
+        DataType::Timestamp(_, _)
+            | DataType::Date32
+            | DataType::Date64
+            | DataType::Utf8
+            | DataType::LargeUtf8
+            | DataType::Utf8View
+            | DataType::Interval(_)
+            | DataType::Null
     )
+}
+
+fn is_non_foldable_node(expr: &Expr) -> bool {
+    match expr {
+        Expr::Column(_)
+        | Expr::OuterReferenceColumn(_, _)
+        | Expr::ScalarVariable(_, _)
+        | Expr::ScalarSubquery(_)
+        | Expr::Exists(_)
+        | Expr::InSubquery(_)
+        | Expr::Placeholder(_)
+        | Expr::AggregateFunction(_)
+        | Expr::WindowFunction(_)
+        | Expr::GroupingSet(_)
+        | Expr::Unnest(_) => true,
+        Expr::ScalarFunction(func) => func.func.signature().volatility != Volatility::Immutable,
+        _ => false,
+    }
+}
+
+fn is_foldable_field_expr(expr: &Expr) -> Result<bool> {
+    Ok(!expr.exists(|node| Ok(is_non_foldable_node(node)))?)
 }
 
 fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
@@ -295,27 +414,35 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     let name_preserver = NamePreserver::new(&plan);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
-        let rewritten = expr.transform_up(|node| Ok(rewrite_expr(node, &schema)))?;
+        let rewritten = expr.transform_up(|node| rewrite_expr(node, &schema))?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     transformed.map_data(LogicalPlan::recompute_schema)
 }
 
-fn rewrite_expr(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
+fn rewrite_expr(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
     let Expr::ScalarFunction(func) = expr else {
-        return Transformed::no(expr);
+        return Ok(Transformed::no(expr));
     };
-    let should_rewrite = func.func.name() == "date_part"
-        && func.args.len() == 2
-        && func.func.inner().downcast_ref::<SparkDatePart>().is_none()
-        && func.args[1]
-            .get_type(schema)
-            .is_ok_and(|data_type| is_spark_date_part_source(&data_type));
-    if !should_rewrite {
-        return Transformed::no(Expr::ScalarFunction(func));
+    if func.func.name() != "date_part" || func.args.len() != 2 {
+        return Ok(Transformed::no(Expr::ScalarFunction(func)));
     }
-    Transformed::yes(Expr::ScalarFunction(ScalarFunction::new_udf(
-        date_part_udf(),
-        func.args,
+    if func.func.inner().downcast_ref::<SparkDatePart>().is_some() {
+        if !is_foldable_field_expr(&func.args[0])? {
+            return Err(non_foldable_field_plan_err());
+        }
+        return Ok(Transformed::no(Expr::ScalarFunction(func)));
+    }
+    let should_rewrite = func.args[1]
+        .get_type(schema)
+        .is_ok_and(|data_type| is_spark_date_part_source(&data_type));
+    if !should_rewrite {
+        return Ok(Transformed::no(Expr::ScalarFunction(func)));
+    }
+    if !is_foldable_field_expr(&func.args[0])? {
+        return Err(non_foldable_field_plan_err());
+    }
+    Ok(Transformed::yes(Expr::ScalarFunction(
+        ScalarFunction::new_udf(date_part_udf(), func.args),
     )))
 }
