@@ -633,6 +633,10 @@ def _split_sql_literal_args(args_blob: str) -> list[Any]:
             pieces: list[str] = []
             closed = False
             while index < length:
+                if text[index] == "\\" and index + 1 < length:
+                    pieces.append(text[index + 1])
+                    index += 2
+                    continue
                 if text[index] == quote:
                     if index + 1 < length and text[index + 1] == quote:
                         pieces.append(quote)
@@ -777,8 +781,12 @@ def _split_sql_call_args(args_blob: str, session: Any) -> list[Any]:
 
 def _strip_sql_comments(text: str) -> str:
     """Remove ``--`` line comments and ``/* */`` block comments (best-effort)."""
-    without_block = re.sub(r"/\*.*?\*/", " ", text, flags=re.DOTALL)
-    return re.sub(r"--[^\n]*", " ", without_block)
+    from repark.spark.filter_quote import _iter_spark_sql_spans
+
+    return "".join(
+        " " if kind == "comment" else text[start:end]
+        for kind, start, end in _iter_spark_sql_spans(text)
+    )
 
 
 def _sql_from_clause_region(body: str) -> str:

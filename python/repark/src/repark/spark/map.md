@@ -448,44 +448,23 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   display in frame order, as Spark lists every input attribute (live Spark 4.1.2:
   `select("nope")` suggests `` `id`, `s`, `Data` `` under both rules); the
   fold-only `_suggestion_candidates` filter is deleted.
-- `filter_quote.py` — **ATTR-ID-1 S3b H-1 (2026-10-01):** the filter-SQL identifier quoter, split
-  out of `column_fields.py` at the size ceiling (pure move; the entry stays there). **R-CS2P-1
-  (2026-10-03):** under the exact rule `_bind_filter_token` leaves a dotted token to the engine when
-  its head matches no qualifier and no display, or when its qualified name misses; folding the later
-  segments there bound `l.id` as `id` (or `T.data` as `` `T`.`Data` ``) where Spark refuses.
-  `_FILTER_TOKEN_PATTERN`, `_SQL_LITERAL_KEYWORDS`, the candidate pair, the lambda scope tokenizer
-  (RC4-1/RC4-6/RC5-2 port: decl sites quoted, bodies resolve params, outer columns bind),
-  `_main_path_dotted_token` (main's bare-ident tokenization with the byte-identical collision
-  raise), and `_bind_filter_token`.
-  **S3b H-1 follow-up (2026-10-01):** a lambda reference that matches its parameter only by folding
-  (`X` under param `x`, insensitive rule) raises `_FoldedLambdaFallbackError`; the entry catches it
-  and runs the whole predicate through `_main_path_filter_sql` (a verbatim port of main's
-  fold-everything quoter, string-identical on probes). Spark folds nested case-colliding lambda
-  variables to one variable; the engine binds them case-sensitively, so only main's path reproduces
-  Spark there. Exact-rule references never fold and never trigger.
-  **Gate narrowing (2026-10-01):** the raise fires only when
-  `_scopes_have_folded_collision` finds an inner parameter that folds to an
-  enclosing parameter with different spelling. Single-level folded
-  references and nested scopes without that collision stay on the binder,
-  which folds them to the parameter spelling exactly as Spark does.
-  **Gate j_cross (2026-10-01):** the qualifier-bound arm carries the same
-  one-id multi-hit join-dup refusal as the unqualified arm, echoing
-  qualifier-qualified candidates as Spark does.
-  **ATTR-ID-1 S3e (2026-10-01):** `_frame_qualifiers_for_bind` (moved here
-  from `column_fields`) and `_known_qualifiers` (plan plus facade names)
-  serve every door; `_select_expr_frame` (the `selectExpr` body, moved from
-  `core.py` at its ceiling) rewrites qualifier-headed dotted tokens to the
-  engine field, aliasing a lone token to its written name; the filter
-  binder takes the facade payload.
-  **ATTR-ID-1 SJ-5 F1 (2026-10-03):** `_refuse_ambiguous_free_names` calls the
-  native of the same name (one rule for SQL text, expressions, and name
-  lists); `_quote_select_expr_dotted` checks each item first.
-  `_displays_unique` skips the call when no two displays match under either
-  case rule, which the native rule cannot refuse; `str.lower` over-matches
-  the native ASCII fold, so a unique verdict always agrees with it.
-  **Fold SM-2 R6 (2026-10-06):** `_quote_select_expr_dotted` calls the
-  USING-key text choke after the ambiguity check, so refused side-key
-  references fail explicit instead of binding the merged key.
+- `filter_quote.py` — **ATTR-ID-1 S3b H-1 (2026-10-01):** filter-SQL identifier quoter split from
+  `column_fields.py` (entry stays there). **R-CS2P-1 (2026-10-03):** under exact mode,
+  `_bind_filter_token` leaves unmatched dotted tokens to the engine. Holds `_FILTER_TOKEN_PATTERN`,
+  `_SQL_LITERAL_KEYWORDS`, lambda scope tokenizer (RC4-1/RC4-6/RC5-2), `_main_path_dotted_token`,
+  `_bind_filter_token`, `_FoldedLambdaFallbackError` -> `_main_path_filter_sql` (only when
+  `_scopes_have_folded_collision` detects nested case-colliding params; **2026-10-01**), qualifier
+  join-dup refusal (**j_cross**), `_frame_qualifiers_for_bind`/`_known_qualifiers`/`_select_expr_frame`
+  (**S3e**), `_refuse_ambiguous_free_names`/`_displays_unique` (**SJ-5 F1, 2026-10-03**), and
+  USING-key choke (**SM-2 R6, 2026-10-06**).
+  **FILTER-STRING-ESCAPED-QUOTE-1 (2026-11-24):** adds Spark lexical helpers (`_iter_spark_sql_spans`,
+  `_quoted_span_closed`, `_quoted_span_end`, `_is_string_prefix_at`, `_spark_line_comment_end`,
+  nested `_spark_block_comment_end`) and context-aware `_boolean_operator_spans` so `'`/`"` skip `\`
+  escapes and doubled quotes, `r`/`R`/`x`/`X` raw/hex literals take no escapes, backticks skip only
+  doubled backticks, comments never mis-open literals, `_select_expr_frame` separates items with newlines,
+  and `and`/`or`/`not` columns work alongside boolean operators. Shared across `column_fields.py`,
+  `qualified_names.py`, `merge_aliases.py`, `_idents.py`, `udtf.py`, `dataframe/join_attr_tokens.py`,
+  and `session/`.
 - `subset_resolve.py` — **ATTR-ID-1 S3d (2026-10-01):** the
   `drop`/`dropDuplicates`/`fillna`/`dropna` name-binding home. `_bindings` reads the stamped ids,
   native engines, and facade displays (or `None` for a bridge frame or a desynced overlay, where

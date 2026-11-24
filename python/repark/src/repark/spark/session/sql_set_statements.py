@@ -33,6 +33,12 @@ from repark.errors import (
     UnsupportedOperationException,
 )
 from repark import _native
+from repark.spark.filter_quote import (
+    _is_string_prefix_at,
+    _quoted_span_closed,
+    _spark_block_comment_end,
+    _spark_line_comment_end,
+)
 from repark.spark.session.builder_conf import SPARK_SQL_ANSI_DOUBLE_QUOTED_IDENTIFIERS_KEY
 from repark.spark.session.create_dataframe_rows import _materialize_arrow_as_memtable_frame
 from repark.spark.session.session_configuration import (
@@ -177,39 +183,35 @@ def _strip_sql_comments(text: str) -> tuple[str, bool]:
     """Drop ``--`` / ``/* … */`` comments outside string literals; report quote balance."""
     out: list[str] = []
     index = 0
-    quote: str | None = None
-    while index < len(text):
+    length = len(text)
+    balanced = True
+    while index < length:
         char = text[index]
-        if quote is not None:
-            out.append(char)
-            if char == quote:
-                if index + 1 < len(text) and text[index + 1] == quote:
-                    out.append(quote)
-                    index += 2
-                    continue
-                quote = None
-            index += 1
+        if _is_string_prefix_at(text, index):
+            end, closed = _quoted_span_closed(text, index + 1, raw=True)
+            out.append(text[index:end])
+            index = end
+            if not closed:
+                balanced = False
+                break
             continue
         if char in "'\"`":
-            quote = char
-            out.append(char)
-            index += 1
-            continue
-        if char == "-" and index + 1 < len(text) and text[index + 1] == "-":
-            end = text.find("\n", index)
-            if end < 0:
-                break
+            end, closed = _quoted_span_closed(text, index)
+            out.append(text[index:end])
             index = end
-            continue
-        if char == "/" and index + 1 < len(text) and text[index + 1] == "*":
-            end = text.find("*/", index + 2)
-            if end < 0:
+            if not closed:
+                balanced = False
                 break
-            index = end + 2
+            continue
+        if char == "-" and index + 1 < length and text[index + 1] == "-":
+            index = _spark_line_comment_end(text, index)
+            continue
+        if char == "/" and index + 1 < length and text[index + 1] == "*":
+            index = _spark_block_comment_end(text, index)
             continue
         out.append(char)
         index += 1
-    return "".join(out), quote is None
+    return "".join(out), balanced
 
 
 def _apply_set(session: ReparkSession, key: str, value: str) -> DataFrame:

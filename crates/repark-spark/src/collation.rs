@@ -47,7 +47,7 @@ pub fn refuse_collation_in_sql(sql: &str) -> Result<()> {
     if let Ok(statements) = Parser::parse_sql(&DatabricksDialect {}, sql) {
         return refuse_parsed(&statements);
     }
-    let wrapped = format!("SELECT ({sql})");
+    let wrapped = format!("SELECT ({sql}\n)");
     if let Ok(statements) = Parser::parse_sql(&DatabricksDialect {}, &wrapped) {
         return refuse_parsed(&statements);
     }
@@ -275,18 +275,49 @@ fn is_ident_byte(byte: u8) -> bool {
     byte.is_ascii_alphanumeric() || byte == b'_'
 }
 
+fn is_raw_prefix_at(bytes: &[u8], index: usize) -> bool {
+    matches!(bytes.get(index), Some(b'r' | b'R' | b'x' | b'X'))
+        && matches!(bytes.get(index + 1), Some(b'\'' | b'"'))
+        && (index == 0 || !is_ident_byte(bytes[index - 1]))
+}
+
 /// Blank `'…'` / `"…"` / `` `…` `` / `--` / `/* … */` content.
 fn blank_sql_quotes_and_comments(sql: &str) -> String {
     let bytes = sql.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
     let mut index = 0;
     while index < bytes.len() {
+        if is_raw_prefix_at(bytes, index) {
+            let delimiter = bytes[index + 1];
+            out.push(bytes[index]);
+            out.push(delimiter);
+            index += 2;
+            while index < bytes.len() {
+                if bytes[index] == delimiter {
+                    out.push(delimiter);
+                    index += 1;
+                    break;
+                }
+                out.push(b' ');
+                index += 1;
+            }
+            continue;
+        }
         match bytes[index] {
             b'\'' | b'"' | b'`' => {
                 let delimiter = bytes[index];
                 out.push(delimiter);
                 index += 1;
                 while index < bytes.len() {
+                    if bytes[index] == b'\\' && delimiter != b'`' {
+                        out.push(b' ');
+                        index += 1;
+                        if index < bytes.len() {
+                            out.push(b' ');
+                            index += 1;
+                        }
+                        continue;
+                    }
                     if bytes[index] == delimiter {
                         if bytes.get(index + 1) == Some(&delimiter) {
                             out.push(b' ');
@@ -306,7 +337,7 @@ fn blank_sql_quotes_and_comments(sql: &str) -> String {
                 out.push(b'-');
                 out.push(b'-');
                 index += 2;
-                while index < bytes.len() && bytes[index] != b'\n' {
+                while index < bytes.len() && !matches!(bytes[index], b'\n' | b'\r') {
                     out.push(b' ');
                     index += 1;
                 }
@@ -315,15 +346,27 @@ fn blank_sql_quotes_and_comments(sql: &str) -> String {
                 out.push(b'/');
                 out.push(b'*');
                 index += 2;
-                while index + 1 < bytes.len() && !(bytes[index] == b'*' && bytes[index + 1] == b'/')
-                {
-                    out.push(b' ');
-                    index += 1;
-                }
-                if index + 1 < bytes.len() {
-                    out.push(b'*');
-                    out.push(b'/');
-                    index += 2;
+                let mut depth = 1usize;
+                while index < bytes.len() && depth > 0 {
+                    if bytes.get(index..index + 2) == Some(b"/*") {
+                        depth += 1;
+                        out.push(b' ');
+                        out.push(b' ');
+                        index += 2;
+                    } else if bytes.get(index..index + 2) == Some(b"*/") {
+                        depth -= 1;
+                        if depth == 0 {
+                            out.push(b'*');
+                            out.push(b'/');
+                        } else {
+                            out.push(b' ');
+                            out.push(b' ');
+                        }
+                        index += 2;
+                    } else {
+                        out.push(b' ');
+                        index += 1;
+                    }
                 }
             }
             byte => {
@@ -333,4 +376,29 @@ fn blank_sql_quotes_and_comments(sql: &str) -> String {
         }
     }
     String::from_utf8_lossy(&out).into_owned()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::refuse_collation_in_sql;
+
+    #[test]
+    fn escaped_quotes_raw_backticks_and_nested_comments_follow_spark_boundaries() {
+        assert!(refuse_collation_in_sql(r"s = 'it\'s STRING COLLATE utf8_lcase'").is_ok());
+        assert!(refuse_collation_in_sql(r#"s = "a\"b STRING COLLATE utf8_lcase""#).is_ok());
+        assert!(
+            refuse_collation_in_sql("/* outer /* it's */ STRING COLLATE utf8_lcase */ s = 'ok'")
+                .is_ok()
+        );
+        assert!(refuse_collation_in_sql(r"s = 'it\'s' -- STRING COLLATE utf8_lcase").is_ok());
+        assert!(
+            refuse_collation_in_sql(r"s = r'a\' OR CAST(s AS STRING COLLATE utf8_lcase) = 'x'")
+                .is_err()
+        );
+        assert!(
+            refuse_collation_in_sql(r"`a\` = 'x' AND CAST(s AS STRING COLLATE utf8_lcase) = 'y'")
+                .is_err()
+        );
+        assert!(refuse_collation_in_sql("CAST(s AS STRING COLLATE utf8_lcase) -- it's").is_err());
+    }
 }

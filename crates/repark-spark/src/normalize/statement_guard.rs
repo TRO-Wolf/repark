@@ -91,6 +91,14 @@ fn outermost_unclosed_bracketed_comment(sql: &str) -> Option<usize> {
             }
             continue;
         }
+        if matches!(bytes[index], b'r' | b'R' | b'x' | b'X')
+            && matches!(bytes.get(index + 1), Some(b'\'' | b'"'))
+            && (index == 0
+                || !(bytes[index - 1].is_ascii_alphanumeric() || bytes[index - 1] == b'_'))
+        {
+            index = skip_raw_quoted_text(bytes, index + 1);
+            continue;
+        }
         match bytes[index] {
             b'\'' | b'"' | b'`' => {
                 index = skip_quoted_text(bytes, index);
@@ -110,11 +118,23 @@ fn outermost_unclosed_bracketed_comment(sql: &str) -> Option<usize> {
     openers.first().copied()
 }
 
+fn skip_raw_quoted_text(bytes: &[u8], mut index: usize) -> usize {
+    let quote = bytes[index];
+    index += 1;
+    while index < bytes.len() {
+        if bytes[index] == quote {
+            return index + 1;
+        }
+        index += 1;
+    }
+    index
+}
+
 fn skip_quoted_text(bytes: &[u8], mut index: usize) -> usize {
     let quote = bytes[index];
     index += 1;
     while index < bytes.len() {
-        let escapes_next = bytes[index] == b'\\'
+        let escapes_next = (bytes[index] == b'\\' && quote != b'`')
             || (bytes[index] == quote && bytes.get(index + 1) == Some(&quote));
         if escapes_next && index + 1 < bytes.len() {
             index += 2;
@@ -232,6 +252,15 @@ mod tests {
         assert_eq!(skip_quoted_text(b"'a\\", 0), 3);
         assert_eq!(skip_quoted_text(b"'/* x", 0), 5);
         assert_eq!(skip_quoted_text(b"`a\"b` c", 0), 5);
+        assert_eq!(skip_quoted_text(b"`a\\` /*", 0), 4);
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT `a\\` /* open"),
+            Some(12)
+        );
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT r'a\\' /* open"),
+            Some(13)
+        );
     }
 
     #[test]

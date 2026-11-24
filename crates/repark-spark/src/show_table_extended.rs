@@ -360,28 +360,65 @@ fn syntax_error_near(near: &str, detail: Option<&str>) -> DataFusionError {
 }
 
 fn unbalanced_delimiter(sql: &str) -> Option<char> {
-    let mut active_delimiter = None;
     let bytes = sql.as_bytes();
     let mut position = 0;
-    while let Some(byte) = bytes.get(position) {
-        if let Some(delimiter) = active_delimiter {
-            if *byte == delimiter as u8 {
-                active_delimiter = None;
-            }
-            position += 1;
-        } else if bytes
+    while position < bytes.len() {
+        if bytes
             .get(position..)
             .is_some_and(|tail| tail.starts_with(b"--") || tail.starts_with(b"/*"))
         {
             position = crate::show_create::skip_sql_whitespace_and_comments(sql, position)?;
-        } else if matches!(*byte, b'\'' | b'"' | b'`') {
-            active_delimiter = Some(char::from(*byte));
-            position += 1;
-        } else {
-            position += 1;
+            continue;
         }
+        if matches!(bytes[position], b'r' | b'R' | b'x' | b'X')
+            && matches!(bytes.get(position + 1), Some(b'\'' | b'"'))
+            && (position == 0
+                || !(bytes[position - 1].is_ascii_alphanumeric() || bytes[position - 1] == b'_'))
+        {
+            let delimiter = bytes[position + 1];
+            position += 2;
+            let mut closed = false;
+            while position < bytes.len() {
+                if bytes[position] == delimiter {
+                    position += 1;
+                    closed = true;
+                    break;
+                }
+                position += 1;
+            }
+            if !closed {
+                return Some(char::from(delimiter));
+            }
+            continue;
+        }
+        if matches!(bytes[position], b'\'' | b'"' | b'`') {
+            let delimiter = bytes[position];
+            position += 1;
+            let mut closed = false;
+            while position < bytes.len() {
+                if bytes[position] == b'\\' && delimiter != b'`' {
+                    position = (position + 2).min(bytes.len());
+                    continue;
+                }
+                if bytes[position] == delimiter {
+                    if bytes.get(position + 1) == Some(&delimiter) {
+                        position += 2;
+                        continue;
+                    }
+                    position += 1;
+                    closed = true;
+                    break;
+                }
+                position += 1;
+            }
+            if !closed {
+                return Some(char::from(delimiter));
+            }
+            continue;
+        }
+        position += 1;
     }
-    active_delimiter
+    None
 }
 
 #[cfg(test)]
@@ -569,5 +606,25 @@ mod tests {
         ] {
             assert!(try_parse_show_table_extended(sql).is_none(), "{sql}");
         }
+    }
+
+    #[test]
+    fn unbalanced_delimiter_honors_escaped_quotes_raw_and_backtick_bs() {
+        assert_eq!(
+            unbalanced_delimiter(r"SHOW TABLE EXTENDED LIKE 'it\'s'"),
+            None
+        );
+        assert_eq!(
+            unbalanced_delimiter(r"SHOW TABLE EXTENDED LIKE 'it\'s"),
+            Some('\'')
+        );
+        assert_eq!(
+            unbalanced_delimiter(r"SHOW TABLE EXTENDED LIKE r'a\'"),
+            None
+        );
+        assert_eq!(
+            unbalanced_delimiter(r"SHOW TABLE EXTENDED FROM `a\` LIKE 'x'"),
+            None
+        );
     }
 }

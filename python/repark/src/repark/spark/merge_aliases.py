@@ -12,10 +12,11 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable
 
+from repark.spark.filter_quote import _iter_spark_sql_spans
+
 LEGACY_TARGET = "target"
 LEGACY_SOURCE = "source"
 
-_STRING_LITERAL = re.compile(r"'(?:[^']|'')*'")
 _QUALIFIER = re.compile(
     r'(?<![\w.`"])(?:`((?:[^`]|``)*)`|"((?:[^"]|"")*)"|([A-Za-z_][A-Za-z0-9_]*))\s*\.'
 )
@@ -23,7 +24,19 @@ _QUALIFIER = re.compile(
 
 def _qualifiers(fragment: str) -> set[str]:
     """Every relation qualifier a rendered SQL fragment references, string literals removed."""
-    stripped = _STRING_LITERAL.sub("''", fragment)
+    parts: list[str] = []
+    for kind, start, end in _iter_spark_sql_spans(fragment):
+        piece = fragment[start:end]
+        if kind == "comment":
+            parts.append(" ")
+        elif kind == "string":
+            if piece.startswith('"') and fragment[end:].lstrip().startswith("."):
+                parts.append(piece)
+            else:
+                parts.append("''")
+        else:
+            parts.append(piece)
+    stripped = "".join(parts)
     found: set[str] = set()
     for tick, quoted, bare in _QUALIFIER.findall(stripped):
         if tick:

@@ -6,7 +6,6 @@ pins: column-parity-1/C-001, C-002, C-003, C-004, C-005, C-008
 from __future__ import annotations
 
 import functools
-import re
 from typing import Any
 
 from repark import _native
@@ -21,11 +20,14 @@ from repark.spark.column_errors import (
     _raise_unresolved_name,
 )
 from repark.spark.filter_quote import (
+    _BOOL_OPERATOR_WORDS,
     _FILTER_TOKEN_PATTERN,
     _bind_filter_token,
+    _boolean_operator_spans,
     _FoldedLambdaFallbackError,
     _frame_qualifiers_for_bind,
     _group_candidates,
+    _iter_spark_sql_spans,
     _known_qualifiers,
     _lambda_quoted_span,
     _lambda_scopes,
@@ -956,6 +958,9 @@ def _quote_filter_sql_identifiers(frame: Any, sql: str) -> str:
     decls: dict[tuple[int, int], str] = {}
     if "->" in sql:
         scopes, decls = _lambda_scopes(sql)
+    spans = _iter_spark_sql_spans(sql)
+    has_bool = any(display.casefold() in _BOOL_OPERATOR_WORDS for display in displays)
+    operator_spans = _boolean_operator_spans(sql, spans) if has_bool else frozenset()
     binder = functools.partial(
         _bind_filter_token,
         native=native,
@@ -969,26 +974,19 @@ def _quote_filter_sql_identifiers(frame: Any, sql: str) -> str:
         decls=decls,
         collision=_scopes_have_folded_collision(scopes, exact),
         frame_qualifiers=frame_bind_quals,
+        operator_spans=operator_spans,
     )
-    pieces = re.split(r"('(?:[^']|'')*')", sql)
     rebuilt: list[str] = []
-    offset = 0
     try:
-        for piece in pieces:
-            if piece.startswith("'"):
+        for kind, start, end in spans:
+            piece = sql[start:end]
+            if kind == "backtick":
+                rebuilt.append(_lambda_quoted_span(piece, scopes, decls, start, exact))
+            elif kind == "code":
+                scoped = functools.partial(binder, base=start)
+                rebuilt.append(_FILTER_TOKEN_PATTERN.sub(scoped, piece))
+            else:
                 rebuilt.append(piece)
-                offset += len(piece)
-                continue
-            subpieces = re.split(r'("(?:[^"]|"")*"|`(?:[^`]|``)*`)', piece)
-            for subpiece in subpieces:
-                if subpiece.startswith('"'):
-                    rebuilt.append(subpiece)
-                elif subpiece.startswith("`"):
-                    rebuilt.append(_lambda_quoted_span(subpiece, scopes, decls, offset, exact))
-                else:
-                    scoped = functools.partial(binder, base=offset)
-                    rebuilt.append(_FILTER_TOKEN_PATTERN.sub(scoped, subpiece))
-                offset += len(subpiece)
     except _FoldedLambdaFallbackError:
         return _main_path_filter_sql(sql, displays)
     return "".join(rebuilt)

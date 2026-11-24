@@ -62,6 +62,7 @@ pins.
 - [test_facade_hygiene.py](test_facade_hygiene.py) — R-FACADE-HYGIENE pins: listTables CDF hide, weakref GC bound, fillna, dropDuplicates, OOS errors.
 - [test_facade_polish.py](test_facade_polish.py) — Facade polish — aggregate display naming + ``spark.read`` expansion.
 - [test_filter_predicate_rewrite.py](test_filter_predicate_rewrite.py) — The SQL-string filter-predicate rewriter (``column_fields._quote_filter_sql_identifiers``).
+- [test_filter_string_escaped_quote_1.py](test_filter_string_escaped_quote_1.py) — FILTER-STRING-ESCAPED-QUOTE-1 (2026-11-24): table-driven pins across `filter`, `where`, `selectExpr`, `F.expr` (`filter`/`withColumn`/`join`), `spark.sql`, USING-join, builder `escapedStringLiterals=true`, and auxiliary scanners in both ANSI modes.
 - [test_g1_stat_and_expander.py](test_g1_stat_and_expander.py) — G1 — DataFrame.stat family + UPDATE/DELETE expander e2e pins.
 - [test_g2_window_rand_sampleby.py](test_g2_window_rand_sampleby.py) — G2 — window frames, seeded rand/randn, sampleBy XORShift, eagerEval.
 - [test_g4b_semi_join.py](test_g4b_semi_join.py) — G4b — DataFrame-API ``leftsemi`` / ``leftanti`` binding: the non-differential surface.

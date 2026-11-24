@@ -182,7 +182,7 @@ pub(crate) async fn plan_expr_column(
 ) -> PyResult<Expr> {
     let rewritten = repark_functions::cast_map::rewrite_map_casts(canonical);
     let canonical = rewritten.as_deref().unwrap_or(canonical);
-    let select_sql = format!("SELECT ({canonical}) AS _repark_expr");
+    let select_sql = format!("SELECT ({canonical}\n) AS _repark_expr");
     let plan = match repark_spark::values_marker::plan_marked_fragment(context, &select_sql).await {
         Ok(None) => {
             return parse_unresolved_expr(context, canonical)
@@ -973,5 +973,20 @@ mod tests {
             .filter(|planner| format!("{planner:?}") == "DuplicateFieldOperands")
             .count();
         assert_eq!(duplicate_planners, 1);
+    }
+
+    #[test]
+    fn plan_expr_column_handles_trailing_line_comment() {
+        let context = build_expr_context().unwrap();
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        let original = "'it\\'s' = 'it\\'s' -- it's";
+        let canonical = repark_spark::spark_literals::canonicalize(original).unwrap();
+        let expr = rt
+            .block_on(plan_expr_column(&context, canonical.as_ref(), original))
+            .unwrap();
+        assert!(format!("{expr}").contains("it's"), "got: {expr}");
     }
 }

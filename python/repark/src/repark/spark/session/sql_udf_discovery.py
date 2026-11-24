@@ -6,6 +6,8 @@ import re
 
 from typing import TYPE_CHECKING, Any
 
+from repark.spark.filter_quote import _is_string_prefix_at, _quoted_span_closed
+
 
 if TYPE_CHECKING:
     from repark.spark.session.sql_relations import (
@@ -167,8 +169,15 @@ def _sql_udf_arg_is_simple(arg: str) -> bool:
     if re.fullmatch(r"-?\d+(\.\d+)?([eE][+-]?\d+)?", arg):
         return True
 
-    if re.fullmatch(r"'(?:[^']|'')*'", arg):
-        return True
+    if arg.startswith("'"):
+        span_end, closed = _quoted_span_closed(arg, 0)
+        if closed and span_end == len(arg):
+            return True
+
+    if _is_string_prefix_at(arg, 0):
+        span_end, closed = _quoted_span_closed(arg, 1, raw=True)
+        if closed and span_end == len(arg):
+            return True
 
     return arg.upper() in {"NULL", "TRUE", "FALSE"}
 

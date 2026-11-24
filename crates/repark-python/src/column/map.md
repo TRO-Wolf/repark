@@ -363,10 +363,5 @@ sync after changes.
 - Up: [src map](../map.md)
 - Crate: [repark-python map](../../map.md)
 - **FNP-4B (2026-09-15):** `expr_build.rs` / `mod.rs` comments removed (2026-08-26); `mod.rs` ceiling 1038.
-- **FNP-AGG-1 slice (d) (2026-09-21):** `function_dispatch.rs` renames `binary_aggregate_udaf` to `nary_aggregate_udaf` (value column plus N args; arity from the built args) and adds the `grouping_id` arm (n-ary, maybe zero columns); `expr_build.rs` gains the `grouping_id_column` binding behind the unsigned-to-signed cast; `mod.rs` `aggregate_binary` takes trailing columns as a vector (exact baseline 1012).
-- **`build_expr_context`:** ICE-TSNS-TYPE-PLANNER-1 (10-13) registers `repark_functions::SparkTypePlanner`,
-  so `F.expr("CAST(x AS TIMESTAMP)")` and `selectExpr` type as `spark.sql`; STRUCT-SETOP-REORDER-REFUSAL-1
-  (11-09) seats the set-op name check after `type_coercion`, STRUCT-COMPARE-BY-POSITION-1 struct operands
-  by position before it, names bare; FEXPR-WINDOW-NULL-ORDER-1 (11-12): `default_null_ordering =
-  nulls_min`, Spark's NULL placement for a fragment `ORDER BY`; FILTER-STRING-NULL-ORDER-1 (11-13):
-  `predicate_state` sets it for a Spark-door frame's string `filter` only. All pinned (`expr_tests.rs`).
+- **FNP-AGG-1 (d) (2026-09-21):** `nary_aggregate_udaf`, `grouping_id`, `grouping_id_column`, `aggregate_binary` vec (`mod.rs` 1012).
+- **`build_expr_context` / `plan_expr_column`:** ICE-TSNS-TYPE-PLANNER-1 (10-13) registers `SparkTypePlanner`; STRUCT-SETOP-REORDER-REFUSAL-1 (11-09) + STRUCT-COMPARE-BY-POSITION-1 seat struct checks around `type_coercion`; FEXPR-WINDOW-NULL-ORDER-1 (11-12) + FILTER-STRING-NULL-ORDER-1 (11-13) set `nulls_min`; **FILTER-STRING-ESCAPED-QUOTE-1 (2026-11-24):** `plan_expr_column` wraps `SELECT ({canonical}\n) AS _repark_expr` so trailing `--` comments never comment out `)`. All pinned (`expr_tests.rs`, `expr_build.rs`).

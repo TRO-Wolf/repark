@@ -177,7 +177,7 @@ EXPECTED_SYMBOL_HASHES = {
     "_empty_typed_arrow_frame": (
         "08c3eb96462d159b1b6d681df3b1f1aa806b4a41d53b9159798c3fcaf3e363be"
     ),
-    "_find_matching_paren": ("cf0e124bf16b10dedacbd7819863fcd4ab64fbe9fc878dfbeec574c468047e1d"),
+    "_find_matching_paren": ("e12f65ef19c4d2b9bd52dcf3f3882c66292b829b387757c0b596f3fa96517613"),
     "_format_datafusion_set_sql": (
         "1d2e344dee78ff621e20d878701fd3da50599e3c4879c76485ef9dc93a71f9ff"
     ),
@@ -252,7 +252,7 @@ EXPECTED_SYMBOL_HASHES = {
     "_parse_jdbc_int_option": ("d7c7ef7c127a54d0030f51a55020be27381931910e9908462ff6c2eb3d3fa4eb"),
     "_parse_schema_ddl": ("f85655a15284092b9ba36ffad12139d4a802702274775be232aa769b1a37410f"),
     "_parse_simple_sql_udf_call": (
-        "1487ad6ad0fd8406e55a935574d1af0dc7d65f3e808e6bbf55b0a1ee0e65d3ba"
+        "9009db95dc69ba6a6a1d9a52cf8d06c463d8fc992107faa78c546dad398ce86b"
     ),
     "_parse_table_identifier_segments": (
         "9cade66f0422a9360878fb94a5247a412ecf8e94444080673d21e95aa0a63828"
@@ -306,7 +306,7 @@ EXPECTED_SYMBOL_HASHES = {
         "370d45b8a92d06f2204e0172140f0d96b7d2d9a208be39d85be223df6d09cd87"
     ),
     "_skip_sql_ws_and_comments": (
-        "5354bccdaf08190a4f40b62839369af5baa1670396e4f805dfcb4cc861c9d095"
+        "e8944bb1bcd5509524c50522e3d90ee5d9450ff21a4c7e6a27fad1472a679905"
     ),
     "_spark_dict_key_union_order": (
         "f40640208b6599a9b17efadd68b390bfa1d5d6095b2eaa7b32d108392ed1f330"
@@ -317,7 +317,7 @@ EXPECTED_SYMBOL_HASHES = {
     "_split_leading_table_ident": (
         "cf7bbcd62531d2b26ae1111d7b7f392b2bff77ac666f64b59fb3a3085a32c413"
     ),
-    "_split_sql_select_list": ("e406776478b038aaa50860a11af47c53797bc6225e07be450741b880f9a8f552"),
+    "_split_sql_select_list": ("31792b80201424d7efea3172dbbde321f575faf756833ff73855f7b07e3eea86"),
     "_split_sql_table_name_list": (
         "8321a35e2be5ee9a8cf14c6f45fc1a97de9215dbe646969e5452ddb620c14c89"
     ),
@@ -329,7 +329,7 @@ EXPECTED_SYMBOL_HASHES = {
     ),
     "_sql_literal": ("714e8b7794873796e8808c8990e40825926ed8410e280609ec251587d663164b"),
     "_sql_mask_strings_and_comments": (
-        "4b7f0e357d15f9ef25369f7221b95fb7c05a4db373acc03fcc00c860d360d8ed"
+        "9e8dc6973bd5f25ccf134ba27da6ef4de37aa0e88f7cd0e7898fb02c03e28669"
     ),
     "_sql_materialize_expr_udfs": (
         "b33af062b1aa008a29597d606d6de72fd02b1b62da69ebc73e41a0702f658559"
@@ -344,20 +344,20 @@ EXPECTED_SYMBOL_HASHES = {
         "2dcde5ce00b36ca11eee0e3fbb37a82bb75a74109b682199953a417e78913070"
     ),
     "_sql_strip_comments_preserve_strings": (
-        "992a00d5a057fc07c3c7c03ac209f07fcdf72c3f2d766e55ff7768f7e5b36bef"
+        "f0af2b4b192f90fdd7443beec150d78aea5bb2a87ad4c315c1c378940c8ae5a3"
     ),
     "_sql_table_ref": ("f84a8a8405316c4c6a13235f56a73fd5885283c07780add54bb98a6964c110a2"),
     "_sql_top_level_keyword_index": (
-        "8d33d0dfa976fc6e0b6140838507e8d5aaaadf6283ccae14c0927fe3c2baffff"
+        "9733933b23b35b1b7c09da84640cf8bc8950d54c847c6b4df868051d4a98d7e7"
     ),
     "_sql_type_to_arrow": ("77602c6bdc9c506058f13227e805d92525ded00006773633fb7bcae35010c9d9"),
-    "_sql_udf_arg_is_simple": ("db0b84f0ee3d3410bbb660ac228ab85a8be365f5d17f4ba9623fc7d7ff982bce"),
+    "_sql_udf_arg_is_simple": ("85be6c1c521b6e16a6d651516deeb26d0f6a53a61a9f6cfea3773fa9d9bf256d"),
     "_sql_udf_call_match_key": ("e5d8292341262271b9099a26080982055c0ca1a77274f75f738e458a1e045e99"),
     "_sql_udf_clean_exception": (
         "603a9c7f7ffcdf5b6747c2022c4d07a28d6dfaf7ee1a843eba7c91a2ef8d8054"
     ),
     "_sql_udf_in_nested_subquery": (
-        "a8d7beee8e9f9f7a07b3190b75eb0f125487a1ea2a97184ea27e2ea3496585ef"
+        "6ae0c77b848fc342f9e1109ba0572d91478e1fea9ff46a77ca59fa80c5ce8d6f"
     ),
     "_sql_udf_public_error_text": (
         "ac881fd5c6a3e9321afc6e918c48df22a2674ac15327e25a6df18dd097cba4c3"

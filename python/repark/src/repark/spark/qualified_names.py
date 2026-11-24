@@ -15,6 +15,7 @@ from repark.spark._integral import (
 from repark.spark.filter_quote import (
     _DOTTED_TOKEN_PATTERN,
     _frame_qualifiers_for_bind,
+    _iter_spark_sql_spans,
     _unqualified_candidates,
 )
 
@@ -497,8 +498,6 @@ def _refuse_using_key_name(
 
 
 _QUOTED_RUN_RE = re.compile(r'"(?:[^"]|"")+"(?:\."(?:[^"]|"")+")+')
-_SINGLE_QUOTED_RE = re.compile(r"('(?:[^']|'')*')")
-_DOUBLE_QUOTED_RE = re.compile(r'("(?:[^"]|"")*")')
 
 
 def _refuse_using_key_text(
@@ -508,24 +507,27 @@ def _refuse_using_key_text(
 
     if mark is None or not _using_mark_live(mark, held):
         return
+    spans = _iter_spark_sql_spans(sql)
     if generated:
-        for match in _QUOTED_RUN_RE.finditer(sql.replace("`", '"')):
+        visible = "".join(
+            sql[start:end].replace("`", '"') if kind in {"code", "backtick"} else " "
+            for kind, start, end in spans
+        )
+        for match in _QUOTED_RUN_RE.finditer(visible):
             parts = [part.replace('""', '"') for part in match.group(0).split('"."')]
             parts[0] = parts[0][1:]
             parts[-1] = parts[-1][:-1]
             if len(parts) == 2 and _using_pair_hit(mark, parts[0], parts[1], exact):
                 _raise_using_key_reference(f"{_quote_ident(parts[0])}.{_quote_ident(parts[1])}")
         return
-    for piece in _SINGLE_QUOTED_RE.split(sql):
-        if piece.startswith("'"):
-            continue
-        for subpiece in _DOUBLE_QUOTED_RE.split(piece):
-            if subpiece.startswith('"'):
-                continue
-            for match in _DOTTED_TOKEN_PATTERN.finditer(subpiece.replace("`", "")):
-                parts = match.group(1).split(".")
-                if len(parts) == 2 and _using_pair_hit(mark, parts[0], parts[1], exact):
-                    _raise_using_key_reference(f"{_quote_ident(parts[0])}.{_quote_ident(parts[1])}")
+    visible = "".join(
+        sql[start:end].replace("`", "") if kind in {"code", "backtick"} else " "
+        for kind, start, end in spans
+    )
+    for match in _DOTTED_TOKEN_PATTERN.finditer(visible):
+        parts = match.group(1).split(".")
+        if len(parts) == 2 and _using_pair_hit(mark, parts[0], parts[1], exact):
+            _raise_using_key_reference(f"{_quote_ident(parts[0])}.{_quote_ident(parts[1])}")
 
 
 def _refuse_using_key_tokens(frames: tuple[Any, ...], sql: str) -> None:
