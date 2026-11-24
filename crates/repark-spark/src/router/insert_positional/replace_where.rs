@@ -418,6 +418,9 @@ async fn refuse_non_deterministic(
              expression, but the actual expression is \"({predicate})\". SQLSTATE: 42K0E"
         )));
     }
+    if crate::const_cast_guard::sql_expr_has_explicit_cast(predicate) {
+        crate::const_cast_guard::validate_write_plan(ctx, check.logical_plan())?;
+    }
     Ok(())
 }
 

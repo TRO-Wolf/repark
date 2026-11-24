@@ -335,6 +335,32 @@ pub(crate) fn frame_plan(provider: &dyn TableProvider) -> Option<LogicalPlan> {
         .map(|view| view.plan.clone())
 }
 
+pub(crate) fn frame_plan_and_settings(
+    provider: &dyn TableProvider,
+) -> Option<(LogicalPlan, TempViewSettings)> {
+    let any: &dyn Any = provider;
+    any.downcast_ref::<FrameView>()
+        .map(|view| (view.plan.clone(), (*view.settings).clone()))
+}
+
+pub(crate) fn extension_settings(
+    plan: &LogicalPlan,
+) -> Option<(&LogicalPlan, Option<TempViewSettings>)> {
+    if let LogicalPlan::Extension(extension) = plan
+        && let Some(node) = extension.node.as_any().downcast_ref::<FrameSettingsNode>()
+    {
+        return Some((&node.input, Some((*node.settings).clone())));
+    }
+    if let Some(parse) = ReaderParse::of(plan) {
+        let settings = parse
+            .live()
+            .read()
+            .map(|live| TempViewSettings::capture(&live));
+        return Some((parse.input(), settings));
+    }
+    None
+}
+
 fn closed_plan(plan: &LogicalPlan) -> Option<LogicalPlan> {
     let LogicalPlan::TableScan(scan) = plan else {
         return None;

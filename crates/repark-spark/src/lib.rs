@@ -12,6 +12,7 @@ mod cast_gate;
 mod catalog_ops;
 mod collation;
 mod column_move;
+mod const_cast_guard;
 mod create_table;
 mod ctas;
 mod describe_column;

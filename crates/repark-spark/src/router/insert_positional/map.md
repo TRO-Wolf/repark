@@ -56,6 +56,9 @@ Rewrite or execute the INSERT forms the stock parser cannot model on the Spark d
   **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):** `ReplaceWhere::table()` and `source()`
   expose the parsed target and source query to `../nested_ns.rs`, which must read them before
   the statement runs. Nothing else changed.
+  **INSERT-OVERWRITE-CONST-CAST-1 (2026-11-24):** `execute_replace_where` calls
+  `const_cast_guard::validate_where_predicate` on `replace.predicate` before staging so constant
+  casts in `REPLACE WHERE` / `writeTo.overwrite(cond)` refuse under ANSI before mutating.
 - `partition_append.rs` — `INSERT INTO … PARTITION (…)` becomes a plain positional INSERT.
   Static values (Spark's string form, checked by an Arrow cast with `safe: false`,
   `CAST_INVALID_INPUT` on failure) go in at their table positions (or after a column list),

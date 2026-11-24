@@ -19,7 +19,7 @@ use repark_common::spark_error;
 use repark_core::column_resolution::on_grown_stack_with;
 use repark_core::{CatalogRegistry, TempViewSession, frame_names};
 
-use crate::view_ddl::frame_settings::{frame_plan, opened, view_body};
+use crate::view_ddl::frame_settings::{frame_plan, frame_plan_and_settings, opened, view_body};
 use crate::view_ddl::read::{
     MAX_VIEW_EXPANSION_DEPTH, TempHomes, VIEW_EXPANSION_STACK_RED_ZONE,
     VIEW_EXPANSION_STACK_SEGMENT, nested_depth_refusal, plan_prepared_body,
@@ -61,6 +61,24 @@ pub(crate) fn definition_plan(provider: &dyn TableProvider) -> Option<LogicalPla
     any.downcast_ref::<ReplanningTempView>()
         .map(|view| view.definition_plan.clone())
         .or_else(|| frame_plan(provider))
+}
+
+pub(crate) fn plan_and_settings(
+    provider: &dyn TableProvider,
+) -> Option<(LogicalPlan, Option<TempViewSettings>)> {
+    let any: &dyn Any = provider;
+    if let Some(view) = any.downcast_ref::<ReplanningTempView>() {
+        return Some((
+            view.definition_plan.clone(),
+            Some(view.definition.settings.clone()),
+        ));
+    }
+    if let Some((plan, settings)) = frame_plan_and_settings(provider) {
+        return Some((plan, Some(settings)));
+    }
+    provider
+        .get_logical_plan()
+        .map(|plan| (plan.into_owned(), None))
 }
 
 pub(crate) fn replanning_scan(plan: &LogicalPlan) -> bool {

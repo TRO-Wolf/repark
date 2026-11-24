@@ -103,6 +103,7 @@ pub(crate) async fn execute_merge(
     }
     let handle = catalog_handle(catalogs, &catalog_name)?;
     crate::merge_fragments::maybe_rewrite_merge_fragments(ctx, handle, &mut spec).await?;
+    crate::const_cast_guard::validate_merge_spec(ctx, catalogs, &catalog_name, &spec).await?;
     repark_iceberg::write::merge::execute_merge(ctx, handle, &spec).await?;
     ctx.read_empty()
 }

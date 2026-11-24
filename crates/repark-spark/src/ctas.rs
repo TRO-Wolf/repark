@@ -206,6 +206,7 @@ pub(crate) async fn execute_ctas(
     let analyzed_plan =
         repark_functions::analyze_eagerly(&ctx.state(), query.logical_plan().clone())?;
     let query = ctx.execute_logical_plan(analyzed_plan).await?;
+    crate::const_cast_guard::validate_write_plan(ctx, query.logical_plan())?;
     let arrow_schema = Arc::new(query.schema().as_arrow().clone());
     if crate::spark_door_case_insensitive(ctx.state().config().options()) {
         let names = arrow_schema

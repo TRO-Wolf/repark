@@ -80,6 +80,7 @@ pub(crate) async fn execute_insert_overwrite(
     }
 
     if let Some(source) = &insert.source {
+        crate::const_cast_guard::validate_write_query(ctx, catalogs, source).await?;
         let dynamic = overwrite_is_dynamic(ctx, options);
         let probe_sql = format!("SELECT 1 FROM ({source}) AS _repark_ow_probe LIMIT 1");
         let probe = spark_ast::execute_passthrough(ctx, catalogs, &probe_sql).await?;
@@ -222,6 +223,7 @@ pub(crate) async fn execute_partition_overwrite(
     refuse_partition_overwrite_sources(ctx, &table, table_name, &filled, &reserved).await?;
     let column_names = filled.columns;
     let source_df = spark_ast::execute_passthrough(ctx, catalogs, &filled.sql).await?;
+    crate::const_cast_guard::validate_write_plan(ctx, source_df.logical_plan())?;
     let pairing = StructPairing::from_source_by_name(
         options.source_by_name,
         !crate::spark_door_case_insensitive(ctx.state().config().options()),

@@ -293,6 +293,9 @@ async fn execute_passthrough_inner(
         None => plan,
     };
     let plan = crate::insert_timestamp_ns::after_analysis(plan)?;
+    if is_eager_command || mode.insert_source {
+        crate::const_cast_guard::validate_write_plan(ctx, &plan)?;
+    }
     if mode.insert_source {
         return ctx.execute_logical_plan(insert_input(&plan)?).await;
     }
@@ -436,6 +439,13 @@ async fn try_execute_identity_dml(
     if matches!(kind, crate::MorDmlKind::Update) {
         crate::router::door_tag::record(ctx, crate::write_door::WriteDoor::D10Update);
     }
+    Box::pin(crate::const_cast_guard::validate_identity_dml_predicate(
+        ctx,
+        catalogs,
+        &allowed.catalog_name,
+        &allowed.spec,
+    ))
+    .await?;
     repark_iceberg::write::predicate_dml::execute_predicate_dml(ctx, handle, &allowed.spec).await?;
     Ok(Some(ctx.read_empty()?))
 }
