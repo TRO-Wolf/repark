@@ -1,12 +1,13 @@
 import argparse
 import json
-import sys
+from pathlib import Path
+from typing import Any
 
 
-def make_session(engine: str, ansi: bool):
+def make_session(engine: str, ansi: bool) -> tuple[Any, Any]:
     if engine == "spark":
         from pyspark.sql import SparkSession
-        from pyspark.sql import functions as F
+        from pyspark.sql import functions as sf
 
         spark = (
             SparkSession.builder.master("local[2]")
@@ -19,9 +20,9 @@ def make_session(engine: str, ansi: bool):
         spark.conf.set("spark.sql.ansi.enabled", "true" if ansi else "false")
         spark.conf.set("spark.sql.parser.escapedStringLiterals", "false")
         spark.conf.set("spark.sql.ansi.doubleQuotedIdentifiers", "false")
-        return spark, F
+        return spark, sf
     from repark.spark import ReparkSession
-    from repark.spark import functions as F
+    from repark.spark import functions as sf
 
     spark = (
         ReparkSession.builder.appName("filterq-domain-probe")
@@ -31,10 +32,10 @@ def make_session(engine: str, ansi: bool):
     spark.conf.set("spark.sql.ansi.enabled", "true" if ansi else "false")
     spark.conf.set("spark.sql.parser.escapedStringLiterals", "false")
     spark.conf.set("spark.sql.ansi.doubleQuotedIdentifiers", "false")
-    return spark, F
+    return spark, sf
 
 
-def norm_rows(df):
+def norm_rows(df: Any) -> list[list[Any]]:
     rows = []
     for row in df.collect():
         vals = []
@@ -48,7 +49,7 @@ def norm_rows(df):
     return rows
 
 
-def run_cell(fn, include_schema: bool = False):
+def run_cell(fn: Any, include_schema: bool = False) -> dict[str, Any]:
     try:
         df = fn()
         out = {"ok": True, "rows": norm_rows(df)}
@@ -61,7 +62,7 @@ def run_cell(fn, include_schema: bool = False):
         return {"ok": False, "err": f"{type(exc).__name__}: {msg[:200]}"}
 
 
-def build_base_frame(spark):
+def build_base_frame(spark: Any) -> Any:
     data = [
         (1, "it's", "k1", "a1"),
         (2, 'a"b', "k2", "a2"),
@@ -87,7 +88,7 @@ def build_base_frame(spark):
     return spark.createDataFrame(data, ["id", "s", "k", "a"])
 
 
-def build_kw_frame(spark):
+def build_kw_frame(spark: Any) -> Any:
     return spark.sql(
         "SELECT 1 AS id, 'it''s' AS s, 10 AS `and`, 20 AS `or`, 30 AS `not`, "
         "'rv1' AS r, 'xv1' AS x, 100 AS `a``b`, 200 AS `a\\` "
@@ -103,8 +104,8 @@ def build_kw_frame(spark):
     )
 
 
-def run_mode(engine: str, ansi: bool):
-    spark, F = make_session(engine, ansi)
+def run_mode(engine: str, ansi: bool) -> dict[str, Any]:
+    spark, sf = make_session(engine, ansi)
     df = build_base_frame(spark)
     df.createOrReplaceTempView("tbl")
     kw_df = build_kw_frame(spark)
@@ -173,14 +174,14 @@ def run_mode(engine: str, ansi: bool):
     for name, pred in predicates:
         cells[f"filter_str::{name}"] = run_cell(lambda p=pred: df.filter(p).select("id"))
         cells[f"where_str::{name}"] = run_cell(lambda p=pred: df.where(p).select("id"))
-        cells[f"filter_fexpr::{name}"] = run_cell(lambda p=pred: df.filter(F.expr(p)).select("id"))
+        cells[f"filter_fexpr::{name}"] = run_cell(lambda p=pred: df.filter(sf.expr(p)).select("id"))
         cells[f"withcol_fexpr::{name}"] = run_cell(
             lambda p=pred: (
-                df.withColumn("flag", F.expr(p)).filter(F.col("flag")).select("id", "flag")
+                df.withColumn("flag", sf.expr(p)).filter(sf.col("flag")).select("id", "flag")
             )
         )
         cells[f"join_fexpr::{name}"] = run_cell(
-            lambda p=pred: df.join(right_df, F.expr(f"({p}) AND id = rid")).select("id", "rid")
+            lambda p=pred: df.join(right_df, sf.expr(f"({p}) AND id = rid")).select("id", "rid")
         )
         cells[f"selectexpr::{name}"] = run_cell(
             lambda p=pred: df.selectExpr("id", f"({p}) AS m"), include_schema=True
@@ -235,7 +236,7 @@ def run_mode(engine: str, ansi: bool):
         cells[f"kw_filter_str::{name}"] = run_cell(lambda p=pred: kw_df.filter(p).select("id"))
         cells[f"kw_where_str::{name}"] = run_cell(lambda p=pred: kw_df.where(p).select("id"))
         cells[f"kw_filter_fexpr::{name}"] = run_cell(
-            lambda p=pred: kw_df.filter(F.expr(p)).select("id")
+            lambda p=pred: kw_df.filter(sf.expr(p)).select("id")
         )
         cells[f"kw_selectexpr::{name}"] = run_cell(
             lambda p=pred: kw_df.selectExpr("id", f"({p}) AS m"), include_schema=True
@@ -288,7 +289,7 @@ def run_mode(engine: str, ansi: bool):
     for name, pred in esc_preds:
         cells[f"esc_true_filter_str::{name}"] = run_cell(lambda p=pred: df.filter(p).select("id"))
         cells[f"esc_true_filter_fexpr::{name}"] = run_cell(
-            lambda p=pred: df.filter(F.expr(p)).select("id")
+            lambda p=pred: df.filter(sf.expr(p)).select("id")
         )
         cells[f"esc_true_selectexpr::{name}"] = run_cell(
             lambda p=pred: df.selectExpr("id", f"({p}) AS m"), include_schema=True
@@ -332,7 +333,7 @@ def run_mode(engine: str, ansi: bool):
     return cells
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--engine", choices=["spark", "repark"], required=True)
     parser.add_argument("--out", required=True)
@@ -343,11 +344,10 @@ def main():
         "ansi_true": run_mode(args.engine, True),
         "ansi_false": run_mode(args.engine, False),
     }
-    with open(args.out, "w", encoding="utf-8") as handle:
+    with Path(args.out).open("w", encoding="utf-8") as handle:
         json.dump(payload, handle, indent=2, sort_keys=True)
-    print(
-        f"WROTE {args.out}: ansi_true={len(payload['ansi_true'])} ansi_false={len(payload['ansi_false'])}"
-    )
+    counts = f"ansi_true={len(payload['ansi_true'])} ansi_false={len(payload['ansi_false'])}"
+    print(f"WROTE {args.out}: {counts}")
 
 
 if __name__ == "__main__":

@@ -1,10 +1,10 @@
 import json
-import os
-import traceback
+from typing import Any
+
 from pyspark.sql import SparkSession
 
 
-def make_spark(ansi: bool, escaped_literals: bool = False, dq_ident: bool = False):
+def make_spark(ansi: bool, escaped_literals: bool = False, dq_ident: bool = False) -> Any:
     builder = (
         SparkSession.builder.master("local[2]")
         .appName("filterq-lexer-probe")
@@ -17,7 +17,7 @@ def make_spark(ansi: bool, escaped_literals: bool = False, dq_ident: bool = Fals
     return builder.getOrCreate()
 
 
-def run_sql_scalar(spark, sql: str):
+def run_sql_scalar(spark: Any, sql: str) -> dict[str, Any]:
     try:
         rows = spark.sql(sql).collect()
         return {"ok": True, "rows": [list(r) for r in rows], "cols": list(spark.sql(sql).columns)}
@@ -26,7 +26,7 @@ def run_sql_scalar(spark, sql: str):
         return {"ok": False, "err": f"{type(exc).__name__}: {msg[:240]}"}
 
 
-def run_filter(df, expr: str):
+def run_filter(df: Any, expr: str) -> dict[str, Any]:
     try:
         out = df.filter(expr).select("id")
         rows = [r[0] for r in out.collect()]
@@ -36,11 +36,11 @@ def run_filter(df, expr: str):
         return {"ok": False, "err": f"{type(exc).__name__}: {msg[:240]}"}
 
 
-def main():
+def main() -> None:
     spark = make_spark(ansi=True)
-    results = {}
+    results: dict[str, Any] = {}
 
-    def set_conf(ansi: bool, escaped: bool, dq: bool):
+    def set_conf(ansi: bool, escaped: bool, dq: bool) -> None:
         spark.conf.set("spark.sql.ansi.enabled", "true" if ansi else "false")
         spark.conf.set("spark.sql.parser.escapedStringLiterals", "true" if escaped else "false")
         spark.conf.set("spark.sql.ansi.doubleQuotedIdentifiers", "true" if dq else "false")
@@ -131,7 +131,8 @@ def main():
     for ansi in (True, False):
         set_conf(ansi, False, False)
         df = spark.sql(
-            "SELECT 1 AS id, 'it''s' AS s, 10 AS `and`, 20 AS `or`, 30 AS `not`, 'rv' AS r, 'xv' AS x "
+            "SELECT 1 AS id, 'it''s' AS s, 10 AS `and`, 20 AS `or`, 30 AS `not`, "
+            "'rv' AS r, 'xv' AS x "
             "UNION ALL "
             "SELECT 2 AS id, 'ok' AS s, 11 AS `and`, 21 AS `or`, 31 AS `not`, 'rw' AS r, 'xw' AS x"
         )
