@@ -2,8 +2,8 @@
 
 **Date:** 2026-11-23. **Filed by:** the orchestrator (`claude-opus-5-5`), from an outside risk review that named the
 hazard, and a measurement here. **Severity:** S1 (owner, 2026-11-23): a silent wrong answer. A filter on the subquery
-drops every row, or keeps every row. **Status:** built on `fix/scalar-subquery-empty-null-1` (2026-11-23,
-`gemini-4-neon-xhigh`). Evidence: [task/wo/scalar-subquery-empty-null-1/evidence/summary.md](../../../wo/scalar-subquery-empty-null-1/evidence/summary.md).
+drops every row, or keeps every row. **Status:** fixed; merged as PR #1423 (`1fd3ee74`, 2026-11-24), built by
+`gemini-4-neon-xhigh`. Evidence: [task/wo/scalar-subquery-empty-null-1/evidence/summary.md](../../../wo/scalar-subquery-empty-null-1/evidence/summary.md).
 
 ## Measured on main (`fa7d75e44`, unchanged from `e80e6bc8`)
 

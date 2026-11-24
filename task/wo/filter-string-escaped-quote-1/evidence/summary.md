@@ -57,9 +57,10 @@ Seats intentionally unchanged: `python/repark/src/repark/spark/session/sql_cache
 | Verifier `repro2.py` | `ansi=true` | 28 | 6 | 4 | 13 | 0 |
 | Verifier `repro2.py` | `ansi=false` | 28 | 6 | 4 | 13 | 0 |
 
+- The final re-check, on the merged head `ea94eedc8`, counted 219/249 `attack_probe.py` cells per mode by strict equality.
 - Every remaining non-equal cell is documented in the card's `Still unlike Spark` section (`task/roadmap/mid-term/cards-2026-11-23/filter-string-escaped-quote-1-card-2026-11-24.md`).
 
 ## Pins
 
 - **Facade pin (`python/repark/tests/dataframe/test_filter_string_escaped_quote_1.py`):** 257 parametrized cases across all 7 doors, outer (`left`/`right`/`full`) USING joins, `SET`/`RESET`, UDTF, UDF `"…\"…"`, `DESCRIBE` UTF-8, and boolean/non-reserved keyword columns in both ANSI modes: **48/48 Delta 1 pins fail on `755c6e6e`** and **257/257 pass on Delta 1 head**.
-- **Rust unit tests:** boundary and UTF-8 advance tests in `crates/repark-spark/src/{collation,normalize/statement_guard,uuid_cast,describe_column,show_table_extended}.rs`, `crates/repark-core/src/session/df_guards/{self_join,case_bind}.rs`, and `crates/repark-python/src/column/expr_build.rs`.
+- **Rust unit tests:** boundary and UTF-8 advance tests in `crates/repark-spark/src/{collation,normalize/statement_guard,uuid_cast,describe_column,show_table_extended}.rs`, `crates/repark-core/src/session/df_guards/{self_join,case_bind}.rs`, and `crates/repark-python/src/column/expr_tests.rs` (moved from `expr_build.rs` by the merge of main at `ea94eedc8`).

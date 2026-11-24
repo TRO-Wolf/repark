@@ -1,8 +1,8 @@
 # Card FILTER-STRING-ESCAPED-QUOTE-1: a backslash-escaped quote in a `DataFrame.filter` string drops rows
 
 **Date:** 2026-11-24. **Filed by:** the orchestrator (`claude-opus-5-5`), from an outside review of the SQL text
-rewrites and a measurement here. **Severity:** S1 (owner, 2026-11-24): a silent wrong answer. **Status:** fixed on
-`fix/filter-string-escaped-quote-1` (2026-11-24). Evidence:
+rewrites and a measurement here. **Severity:** S1 (owner, 2026-11-24): a silent wrong answer. **Status:** fixed; merged
+as PR #1427 (`514281bd`, 2026-11-24). Evidence:
 [task/wo/filter-string-escaped-quote-1/evidence/summary.md](../../../wo/filter-string-escaped-quote-1/evidence/summary.md).
 
 ## Measured
@@ -40,7 +40,8 @@ Only the `filter(str)` door is wrong. SQL with the same predicate answers correc
 - Measured against Spark 4.1.2 in both ANSI modes: 313/338 core domain cells equal Spark per mode (up from 254/338,
   +59 fixed/mode, 0 regressions), 27/29 extra edge-case cells equal Spark per mode (up from 11/29, +16 fixed/mode, 0
   regressions), and verifier attack probes improve to 218/249 (`attack`), 19/40 (`deep`), and 13/28 (`repro2`) per
-  mode with 0 regressions vs main. Facade pins:
+  mode with 0 regressions vs main. The final re-check, on the merged head `ea94eedc8`, counted 219/249 `attack` cells
+  per mode by strict equality. Facade pins:
   `python/repark/tests/dataframe/test_filter_string_escaped_quote_1.py` (257/257 green on head; 48/48 Delta 1 pins
   red on pre-delta merged head `755c6e6e`; inner + `left`/`right`/`full` USING-join pins red on main).
 
@@ -72,7 +73,10 @@ Measured gaps remaining on head (all pre-existing on main or reverted to main un
    `AnalysisException: [UNRESOLVED_ROUTINE] IN` rather than returning a silent wrong answer (Spark evaluates
    `NOT NOT 1 IN (2)` -> `[]`; backticked `` `not` NOT IN (1, 2) `` matches Spark `[[1]]`). Bare 3-token
    `bkw_df.filter("not OR and")`, `not AND or`, `not OR not`, and `not AND not` raise `ParseException` matching main
-   (Spark parses the trailing word as an alias, e.g. `Filter NOT OR`).
+   (Spark parses the trailing word as an alias, e.g. `Filter NOT OR`). Bare `f_int.filter("not NOT BETWEEN 1 AND 2")`
+   raises `ParseException`, as on main, where Spark answers `[[6]]` (`Filter NOT between(NOT#3, 1, 2)`). The
+   pre-delta head answered it only through the infix arm that also gave the `not NOT IN` and `not NOT LIKE` wrong
+   answers, so Delta 1 removed that arm (final re-check, note N-1).
 7. **Aliased `join` with `F.expr` containing `\'` or trailing `--` comments (A-5, present on main)** —
    `l.alias("l").join(r.alias("r"), F.expr(r"l.id = r.id AND l.s = 'it\'s'"))` and `(l["id"] == r["id"]) & F.expr(...)`
    fail (`AnalysisException` / `ParseException`) because `crates/repark-core/src/session/df_guards/self_join.rs`
