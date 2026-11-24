@@ -739,7 +739,9 @@ def cold_table_rows(
     )
     try:
         return {
-            table: arrow_rows(cold.read.format("iceberg").load(str(warehouse / "ns" / table)))
+            table: sorted(
+                arrow_rows(cold.read.format("iceberg").load(str(warehouse / "ns" / table)))
+            )
             for table in tables
         }
     finally:
@@ -814,7 +816,10 @@ def test_r1_minus_all_runs_after_spark_normalizers_across_seats(tmp_path: Path, 
             r"SELECT r'a\b' AS a UNION ALL SELECT r'a\b' MINUS ALL SELECT r'a\b' AS a"
             r") s ON t.a = s.a WHEN NOT MATCHED THEN INSERT (a) VALUES (s.a)"
         ).collect()
-        assert arrow_rows(session.sql("SELECT a FROM ice.ns.m_r1_raw")) == [(r"a\b",), ("z",)]
+        assert sorted(arrow_rows(session.sql("SELECT a FROM ice.ns.m_r1_raw"))) == [
+            (r"a\b",),
+            ("z",),
+        ]
         session.sql(
             r"CREATE OR REPLACE TEMPORARY VIEW v_r1_raw AS "
             r"SELECT r'a\b' AS a UNION ALL SELECT r'a\b' MINUS ALL SELECT r'a\b' AS a"
@@ -925,7 +930,10 @@ def test_r2_ddl_dml_values_and_insert_by_name_parens_minus_all(tmp_path: Path, a
             for setup_stmt in setup_stmts:
                 session.sql(setup_stmt).collect()
             session.sql(stmt).collect()
-            assert arrow_rows(session.sql(f"SELECT * FROM ice.ns.{table}")) == [(1,), (4,)], stmt
+            assert sorted(arrow_rows(session.sql(f"SELECT * FROM ice.ns.{table}"))) == [
+                (1,),
+                (4,),
+            ], stmt
         session.sql(
             "CREATE TABLE ice.ns.t_r2_ident USING iceberg AS "
             "(SELECT minus all FROM (SELECT 1 AS minus, 2 AS except) s)"

@@ -2,7 +2,7 @@
 
 ## Provenance
 
-- **RePark:** main `e80e6bc8` and the branch head (`head4` `2ce51f04`), release wheels (maturin 1.14.1, Python 3.12); the mutant (`f6376a1b`, pre-Delta-1) is head with `insert_multiset_set_operations` not seating the rule, so the ALL forms plan DataFusion's semi and anti join: the wrong answer main's refusal guarded.
+- **RePark:** main `e80e6bc8` and the branch head (`head5` `b6c2e728`), release wheels (maturin 1.14.1, Python 3.12); the mutant (`f6376a1b`, pre-Delta-1) is head with `insert_multiset_set_operations` not seating the rule, so the ALL forms plan DataFusion's semi and anti join: the wrong answer main's refusal guarded.
 - **Spark:** PySpark 4.1.2 with `iceberg-spark-runtime-4.1_2.13` 1.11.0, Java 17, `local[2]`, a Hadoop catalog `ice`, session zone UTC, ANSI on and off; recorded into `python/repark/tests/sql/setop_all_multiset_1_spark_oracle.json` by `python _setop_all_multiset_1_cells.py <warehouse> <fixture>` (persistent views live in `spark_catalog.default`: a Hadoop catalog has no views).
 - **Doors:** `spark.sql` over a memory catalog `ice` in both ANSI modes; `repark.sql()` over a native session's memory catalog, against Spark's ANSI-on answer. Writes are read back cold by a new session loading the table folder.
 
@@ -72,11 +72,11 @@ Projection: the join's schema (casts back to the left types where coercion widen
 
 Six setop pin files (`test_sql_setop_all_multiset_1.py`, `test_struct_setop_reorder_refusal_1.py`, `test_decimal_double_coercion_2.py`, `test_examples_dataframe_a.py`, `test_examples_dataframe_b.py`, `test_df_easy.py`), `pytest -n 4`:
 
-- `head4` (`2ce51f04`): **1433 passed, 0 failed** (0 guard failures).
-- `head3` (`1b1a00b3`): **9 failed, 1424 passed** (all 9 are Delta-2 finding pins; 0 guard failures).
-- `head2` (`0add094c`): **54 failed, 1379 passed** (43 native `MINUS ALL` + 11 Delta-2 finding pins; 0 guard failures).
-- `mutant` (`f6376a1b`): **416 failed, 1017 passed** (0 guard failures; EX-DF-7 kills the mutant via asymmetric multiplicity).
-- `main` (`e80e6bc8`): **660 failed, 773 passed** (0 guard failures).
+- `head5` (`b6c2e728`): **1437 passed, 0 failed** (0 guard failures).
+- `head4` (`2ce51f04`): **4 failed, 1433 passed** (all 4 are Delta-3 R-1/R-2 pins; 0 guard failures).
+- `head3` (`1b1a00b3`): **13 failed, 1424 passed** (9 Delta-2 + 4 Delta-3 finding pins; 0 guard failures).
+- `mutant` (`f6376a1b`): **420 failed, 1017 passed** (0 guard failures; EX-DF-7 kills the mutant via asymmetric multiplicity).
+- `main` (`e80e6bc8`): **664 failed, 773 passed** (0 guard failures).
 
 The mutant (`f6376a1b`, not on the branch) drops the multiplicity; the pins that catch it are the type, edge, shape, spelling, fragment and DataFrame cells of `test_sql_setop_all_multiset_1.py`, EX-DF-3, EX-DF-7, and `test_df_easy.py::test_set_ops_and_cross_join`. The Rust seat tests (`setop_all/tests.rs`) fail without the rule in the same way.
 
@@ -106,5 +106,11 @@ Skew, 1M rows over 10 keys (100,000 copies/key) vs 600,000 rows, warm median of 
 - **F-3 (`MAP` on either side and nested):** `map_ordering.rs` inspects both `join.left` and `join.right` and recursively walks `Struct` and `List*` fields for `DataType::Map` on multiset set operations, refusing with `[UNSUPPORTED_FEATURE.SET_OPERATION_ON_MAP_TYPE]`; distinct forms keep main's answers.
 - **F-4 (`F.expr` boundary):** no code change; `F.expr` belongs to `pyspark.sql.functions` and is Spark grammar even when passed to a native frame. Pinned and recorded in the card, parity doc, and `crates/repark-python/src/column/map.md`.
 - **F-5 (lossy round-trip cast refusal):** `rewrite_multiset` refuses at analysis time (before any write) with `AnalysisException` naming `SETOP-MIXED-TYPE-COERCION-1` (`task/roadmap/mid-term/cards-2026-11-23/setop-mixed-type-coercion-1-card-2026-11-23.md`) whenever casting a coerced key back to its output type is not lossless (`STRING` vs numeric/`DATE`/`TIMESTAMP`/`BOOLEAN`/`BINARY`, lossy int/float/decimal/date/timestamp pairs, and nested struct/list fields). Exact widenings (`INT`/`BIGINT`, `FLOAT`/`DOUBLE`, Spark-door `DECIMAL`/`DOUBLE`) keep answering; distinct forms stay unchanged.
+
+## Delta 3 (re-check findings R-1, R-2, B-R1; owner ruling 2026-11-23)
+
+- **R-1 (post-normalizer `MINUS ALL`):** `SparkDialect::owns_minus_all_rewrite` (`true`) lets `ReparkSession::sql_with_write_options_inner` pass raw SQL to the Spark router, which runs `minus_all_as_except_all` in `execute_inner` after `canonicalize_verbatim`, `metadata_tables`, `time_travel`, `rewrite_sql_for_execute`, and `strip_schema_evolution`; `prepare_view_body_sql_with` / `view_dispatch` run it after `prepare_time_travel_sql`; `PyColumn::plan_sql_text` and `parse_canonical_predicate*` run it after `canonicalize_verbatim`. All 13 regressed shapes (`FOR VERSION AS OF`, `r'...'`/`R'...'`, `1e2BD`, escaped `'a\'b'`, CTAS, `MERGE`, temp/persistent views, `filter`, `F.expr`, `selectExpr`) answer Spark 4.1.2 again while keeping F-1 identifiers and native `MINUS ALL` refusal intact.
+- **R-2 (`VALUES` CTAS & `BY NAME (...)` `INSERT`):** `resolve_ddl_dml_fallback` now recognizes depth-0 `VALUES`, `TABLE`, and `(` trailing query suffixes (parsed to `EOF`), restoring all 6 regressed write shapes (verified cold) while keeping DDL/DML `minus all` identifier guards intact.
+- **B-R1:** Corrected the two pin filenames in `## Red and green` (`test_struct_setop_reorder_refusal_1.py` and `test_decimal_double_coercion_2.py`).
 
 Up: [../map.md](../map.md).
