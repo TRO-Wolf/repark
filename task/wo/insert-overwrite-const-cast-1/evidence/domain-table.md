@@ -2,8 +2,8 @@
 
 - **Date:** 2026-11-24
 - **Spark oracle:** Spark 4.1.2 + Iceberg 1.11.0 (local hadoop catalog)
-- **Main:** `514281bd4` (`pkg-d1merged-ea94eedc`, tree-equal to `514281bd4`)
-- **Head:** `fix/insert-overwrite-const-cast-1` (`896af53a3`)
+- **Main:** `514281bd4` (`pkg-d1merged-ea94eedc`, tree-equal to `514281bd4`; Delta 1 also verified on `14d2404a6` / `pkg-d1-57c92b41`)
+- **Head:** `fix/insert-overwrite-const-cast-1` (`11aefbfd9`)
 
 ## Part 1: Cast Shapes × ANSI Modes (Read Control vs `INSERT OVERWRITE`, 204 cells)
 
@@ -641,29 +641,29 @@
 
 ## Part 3: Edge Cases & View/DataFrame ANSI Capture (24 cells)
 
-| Cell | Main | Head |
-|---|---|---|
-| `true|union_real_and_const` | `OK (r=0)` | `ERR(CAST_INVALID_INPUT, r=1)` |
-| `true|union_valid_and_bad` | `OK (r=0)` | `ERR(CAST_INVALID_INPUT, r=1)` |
-| `true|left_join_const_right` | `OK (r=0)` | `ERR(CAST_INVALID_INPUT, r=1)` |
-| `true|groupby_const_having_false` | `OK (r=0)` | `ERR(CAST_INVALID_INPUT, r=1)` |
-| `true|try_cast_wrapping_cast` | `ERR(ERR, r=1)` | `ERR(CAST_INVALID_INPUT, r=1)` |
-| `true|values_cast_where_false` | `ERR(CAST_INVALID_INPUT, r=1)` | `ERR(CAST_INVALID_INPUT, r=1)` |
-| `true|update_empty_no_where` | `OK (r=0)` | `OK (r=0)` |
-| `true|update_empty_ts_no_where` | `OK (r=0)` | `OK (r=0)` |
-| `true|where_false_and_col_ts` | `OK (r=1)` | `ERR(CAST_INVALID_INPUT, r=1)` |
-| `true|lit_ts_limit0` | `OK (r=0)` | `OK (r=0)` |
-| `false|union_real_and_const` | `OK (r=0)` | `OK (r=0)` |
-| `false|union_valid_and_bad` | `OK (r=0)` | `OK (r=0)` |
-| `false|left_join_const_right` | `OK (r=0)` | `OK (r=0)` |
-| `false|groupby_const_having_false` | `OK (r=0)` | `OK (r=0)` |
-| `false|try_cast_wrapping_cast` | `ERR(ERR, r=1)` | `ERR(ERR, r=1)` |
-| `false|values_cast_where_false` | `OK (r=0)` | `OK (r=0)` |
-| `false|update_empty_no_where` | `OK (r=0)` | `OK (r=0)` |
-| `false|update_empty_ts_no_where` | `OK (r=0)` | `OK (r=0)` |
-| `false|where_false_and_col_ts` | `OK (r=1)` | `OK (r=1)` |
-| `false|lit_ts_limit0` | `OK (r=0)` | `OK (r=0)` |
-| `cap|tv_created_off_cast_on` | `OK (r=0)` | `ERR(CAST_INVALID_INPUT, r=1)` |
-| `cap|tv_cast_created_off_read_on` | `OK (r=0)` | `OK (r=0)` |
-| `cap|df_built_off_written_on` | `OK (r=0)` | `OK (r=0)` |
-| `cap|df_built_on_written_off` | `OK (r=0)` | `ERR(CAST_INVALID_INPUT, r=1)` |
+| Cell | Spark | Main | Head |
+|---|---|---|---|
+| `true|union_real_and_const` | `ERR(CAST_INVALID_INPUT, r=1)` | `OK (r=0)` | `ERR(CAST_INVALID_INPUT, r=1)` |
+| `true|union_valid_and_bad` | `ERR(CAST_INVALID_INPUT, r=1)` | `OK (r=0)` | `ERR(CAST_INVALID_INPUT, r=1)` |
+| `true|left_join_const_right` | `ERR(CAST_INVALID_INPUT, r=1)` | `OK (r=0)` | `ERR(CAST_INVALID_INPUT, r=1)` |
+| `true|groupby_const_having_false` | `ERR(CAST_INVALID_INPUT, r=1)` | `OK (r=0)` | `ERR(CAST_INVALID_INPUT, r=1)` |
+| `true|try_cast_wrapping_cast` | `ERR(CAST_INVALID_INPUT, r=1)` | `ERR(ERR, r=1)` | `ERR(CAST_INVALID_INPUT, r=1)` |
+| `true|values_cast_where_false` | `ERR(INVALID_INLINE_TABLE.FAILED_SQL_EXPRESSION_EVALUATION, r=1)` | `ERR(CAST_INVALID_INPUT, r=1)` | `ERR(CAST_INVALID_INPUT, r=1)` |
+| `true|update_empty_no_where` | `OK (r=0)` | `OK (r=0)` | `OK (r=0)` |
+| `true|update_empty_ts_no_where` | `OK (r=0)` | `OK (r=0)` | `OK (r=0)` |
+| `true|where_false_and_col_ts` | `ERR(CAST_INVALID_INPUT, r=1)` | `OK (r=1)` | `ERR(CAST_INVALID_INPUT, r=1)` |
+| `true|lit_ts_limit0` | `OK (r=0)` | `OK (r=0)` | `OK (r=0)` |
+| `false|union_real_and_const` | `OK (r=0)` | `OK (r=0)` | `OK (r=0)` |
+| `false|union_valid_and_bad` | `OK (r=0)` | `OK (r=0)` | `OK (r=0)` |
+| `false|left_join_const_right` | `OK (r=0)` | `OK (r=0)` | `OK (r=0)` |
+| `false|groupby_const_having_false` | `OK (r=0)` | `OK (r=0)` | `OK (r=0)` |
+| `false|try_cast_wrapping_cast` | `OK (r=0)` | `ERR(ERR, r=1)` | `ERR(ERR, r=1)` |
+| `false|values_cast_where_false` | `OK (r=0)` | `OK (r=0)` | `OK (r=0)` |
+| `false|update_empty_no_where` | `OK (r=0)` | `OK (r=0)` | `OK (r=0)` |
+| `false|update_empty_ts_no_where` | `OK (r=0)` | `OK (r=0)` | `OK (r=0)` |
+| `false|where_false_and_col_ts` | `OK (r=1)` | `OK (r=1)` | `OK (r=1)` |
+| `false|lit_ts_limit0` | `OK (r=0)` | `OK (r=0)` | `OK (r=0)` |
+| `cap|tv_created_off_cast_on` | `ERR(CAST_INVALID_INPUT, r=1)` | `OK (r=0)` | `ERR(CAST_INVALID_INPUT, r=1)` |
+| `cap|tv_cast_created_off_read_on` | `OK (r=0)` | `OK (r=0)` | `OK (r=0)` |
+| `cap|df_built_off_written_on` | `OK (r=0)` | `OK (r=0)` | `OK (r=0)` |
+| `cap|df_built_on_written_off` | `ERR(CAST_INVALID_INPUT, r=1)` | `OK (r=0)` | `ERR(CAST_INVALID_INPUT, r=1)` |

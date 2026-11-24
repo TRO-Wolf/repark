@@ -2,9 +2,9 @@
 
 ## Provenance
 
-- **RePark:** `main` at `514281bd4` (`pkg-d1merged-ea94eedc`, tree-equal to `514281bd4`), and `fix/insert-overwrite-const-cast-1` release wheel (`896af53a3` / rebuilt at final HEAD).
+- **RePark:** `main` at `514281bd4` (`pkg-d1merged-ea94eedc`, tree-equal to `514281bd4`) and `14d2404a6` (`pkg-d1-57c92b41`), and `fix/insert-overwrite-const-cast-1` Delta 1 release wheel (`11aefbfd9` / rebuilt at final HEAD).
 - **Spark:** live PySpark 4.1.2 + Iceberg 1.11.0 (local hadoop catalog, Java 17), both ANSI modes (`spark.sql.ansi.enabled=true` and `false`).
-- **Scripts:** [probe_part1.py](probe_part1.py) (102 shapes × 2 ANSI modes × read/overwrite = 204 cells), [probe_part2.py](probe_part2.py) (28 write doors × 7 shapes + 6 non-empty multi-row/20k-row multi-batch cases × 4 doors, both ANSI modes = 420 cells), [probe_edge.py](probe_edge.py) (24 edge and view/DataFrame ANSI-capture cells).
+- **Scripts:** [probe_part1.py](probe_part1.py) (102 shapes × 2 ANSI modes × read/overwrite = 204 cells), [probe_part2.py](probe_part2.py) (28 write doors × 7 shapes + 6 non-empty multi-row/20k-row multi-batch cases × 4 doors, both ANSI modes = 420 cells), [probe_edge.py](probe_edge.py) (`--engine spark|repark`, 24 edge and view/DataFrame ANSI-capture cells).
 - **Full cell-by-cell table:** [domain-table.md](domain-table.md).
 
 ## Spark 4.1.2 measured constant-cast folding rule
@@ -25,8 +25,8 @@
 | `crates/repark-functions/src/analyzer/cast_legality.rs:24-28` | Analysis-time illegal type-pair deny list | Unchanged |
 | `crates/repark-python/src/column/expr_build.rs:325` | `F.expr` expression context | Unchanged (writes execute through Spark router) |
 | `datafusion-optimizer-54.1.0/.../expr_simplifier.rs:558-570` | `ConstEvaluator::f_up` swallows non-`Expr::Cast` UDF errors; `EliminateFilter` runs before `OptimizeProjections` | Untouched (write-door guard handles Spark write doors) |
-| `crates/repark-spark/src/const_cast_guard.rs` & `eval.rs` | New write-door ANSI constant-cast folding guard | Added (`validate_write_plan`, `validate_write_query`, `validate_identity_dml_predicate`, `validate_merge_spec`) |
-| `crates/repark-spark/src/view_ddl/{temp_view,frame_settings}.rs` | View plan + captured `TempViewSettings` | Added `plan_and_settings`, `frame_plan_and_settings`, `extension_settings` |
+| `crates/repark-spark/src/const_cast_guard.rs` & `const_cast_guard/{join,probes,eval,spark_grammar}.rs` | New write-door ANSI constant-cast folding guard | Added (`validate_write_plan`, `validate_write_query`, `validate_identity_dml_predicate`, `validate_merge_spec`, outer-join & MERGE isolation, live temp-view pre-resolution, Spark 4.1.2 string-cast grammar) |
+| `crates/repark-spark/src/view_ddl/{temp_view,frame_settings}.rs` | View plan + captured `TempViewSettings` | Added `live_replanning_plan`, `static_view_plan`, `view_cache_key`, `frame_plan_and_settings`, `extension_settings` |
 | `crates/repark-spark/src/insert_overwrite.rs:40,190,701-852` & `store.rs:12` | Whole-table & partition `INSERT OVERWRITE`; W03 guard | Wired `const_cast_guard` before empty probe/wipe & staging; W03 guard preserved untouched |
 | `crates/repark-spark/src/insert_by_name.rs:49` | `INSERT INTO/OVERWRITE BY NAME` | Wired `validate_write_query` before evolution/wipe/staging |
 | `crates/repark-spark/src/ctas.rs:156` | `CTAS`, `RTAS`, `CRTAS`, `writeTo.create/replace`, `saveAsTable` | Wired `validate_write_plan` right after `analyze_eagerly` |
@@ -40,10 +40,10 @@
 | Suite | Cells | Equal on main | Equal on head | Improved to exact Spark | Regressed vs main |
 |---|---|---|---|---|---|
 | Part 1 (`INSERT OVERWRITE`, both ANSI modes) | 204 | 109 | 152 | 43 | 0 |
-| Part 1 (Read controls, both ANSI modes) | 204 | 146 | 146 | 0 (out of scope) | 0 |
+| Part 1 (Read controls, both ANSI modes) | 204 | 150 | 150 | 0 (out of scope) | 0 |
 | Part 2 (Write doors + non-empty atomicity, both ANSI modes) | 420 | 262 | 379 | 117 | 0 |
-| Part 3 (Edge cases + ANSI capture) | 24 | 16 | 24 | 8 | 0 |
+| Part 3 (Edge cases + ANSI capture) | 24 | 14 | 22 | 8 | 0 |
 | `pre_handback_check.py --profile full` seam probes | 219 | 219 (baseline) | 219 | 0 diffs | 0 |
 
 - **Non-empty S1 check:** NOT S1 (stays S2). All 2-row and 20,000-row multi-batch writes under ANSI=true fail atomically before commit and preserve prior rows.
-- **Pins:** Rust unit tests in `crates/repark-spark/src/const_cast_guard/tests.rs`; table-driven facade pins in `python/repark/tests/writes/test_insert_overwrite_const_cast_1.py` (161/161 fixed pins red on main for the right reason; 260/260 pins + controls green on head).
+- **Pins:** Rust unit tests in `crates/repark-spark/src/const_cast_guard/tests.rs` (10 tests); table-driven facade pins in `python/repark/tests/writes/test_insert_overwrite_const_cast_1.py` (161/161 fixed pins red on main for the right reason; 260/260 pins + controls green on head) and `python/repark/tests/writes/test_insert_overwrite_const_cast_1_delta1.py` (29/29 Delta 1 pins red on pre-Delta-1 `87cf354f` and green on head).

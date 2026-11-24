@@ -1,15 +1,64 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import shutil
 import sys
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from repark import SparkSession
-from repark.spark import functions as spark_fn
+
+def build_session(engine: str, warehouse: str) -> tuple[Any, Any]:
+    if engine == "spark":
+        from pyspark.sql import SparkSession
+        from pyspark.sql import functions as spark_fn
+
+        jar = os.environ["SPARK_ICEBERG_JAR"]
+        sess = (
+            SparkSession.builder.master("local[2]")
+            .appName("iocast_edge_probe")
+            .config("spark.jars", jar)
+            .config(
+                "spark.sql.extensions",
+                "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
+            )
+            .config("spark.sql.catalog.local", "org.apache.iceberg.spark.SparkCatalog")
+            .config("spark.sql.catalog.local.type", "hadoop")
+            .config("spark.sql.catalog.local.warehouse", warehouse)
+            .config("spark.sql.session.timeZone", "UTC")
+            .config("spark.ui.enabled", "false")
+            .config("spark.driver.memory", "2g")
+            .config("spark.sql.shuffle.partitions", "1")
+            .getOrCreate()
+        )
+        sess.sparkContext.setLogLevel("OFF")
+        return sess, spark_fn
+    from repark import SparkSession
+    from repark.spark import functions as spark_fn
+
+    sess = (
+        SparkSession.builder.config("spark.sql.ansi.enabled", "true")
+        .config("spark.sql.catalog.local.type", "hadoop")
+        .config("spark.sql.catalog.local.warehouse", warehouse)
+        .config("spark.sql.session.timeZone", "UTC")
+        .getOrCreate()
+    )
+    return sess, spark_fn
+
+
+def parse_args(argv: list[str]) -> tuple[str, Path]:
+    if len(argv) == 3 and argv[0] == "--engine":
+        return argv[1], Path(argv[2])
+    if len(argv) == 2 and argv[0].startswith("--engine="):
+        return argv[0].split("=", 1)[1], Path(argv[1])
+    if len(argv) == 2 and argv[0] in ("spark", "repark"):
+        return argv[0], Path(argv[1])
+    if len(argv) == 1:
+        return "repark", Path(argv[0])
+    raise SystemExit("usage: probe_edge.py [--engine spark|repark] <out.json>")
 
 
 def err_cond(message: str) -> str | None:
@@ -43,16 +92,12 @@ def record_cell(
         out[name] = {"ok": False, "cond": err_cond(msg), "head": msg[:140], "rows": count}
 
 
-def run_all() -> dict[str, Any]:
+def run_all(engine: str) -> dict[str, Any]:
     out: dict[str, Any] = {}
-    with tempfile.TemporaryDirectory() as tmp:
-        spark = (
-            SparkSession.builder.config("spark.sql.ansi.enabled", "true")
-            .config("spark.sql.catalog.local.type", "hadoop")
-            .config("spark.sql.catalog.local.warehouse", str(Path(tmp) / "wh"))
-            .config("spark.sql.session.timeZone", "UTC")
-            .getOrCreate()
-        )
+    wh = tempfile.mkdtemp(prefix=f"wh_edge_{engine}_", dir=tempfile.gettempdir())
+    spark, spark_fn = build_session(engine, wh)
+    try:
+        spark.conf.set("spark.sql.ansi.enabled", "true")
         spark.sql("CREATE NAMESPACE IF NOT EXISTS local.db").collect()
         spark.sql("CREATE TABLE local.db.real_empty (s STRING) USING iceberg").collect()
 
@@ -123,6 +168,14 @@ def run_all() -> dict[str, Any]:
                     f"INSERT OVERWRITE {f} SELECT x FROM "
                     "(SELECT * FROM VALUES (CAST('x' AS DOUBLE)) AS v(x)) q WHERE 1 = 0"
                 ).collect(),
+                fq,
+            )
+            fq = fresh_dbl(spark, f"e_upd_dbl_{ansi_val}", seed=False)
+            record_cell(
+                out,
+                spark,
+                f"{ansi_val}|update_empty_no_where",
+                lambda f=fq: spark.sql(f"UPDATE {f} SET x = CAST('x' AS DOUBLE)").collect(),
                 fq,
             )
             fq = f"local.db.e_upd_ts_{ansi_val}"
@@ -208,12 +261,17 @@ def run_all() -> dict[str, Any]:
             lambda f=fq: df_on.writeTo(f).overwrite(spark_fn.lit(True)),
             fq,
         )
+    finally:
         spark.stop()
+        shutil.rmtree(wh, ignore_errors=True)
     return out
 
 
 def main() -> int:
-    Path(sys.argv[1]).write_text(json.dumps(run_all(), indent=2), encoding="utf-8")
+    engine, out_path = parse_args(sys.argv[1:])
+    out = run_all(engine)
+    out_path.write_text(json.dumps(out, indent=2), encoding="utf-8")
+    print(f"done engine={engine} cells={len(out)}")
     return 0
 
 

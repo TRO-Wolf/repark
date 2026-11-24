@@ -54,7 +54,7 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 - [test_ice_write_options_rp_1.py](test_ice_write_options_rp_1.py) — ICE-WRITE-OPTIONS-RP-1 — a caller ``replace-partitions`` summary value wins.
 - [test_ice_write_refusals_1.py](test_ice_write_refusals_1.py) — U6 WRITE-REFUSALS — refusal parity on `write.spark.accept-any-schema` tables.
 - [test_ice_write_sql_1.py](test_ice_write_sql_1.py) — U8 WRITE-SQL PR1 and PR2 — REPLACE WHERE, INSERT PARTITION, bucketed INSERT, nested SET.
-- [test_insert_overwrite_const_cast_1.py](test_insert_overwrite_const_cast_1.py) — INSERT-OVERWRITE-CONST-CAST-1 (2026-11-24): 260 facade pins across write doors, shapes, dead branches, ANSI modes, and view/DF capture.
+- [test_insert_overwrite_const_cast_1.py](test_insert_overwrite_const_cast_1.py), [test_insert_overwrite_const_cast_1_delta1.py](test_insert_overwrite_const_cast_1_delta1.py) — INSERT-OVERWRITE-CONST-CAST-1 (2026-11-24): 289 pins.
 - [test_insert_store_assign.py](test_insert_store_assign.py) — Non-MERGE write-path ANSI store-assignment gate (WI-1) — the `INSERT OVERWRITE` door.
 - [test_io_bucket_cluster_1.py](test_io_bucket_cluster_1.py) — io-bucket-cluster-1 pins: the bucketBy / sortBy / clusterBy writer surface.
 - [test_merge_differential_parity.py](test_merge_differential_parity.py) — MERGE INTO differential rows (gap G3, record-side) — post-MERGE table vs live Spark.
