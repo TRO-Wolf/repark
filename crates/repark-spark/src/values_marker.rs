@@ -136,6 +136,16 @@ pub async fn plan_marked_sql(
     state.statement_to_plan(statement).await
 }
 
+fn lower_fragment_statement(statement: &mut DfStatement) {
+    match statement {
+        DfStatement::Statement(inner) => {
+            crate::keyword_lower::lower_fragment_timestamp_casts(inner.as_mut());
+        }
+        DfStatement::Explain(explain) => lower_fragment_statement(explain.statement.as_mut()),
+        _ => {}
+    }
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub async fn plan_marked_fragment(
     ctx: &datafusion::prelude::SessionContext,
@@ -144,8 +154,11 @@ pub async fn plan_marked_fragment(
     let state = ctx.state();
     let dialect = state.config().options().sql_parser.dialect;
     let mut statement = state.sql_to_statement(sql, &dialect)?;
-    if session_marks_values(&state) && mark_fragment_statement(&mut statement) {
-        return Ok(None);
+    if session_marks_values(&state) {
+        lower_fragment_statement(&mut statement);
+        if mark_fragment_statement(&mut statement) {
+            return Ok(None);
+        }
     }
     state.statement_to_plan(statement).await.map(Some)
 }

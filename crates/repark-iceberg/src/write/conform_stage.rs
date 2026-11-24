@@ -13,7 +13,9 @@ use datafusion::logical_expr::{
 use datafusion::optimizer::AnalyzerRule;
 use datafusion::prelude::{DataFrame, SessionContext};
 use iceberg::table::Table;
-use repark_common::udf_names::{NARROW_TIMESTAMP_NS_NAME, STORE_PAIR_KERNEL_NAME, ZONE_SEAM_NAME};
+use repark_common::udf_names::{
+    NARROW_TIMESTAMP_NS_NAME, STORE_PAIR_KERNEL_NAME, TIMESTAMP_LTZ_CAST_NAME, ZONE_SEAM_NAME,
+};
 
 use super::conform::float_decimal_store_expr;
 use super::ntz_store::{
@@ -369,6 +371,9 @@ fn leaf_store(
     }
     if matches!(source, DataType::Timestamp(TimeUnit::Nanosecond, _)) {
         let udf = registered_kernel(ctx, NARROW_TIMESTAMP_NS_NAME, source, target)?;
+        return Ok(Some(call(udf, vec![column])));
+    }
+    if let Ok(udf) = ctx.udf(TIMESTAMP_LTZ_CAST_NAME) {
         return Ok(Some(call(udf, vec![column])));
     }
     let instant = Field::new(field.name(), target.clone(), field.is_nullable());

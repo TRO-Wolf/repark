@@ -97,6 +97,7 @@ fn marked_logical_expr(
     let dialect = state.config().options().sql_parser.dialect;
     let mut parsed = state.sql_to_expr_with_alias(sql, &dialect)?;
     if repark_spark::is_spark_door_session(state.config()) {
+        repark_spark::keyword_lower::lower_fragment_timestamp_casts(&mut parsed.expr);
         repark_spark::values_marker::mark_values_cells(&mut parsed.expr);
     }
     state.create_logical_expr_from_sql_expr(parsed, schema)
@@ -110,6 +111,7 @@ fn fragment_logical_expr(
     let state = context.state();
     let dialect = state.config().options().sql_parser.dialect;
     let mut parsed = state.sql_to_expr_with_alias(sql, &dialect)?;
+    repark_spark::keyword_lower::lower_fragment_timestamp_casts(&mut parsed.expr);
     repark_spark::values_marker::mark_fragment_cells(&mut parsed.expr);
     state.create_logical_expr_from_sql_expr(parsed, schema)
 }
@@ -122,6 +124,7 @@ fn folded_qualifier_predicate(
     let dialect = state.config().options().sql_parser.dialect;
     let mut parsed = state.sql_to_expr_with_alias(canonical, &dialect).ok()?;
     if repark_spark::is_spark_door_session(state.config()) {
+        repark_spark::keyword_lower::lower_fragment_timestamp_casts(&mut parsed.expr);
         repark_spark::values_marker::mark_values_cells(&mut parsed.expr);
     }
     repark_core::frame_names::fold_frame_qualifiers(
@@ -323,8 +326,9 @@ pub(super) fn sql_context(
 }
 
 pub(super) fn build_expr_context() -> datafusion::error::Result<SessionContext> {
-    let mut config =
+    let config =
         repark_functions::session_time_zone::with_deferred_session_time_zone(SessionConfig::new());
+    let mut config = repark_functions::timestamp_type::with_deferred_spark_timestamp_type(config);
     config.options_mut().sql_parser.dialect = datafusion::config::Dialect::Databricks;
     config.options_mut().sql_parser.enable_ident_normalization = false;
     config.options_mut().sql_parser.default_null_ordering = SPARK_NULL_ORDERING.to_string();

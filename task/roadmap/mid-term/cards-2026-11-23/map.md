@@ -34,5 +34,8 @@ awaits the owner's rating. Each card row records its own status.
   `INSERT OVERWRITE` with an invalid constant cast wipes the table where Spark refuses.
 - [SPARK-DOOR-OVER-ACCEPT-SYNTAX-1](spark-door-over-accept-syntax-1-card-2026-11-24.md) (S3) — **card:** `1e2foo`,
   `named_struct(…).a` with a bad sibling, `* EXCLUDE` and `DELETE` without `FROM` answer where Spark refuses.
+- [FEXPR-TIMESTAMP-DISPLAY-NAME-1](fexpr-timestamp-display-name-1-card-2026-11-24.md) (S3 proposed) — **card:**
+  unaliased timestamp literals and NTZ casts on `F.expr`, `selectExpr`, and `spark.sql` carry raw/static column names
+  instead of Spark's zone-rendered `TIMESTAMP '...'` / `TIMESTAMP_NTZ '...'` / `CAST(... AS TIMESTAMP_NTZ)` names.
 
 Up: [../map.md](../map.md).

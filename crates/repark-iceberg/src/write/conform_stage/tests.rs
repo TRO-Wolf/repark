@@ -403,3 +403,36 @@ async fn stores_a_float_leaf_by_the_kernel(
         "{site:?}: {shown}"
     );
 }
+
+#[tokio::test]
+async fn ntz_leaf_to_ltz_target_uses_explicit_ltz_kernel_when_registered() {
+    use datafusion::logical_expr::{ColumnarValue, Volatility, create_udf};
+    use repark_common::udf_names::TIMESTAMP_LTZ_CAST_NAME;
+
+    let ctx = SessionContext::new();
+    let ltz_udf = create_udf(
+        TIMESTAMP_LTZ_CAST_NAME,
+        vec![wall()],
+        instant(),
+        Volatility::Volatile,
+        Arc::new(|args: &[ColumnarValue]| Ok(args[0].clone())),
+    );
+    ctx.register_udf(ltz_udf);
+    let frame = ctx
+        .sql("SELECT arrow_cast('2024-01-01 02:00:00', 'Timestamp(Microsecond, None)') AS ts")
+        .await
+        .expect("frame");
+    let targets = vec![("ts".to_string(), instant())];
+    let request = StageRequest {
+        site: StageSite::InsertByName,
+        targets: &targets,
+        by_name: true,
+        fold: false,
+        gate_op: None,
+        pairing: StructPairing::by_name(false),
+        table: "``",
+    };
+    let plan = conform_stage(&ctx, frame.logical_plan().clone(), &request).expect("stage");
+    let shown = plan.display_indent().to_string();
+    assert!(shown.contains(TIMESTAMP_LTZ_CAST_NAME), "{shown}");
+}

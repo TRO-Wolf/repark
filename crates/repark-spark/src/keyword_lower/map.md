@@ -16,7 +16,11 @@ lowering it calls first.
   `__repark_try_cast_timestamp_ntz__`, and a `TIMESTAMP_NTZ` typed string that escaped the
   token layer into the cast of its text. Nested targets (`ARRAY`, `STRUCT`, `MAP`) stay
   untouched for the R4 refusal. Reached from `lower_expression`,
-  `TimestampNsCastLower::post_visit_expr` and `TimestampNsCastProbe`.
+  `TimestampNsCastLower::post_visit_expr`, `TimestampNsCastProbe`, and
+  `lower_fragment_timestamp_casts`. **FEXPR-TIMESTAMP-NTZ-1 (2026-11-24):** adds
+  `lower_fragment_timestamp_ltz_cast` (explicit `TIMESTAMP_LTZ` casts/literals and zoned
+  `TIMESTAMP '...'` typed strings -> `__repark_cast_timestamp_ltz__` /
+  `__repark_try_cast_timestamp_ltz__`) for `F.expr` and Spark-door `filter(str)` fragments.
 - `ltz_values_cast.rs` — **WO NTZ-STORE-DOORS-1 second re-verify fold (2026-09-29,
   RD3-1):** `mark_values_timestamp_casts` wraps each `VALUES` cell that is a written
   `CAST` / `::` to `TIMESTAMP` (or `TIMESTAMP_LTZ`), through parentheses, in one more

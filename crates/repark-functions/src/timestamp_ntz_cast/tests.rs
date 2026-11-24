@@ -120,6 +120,28 @@ async fn malformed_strings_raise_under_ansi_and_null_under_try_cast() {
         .await
         .expect("collect");
     assert!(batches[0].column(0).is_null(0));
+    let non_ansi_config = crate::ansi::with_spark_ansi_config(
+        crate::session_time_zone::with_session_time_zone(SessionConfig::new(), "UTC"),
+        false,
+    );
+    let non_ansi_ctx = crate::spark_type_planner::planned_context(non_ansi_config);
+    crate::register_all(&non_ansi_ctx);
+    for rule in crate::analyzer_rules() {
+        non_ansi_ctx.add_analyzer_rule(rule);
+    }
+    let non_ansi = non_ansi_ctx
+        .sql("SELECT __repark_cast_timestamp_ntz__('x') AS v")
+        .await
+        .expect("plan")
+        .collect()
+        .await
+        .expect("collect");
+    assert_eq!(
+        non_ansi[0].schema().field(0).data_type(),
+        &ntz_timestamp_type()
+    );
+    assert!(non_ansi[0].schema().field(0).is_nullable());
+    assert!(non_ansi[0].column(0).is_null(0));
 }
 
 #[tokio::test]

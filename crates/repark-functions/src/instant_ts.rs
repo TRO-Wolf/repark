@@ -16,7 +16,7 @@ use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::simplify::{ExprSimplifyResult, SimplifyContext};
 use datafusion::logical_expr::{
     Cast, ColumnarValue, Expr, ExprSchemable, LogicalPlan, ReturnFieldArgs, ScalarFunctionArgs,
-    ScalarUDF, ScalarUDFImpl, Signature, Volatility,
+    ScalarUDF, ScalarUDFImpl, Signature, TryCast, Union, Volatility,
 };
 use datafusion::optimizer::AnalyzerRule;
 
@@ -29,7 +29,13 @@ use crate::spark_string_timestamp::{
     spark_string_literal,
 };
 use crate::spark_type_planner::planned_instant_cast;
-use crate::timestamp_type::{SparkTimestampType, spark_timestamp_type_from_options};
+use crate::timestamp_type::{
+    SparkTimestampType, is_spark_timestamp_type_deferred, spark_timestamp_type_from_options,
+};
+
+pub(crate) mod ltz_cast;
+
+pub use ltz_cast::{TIMESTAMP_LTZ_CAST_NAME, TRY_TIMESTAMP_LTZ_CAST_NAME, timestamp_ltz_cast_udf};
 
 /// Spark's default `TIMESTAMP` / LTZ Arrow type — µs with a UTC annotation.
 pub(crate) fn ltz_timestamp_type() -> DataType {
@@ -63,6 +69,8 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         crate::timestamp_ntz_cast::timestamp_ntz_cast_udf(false),
         crate::timestamp_ntz_cast::timestamp_ntz_cast_udf(true),
         crate::timestamp_ntz_cast::timestamp_ntz_literal_udf(),
+        ltz_cast::timestamp_ltz_cast_udf(false),
+        ltz_cast::timestamp_ltz_cast_udf(true),
     ]
 }
 
@@ -354,7 +362,8 @@ fn parse_extraction_zone(zone_id: &str) -> Result<Tz> {
 }
 
 /// `true` when Spark would treat the string as already carrying a zone (instant, not wall).
-pub(crate) fn string_carries_timezone(text: &str) -> bool {
+#[must_use]
+pub fn string_carries_timezone(text: &str) -> bool {
     let trimmed = text.trim();
     if trimmed.is_empty() {
         return false;
@@ -530,26 +539,37 @@ impl AnalyzerRule for SparkLtzTimestampCast {
         let zone = (!is_session_time_zone_deferred(config))
             .then(|| session_time_zone_from_options(config).to_string());
         let zone_ref = zone.as_deref();
+        let defer_timestamp_type = is_spark_timestamp_type_deferred(config);
         let timestamp_type = spark_timestamp_type_from_options(config);
         let empty = DFSchema::empty();
         let plan = crate::timestamp_ns_cast::widen_mixed_values_timestamps(
             plan,
             &|cell: Expr| {
-                cell.transform_up(|node| Ok(rewrite_cast(node, &empty, zone_ref, timestamp_type)))
-                    .data()
+                cell.transform_up(|node| {
+                    Ok(rewrite_cast(
+                        node,
+                        &empty,
+                        zone_ref,
+                        timestamp_type,
+                        defer_timestamp_type,
+                    ))
+                })
+                .data()
             },
-            timestamp_type.is_ntz(),
+            !defer_timestamp_type && timestamp_type.is_ntz(),
         )?;
-        let plan = if timestamp_type.is_ntz() {
+        let plan = if defer_timestamp_type || timestamp_type.is_ntz() {
             plan
         } else {
             crate::timestamp_ntz_cast::retarget_dml_store_casts(plan)?
         };
-        plan.transform_up_with_subqueries(|node| rewrite_plan(node, zone_ref, timestamp_type))
-            .data()
+        plan.transform_up_with_subqueries(|node| {
+            rewrite_plan(node, zone_ref, timestamp_type, defer_timestamp_type)
+        })
+        .data()
     }
 
-    #[allow(clippy::unnecessary_literal_bound)] // `AnalyzerRule::name` ties the lifetime to &self
+    #[allow(clippy::unnecessary_literal_bound)]
     fn name(&self) -> &str {
         "spark_ltz_timestamp_cast"
     }
@@ -559,7 +579,14 @@ fn rewrite_plan(
     plan: LogicalPlan,
     zone: Option<&str>,
     timestamp_type: SparkTimestampType,
+    defer_timestamp_type: bool,
 ) -> Result<Transformed<LogicalPlan>> {
+    if !defer_timestamp_type
+        && timestamp_type.is_ntz()
+        && let LogicalPlan::Union(union) = plan
+    {
+        return rebuild_stale_union(union);
+    }
     let mut schema = DFSchema::empty();
     for input in plan.inputs() {
         schema.merge(input.schema());
@@ -568,9 +595,9 @@ fn rewrite_plan(
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
         let rewritten = expr.transform_up(|node| {
-            rewrite_cast(node, &schema, zone, timestamp_type).transform_data(|typed| {
-                crate::timestamp_ns_cast::wall_kernel_by_target(typed, &schema)
-            })
+            rewrite_cast(node, &schema, zone, timestamp_type, defer_timestamp_type).transform_data(
+                |typed| crate::timestamp_ns_cast::wall_kernel_by_target(typed, &schema),
+            )
         })?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
@@ -579,15 +606,72 @@ fn rewrite_plan(
         .map_data(crate::timestamp_ns_cast::conform_values_timestamp_columns)
 }
 
+fn rebuild_stale_union(union: Union) -> Result<Transformed<LogicalPlan>> {
+    let stale = union.inputs.iter().any(|input| {
+        let merged = union.schema.fields();
+        let mine = input.schema().fields();
+        mine.len() != merged.len()
+            || mine
+                .iter()
+                .zip(merged.iter())
+                .any(|(mine, merged)| mine.data_type() != merged.data_type())
+    });
+    if !stale {
+        return Ok(Transformed::no(LogicalPlan::Union(union)));
+    }
+    let rebuilt = Union::try_new_with_loose_types(union.inputs)?;
+    Ok(Transformed::yes(LogicalPlan::Union(rebuilt)))
+}
+
 fn rewrite_cast(
     expr: Expr,
     schema: &DFSchema,
     zone: Option<&str>,
     timestamp_type: SparkTimestampType,
+    defer_timestamp_type: bool,
 ) -> Transformed<Expr> {
+    if defer_timestamp_type {
+        if let Some((arg, _)) = ltz_cast::unwrap_ltz_cast_marker(&expr)
+            && let Some(literal) = spark_string_literal(&arg, None)
+        {
+            return Transformed::yes(literal);
+        }
+        return Transformed::no(expr);
+    }
+    if let Some((arg, try_cast)) = ltz_cast::unwrap_ltz_cast_marker(&expr) {
+        return rewrite_explicit_ltz_marker(arg, try_cast, schema, zone);
+    }
     if timestamp_type.is_ntz() {
         return rewrite_cast_as_ntz(expr, schema);
     }
+    rewrite_cast_as_ltz(expr, schema, zone)
+}
+
+fn rewrite_explicit_ltz_marker(
+    arg: Expr,
+    try_cast: bool,
+    schema: &DFSchema,
+    zone: Option<&str>,
+) -> Transformed<Expr> {
+    if !try_cast
+        && arg
+            .get_type(schema)
+            .is_ok_and(|data_type| is_ltz_timestamp(&data_type))
+    {
+        return Transformed::yes(arg);
+    }
+    let nullable = try_cast || arg.nullable(schema).unwrap_or(true);
+    let field = Arc::new(Field::new("ts", ltz_timestamp_type(), nullable));
+    let unwrapped = if try_cast {
+        Expr::TryCast(TryCast::new_from_field(Box::new(arg), field))
+    } else {
+        Expr::Cast(Cast::new_from_field(Box::new(arg), field))
+    };
+    let rewritten = rewrite_cast_as_ltz(unwrapped, schema, zone);
+    Transformed::yes(rewritten.data)
+}
+
+fn rewrite_cast_as_ltz(expr: Expr, schema: &DFSchema, zone: Option<&str>) -> Transformed<Expr> {
     if let Some(seamed) = crate::zone_seam::rewrite_zone_seam(&expr, schema) {
         return Transformed::yes(seamed);
     }
@@ -693,6 +777,26 @@ fn wrap_as_ltz(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
 
 /// `spark.sql.timestampType=TIMESTAMP_NTZ`: bare `TIMESTAMP` literals / casts become naive µs.
 fn rewrite_cast_as_ntz(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
+    if let Expr::TryCast(try_cast) = &expr {
+        let targeting_timestamp = matches!(try_cast.field.data_type(), DataType::Timestamp(_, _));
+        let targeting_ns = matches!(
+            try_cast.field.data_type(),
+            DataType::Timestamp(TimeUnit::Nanosecond, _)
+        );
+        if targeting_timestamp
+            && !targeting_ns
+            && let Ok(source) = try_cast.expr.get_type(schema)
+            && (is_ltz_timestamp(&source)
+                || is_wall_clock_cast_source(&source)
+                || matches!(source, DataType::Null))
+        {
+            return Transformed::yes(crate::timestamp_ntz_cast::timestamp_ntz_cast_expr(
+                *try_cast.expr.clone(),
+                true,
+            ));
+        }
+        return Transformed::no(expr);
+    }
     if let Expr::Cast(cast) = &expr {
         let targeting_naive_us = matches!(
             cast.field.data_type(),
@@ -717,7 +821,10 @@ fn rewrite_cast_as_ntz(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
                 .get_type(schema)
                 .is_ok_and(|data_type| is_ltz_timestamp(&data_type));
             if child_is_to_timestamp || child_is_ltz {
-                return wrap_as_ntz(*cast.expr.clone(), schema);
+                return Transformed::yes(crate::timestamp_ntz_cast::timestamp_ntz_cast_expr(
+                    *cast.expr.clone(),
+                    false,
+                ));
             }
             return Transformed::no(expr);
         }
@@ -726,7 +833,10 @@ fn rewrite_cast_as_ntz(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
                 return Transformed::yes(planned);
             }
             if targeting_timestamp && !targeting_ns && is_ltz_timestamp(&source) {
-                return wrap_as_ntz(*cast.expr.clone(), schema);
+                return Transformed::yes(crate::timestamp_ntz_cast::timestamp_ntz_cast_expr(
+                    *cast.expr.clone(),
+                    false,
+                ));
             }
             if targeting_timestamp && !targeting_ns && is_wall_clock_cast_source(&source) {
                 return wrap_as_ntz(*cast.expr.clone(), schema);
@@ -747,252 +857,4 @@ fn wrap_as_ntz(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use datafusion::arrow::array::AsArray;
-    use datafusion::arrow::datatypes::TimestampMicrosecondType;
-    use datafusion::prelude::SessionContext;
-
-    fn ctx() -> SessionContext {
-        let ctx =
-            crate::spark_type_planner::planned_context(datafusion::prelude::SessionConfig::new());
-        crate::register_all(&ctx);
-        for rule in crate::analyzer_rules() {
-            ctx.add_analyzer_rule(rule);
-        }
-        ctx
-    }
-
-    #[tokio::test]
-    async fn now_and_current_timestamp_are_microsecond_utc_non_null() {
-        let ctx = ctx();
-        for sql in ["SELECT now() AS ts", "SELECT current_timestamp() AS ts"] {
-            let batches = ctx.sql(sql).await.expect(sql).collect().await.expect(sql);
-            let schema = batches[0].schema();
-            let field = schema.field(0);
-            assert_eq!(field.data_type(), &ltz_timestamp_type(), "{sql}: type");
-            assert!(!field.is_nullable(), "{sql}: Spark marks now() not-null");
-        }
-    }
-
-    #[tokio::test]
-    async fn to_timestamp_of_a_zone_suffixed_string_is_microsecond_utc() {
-        let ctx = ctx();
-        let sql = "SELECT to_timestamp('2024-03-10T01:30:00-05:00') AS ts";
-        let batches = ctx.sql(sql).await.expect(sql).collect().await.expect(sql);
-        let schema = batches[0].schema();
-        assert_eq!(schema.field(0).data_type(), &ltz_timestamp_type());
-        let ticks = batches[0]
-            .column(0)
-            .as_primitive::<TimestampMicrosecondType>()
-            .value(0);
-        assert_eq!(ticks, 1_710_052_200_000_000);
-    }
-
-    #[tokio::test]
-    async fn zoneless_to_timestamp_under_utc_session_keeps_wall_as_utc() {
-        let ctx = ctx();
-        let sql = "SELECT to_timestamp('2024-06-15 12:00:00') AS ts";
-        let batches = ctx.sql(sql).await.expect(sql).collect().await.expect(sql);
-        assert_eq!(
-            batches[0].schema().field(0).data_type(),
-            &ltz_timestamp_type()
-        );
-        let ticks = batches[0]
-            .column(0)
-            .as_primitive::<TimestampMicrosecondType>()
-            .value(0);
-        assert_eq!(ticks, 1_718_452_800_000_000);
-    }
-
-    fn ctx_at(zone: &str) -> SessionContext {
-        use datafusion::prelude::SessionConfig;
-        let config = crate::session_time_zone::with_session_time_zone(SessionConfig::new(), zone);
-        let ctx = crate::spark_type_planner::planned_context(config);
-        crate::register_all(&ctx);
-        for rule in crate::analyzer_rules() {
-            ctx.add_analyzer_rule(rule);
-        }
-        ctx
-    }
-
-    #[tokio::test]
-    async fn zoneless_inputs_localize_in_the_session_zone() {
-        let ctx = ctx_at("America/New_York");
-        let expected = 1_718_467_200_000_000_i64;
-        for sql in [
-            "SELECT to_timestamp('2024-06-15 12:00:00') AS ts",
-            "SELECT CAST('2024-06-15 12:00:00' AS TIMESTAMP) AS ts",
-            "SELECT TIMESTAMP '2024-06-15 12:00:00' AS ts",
-        ] {
-            let batches = ctx.sql(sql).await.expect(sql).collect().await.expect(sql);
-            assert_eq!(
-                batches[0].schema().field(0).data_type(),
-                &ltz_timestamp_type(),
-                "{sql}"
-            );
-            let ticks = batches[0]
-                .column(0)
-                .as_primitive::<TimestampMicrosecondType>()
-                .value(0);
-            assert_eq!(ticks, expected, "{sql}");
-        }
-    }
-
-    #[tokio::test]
-    async fn zone_suffixed_to_timestamp_is_not_localized_again() {
-        let ctx = ctx_at("America/New_York");
-        let sql = "SELECT to_timestamp('2024-06-15T12:00:00Z') AS ts";
-        let batches = ctx.sql(sql).await.expect(sql).collect().await.expect(sql);
-        let ticks = batches[0]
-            .column(0)
-            .as_primitive::<TimestampMicrosecondType>()
-            .value(0);
-        assert_eq!(ticks, 1_718_452_800_000_000);
-    }
-
-    #[tokio::test]
-    async fn integer_cast_to_timestamp_is_microsecond_utc_seconds() {
-        let ctx = ctx();
-        let sql = "SELECT CAST(CAST(-1800 AS BIGINT) AS TIMESTAMP) AS ts";
-        let batches = ctx.sql(sql).await.expect(sql).collect().await.expect(sql);
-        let schema = batches[0].schema();
-        assert_eq!(schema.field(0).data_type(), &ltz_timestamp_type());
-        let ticks = batches[0]
-            .column(0)
-            .as_primitive::<TimestampMicrosecondType>()
-            .value(0);
-        assert_eq!(ticks, -1_800_000_000);
-    }
-
-    fn ctx_ntz_at(zone: &str) -> SessionContext {
-        use datafusion::prelude::SessionConfig;
-        let config = crate::session_time_zone::with_session_time_zone(SessionConfig::new(), zone);
-        let config = crate::timestamp_type::with_spark_timestamp_type(
-            config,
-            crate::timestamp_type::SparkTimestampType::Ntz,
-        );
-        let ctx = crate::spark_type_planner::planned_context(config);
-        crate::register_all(&ctx);
-        for rule in crate::analyzer_rules() {
-            ctx.add_analyzer_rule(rule);
-        }
-        ctx
-    }
-
-    #[tokio::test]
-    async fn ntz_opt_in_bare_timestamp_is_naive_microseconds() {
-        let ctx = ctx_ntz_at("America/New_York");
-        let expected = 1_718_452_800_000_000_i64;
-        for sql in [
-            "SELECT TIMESTAMP '2024-06-15 12:00:00' AS ts",
-            "SELECT CAST('2024-06-15 12:00:00' AS TIMESTAMP) AS ts",
-        ] {
-            let batches = ctx.sql(sql).await.expect(sql).collect().await.expect(sql);
-            assert_eq!(
-                batches[0].schema().field(0).data_type(),
-                &ntz_timestamp_type(),
-                "{sql}"
-            );
-            let ticks = batches[0]
-                .column(0)
-                .as_primitive::<TimestampMicrosecondType>()
-                .value(0);
-            assert_eq!(ticks, expected, "{sql}");
-        }
-    }
-
-    #[tokio::test]
-    async fn ntz_opt_in_does_not_retarget_to_timestamp_or_now() {
-        let ctx = ctx_ntz_at("UTC");
-        let batches = ctx
-            .sql("SELECT to_timestamp('2024-06-15 12:00:00') AS ts")
-            .await
-            .expect("to_timestamp")
-            .collect()
-            .await
-            .expect("collect");
-        assert_eq!(
-            batches[0].schema().field(0).data_type(),
-            &ltz_timestamp_type(),
-            "to_timestamp stays LTZ; the knob is the SQL type name TIMESTAMP"
-        );
-        let batches = ctx
-            .sql("SELECT current_timestamp() AS ts")
-            .await
-            .expect("current_timestamp")
-            .collect()
-            .await
-            .expect("collect");
-        assert_eq!(
-            batches[0].schema().field(0).data_type(),
-            &ltz_timestamp_type(),
-            "current_timestamp is an instant, not the SQL type name"
-        );
-    }
-
-    #[tokio::test]
-    async fn ntz_opt_in_integer_cast_is_naive_microseconds_seconds() {
-        let ctx = ctx_ntz_at("UTC");
-        let sql = "SELECT CAST(CAST(-1800 AS BIGINT) AS TIMESTAMP) AS ts";
-        let batches = ctx.sql(sql).await.expect(sql).collect().await.expect(sql);
-        assert_eq!(
-            batches[0].schema().field(0).data_type(),
-            &ntz_timestamp_type()
-        );
-        let ticks = batches[0]
-            .column(0)
-            .as_primitive::<TimestampMicrosecondType>()
-            .value(0);
-        assert_eq!(ticks, -1_800_000_000);
-    }
-
-    #[tokio::test]
-    async fn deferred_session_zone_skips_zoneless_fold_and_keeps_zoned_fold() {
-        let config = crate::session_time_zone::with_deferred_session_time_zone(
-            datafusion::prelude::SessionConfig::new(),
-        );
-        let ctx = crate::spark_type_planner::planned_context(config);
-        crate::register_all(&ctx);
-        for rule in crate::analyzer_rules() {
-            ctx.add_analyzer_rule(rule);
-        }
-        for (sql, expected_fn) in [
-            (
-                "SELECT TIMESTAMP '2024-01-01 02:00:00' AS ts",
-                "to_timestamp",
-            ),
-            (
-                "SELECT CAST('2024-01-01 02:00:00' AS TIMESTAMP) AS ts",
-                "to_timestamp",
-            ),
-            (
-                "SELECT TRY_CAST('2024-01-01 02:00:00' AS TIMESTAMP) AS ts",
-                "try_to_timestamp",
-            ),
-        ] {
-            let unoptimized = ctx.sql(sql).await.expect(sql).into_unoptimized_plan();
-            let plan = crate::analyze_eagerly(&ctx.state(), unoptimized).expect(sql);
-            let display = format!("{plan}");
-            assert!(display.contains(expected_fn), "{sql}: {display}");
-            assert!(
-                !display.contains("TimestampMicrosecond("),
-                "{sql}: {display}"
-            );
-        }
-        for sql in [
-            "SELECT TIMESTAMP '2024-01-01 02:00:00Z' AS ts",
-            "SELECT CAST('2024-01-01 02:00:00+00:00' AS TIMESTAMP) AS ts",
-            "SELECT TRY_CAST('2024-01-01 02:00:00Z' AS TIMESTAMP) AS ts",
-        ] {
-            let unoptimized = ctx.sql(sql).await.expect(sql).into_unoptimized_plan();
-            let plan = crate::analyze_eagerly(&ctx.state(), unoptimized).expect(sql);
-            let display = format!("{plan}");
-            assert!(
-                display.contains("TimestampMicrosecond(1704074400000000"),
-                "{sql}: {display}"
-            );
-            assert!(!display.contains("to_timestamp"), "{sql}: {display}");
-        }
-    }
-}
+mod tests;

@@ -311,7 +311,7 @@ impl ScalarUDFImpl for SparkTimestampNtzCast {
                     let arg = scalar.map_or_else(|| field.name().to_owned(), ToString::to_string);
                     return Err(cast_refusal(self.try_cast, &arg, field.data_type(), scalar));
                 }
-                field.is_nullable() || self.try_cast
+                field.is_nullable() || self.try_cast || is_string_source(field.data_type())
             }
             None => true,
         };

@@ -59,14 +59,12 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   (22003), measured byte-exact on live Spark 4.1.2 for DOUBLE and DECIMAL(38,0)
   sources, with catalogue + template pins (44 conditions).
 
-- `udf_names.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** `NARROW_TIMESTAMP_NS_NAME` joins the names here, the narrowing kernel the conform stage names fail-closed (WS2-13).
-- `udf_names.rs` — **WRITE-SPINE-1 step 1a (2026-10-24):** the one home of the seven UDF
-  names that `repark-functions` and `repark-iceberg` both name: `TIMESTAMP_NTZ_CAST_NAME`,
-  `TIMESTAMP_NS_CAST_NAME`, `TIMESTAMPTZ_NS_CAST_NAME`, `CAST_MAP_NAME`, `ZONE_SEAM_NAME`,
-  `STORE_INT_GUARD_NAME` and `STORE_PAIR_KERNEL_NAME`. One `pub const` each, no logic. Each crate
-  re-exports them under its existing identifier, so no call site changed. Why: the iceberg write
-  path reaches the function kernels by name through the session's function registry, and the
-  names were two copies of the same string on each side of the crate line.
+- `udf_names.rs` — **WRITE-SPINE-1 (2026-10-24/25) & FEXPR-TIMESTAMP-NTZ-1 (2026-11-24):** shared
+  UDF names across `repark-functions` and `repark-iceberg`: `TIMESTAMP_NTZ_CAST_NAME`,
+  `TIMESTAMP_LTZ_CAST_NAME`, `TRY_TIMESTAMP_LTZ_CAST_NAME`, `TIMESTAMP_NS_CAST_NAME`,
+  `TIMESTAMPTZ_NS_CAST_NAME`, `NARROW_TIMESTAMP_NS_NAME`, `CAST_MAP_NAME`, `ZONE_SEAM_NAME`,
+  `STORE_INT_GUARD_NAME`, `STORE_PAIR_KERNEL_NAME`, `NORMALIZE_ZERO_NAME`. One `pub const` each,
+  re-exported by each crate so the Iceberg write spine names kernels through the registry.
 
 - `zone_horizon.rs` — **C-2d fold 1 (2026-10-07):** the zone horizon, moved here from
   `repark-functions`' `spark_string_timestamp/instant.rs` so the engine can read it too.

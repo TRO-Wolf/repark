@@ -1,4 +1,6 @@
 pub const TIMESTAMP_NTZ_CAST_NAME: &str = "__repark_cast_timestamp_ntz__";
+pub const TIMESTAMP_LTZ_CAST_NAME: &str = "__repark_cast_timestamp_ltz__";
+pub const TRY_TIMESTAMP_LTZ_CAST_NAME: &str = "__repark_try_cast_timestamp_ltz__";
 pub const TIMESTAMP_NS_CAST_NAME: &str = "__repark_cast_timestamp_ns__";
 pub const TIMESTAMPTZ_NS_CAST_NAME: &str = "__repark_cast_timestamptz_ns__";
 pub const NARROW_TIMESTAMP_NS_NAME: &str = "__repark_narrow_timestamp_ns__";

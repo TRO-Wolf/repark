@@ -561,7 +561,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **TIMESTAMP_LTZ**). Parsed from the builder map in `SparkExtension::configure`.
   Missing carrier also defaults LTZ. Invalid value
   fail-louds naming `TIMESTAMP_LTZ` and `TIMESTAMP_NTZ`. Ledger:
-  `task/q10-timestamptype-ledger.md`.
+  `task/q10-timestamptype-ledger.md`. **FEXPR-TIMESTAMP-NTZ-1 (2026-11-24):** adds
+  `DeferredSparkTimestampTypeConfig` (`with_deferred_spark_timestamp_type` /
+  `is_spark_timestamp_type_deferred`) for fragment contexts.
 - `ansi.rs` — **U5 / Q10=A:** Spark-door `spark.sql.ansi.enabled` carrier; `decimal_legacy.rs` (DECIMAL-COMMON-TYPE-1) carries the decimal legacy flag alike
   (`SparkAnsiConfig`, `PREFIX = repark.ansi`, default **TRUE**) + the embedded
   `__repark_ansi_nonzero_divisor__` raise kernel. Parsed from the builder map in
@@ -1083,6 +1085,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **WO NTZ-STORE-DOORS-1 third re-verify fold (2026-09-29, RD4-1):** the call also passes
   `timestamp_type.is_ntz()`, so the pass reads a `TIMESTAMP` literal by the session's
   default timestamp type.
+  **FEXPR-TIMESTAMP-NTZ-1 (2026-11-24):** [instant_ts/](instant_ts/map.md) holds `ltz_cast.rs`
+  (`__repark_cast_timestamp_ltz__` / `__repark_try_cast_timestamp_ltz__`) and moved `tests.rs`.
+  `SparkLtzTimestampCast` skips bare `TIMESTAMP` rewrites under `DeferredSparkTimestampTypeConfig`
+  (folding only zoned LTZ markers), unwraps explicit LTZ markers via the LTZ path even in NTZ
+  sessions, handles `TryCast` and LTZ->NTZ wall conversion in `rewrite_cast_as_ntz`, and rebuilds
+  stale `Union` schemas in NTZ sessions.
 - `timestamp_cast.rs` — **C-4 fold 3 item 2 (2026-10-11):** the tick, wall-clock and
   formatting kernels of `__repark_timestamp_to_string__` moved to
   `repark-common`'s `spark_timestamp_text.rs` so the Postgres write chokepoint calls
@@ -1259,7 +1267,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   VALUES-schema fields wrap in the store cast too, through direct VALUES and
   pass-through subquery nests, so `from_utc_timestamp` / `to_utc_timestamp` /
   `date_trunc` cells store the session wall again; the wrap skips an
-  already-wrapped expression.
+  already-wrapped expression. **FEXPR-TIMESTAMP-NTZ-1 (2026-11-24):** `SparkTimestampNtzCast`
+  marks string-source outputs nullable so `CAST('bad' AS TIMESTAMP_NTZ)` returns `NULL` under
+  `ansi=false` without an Arrow schema error.
 - `timestamp_ltz_ntz.rs` — **ICE-TSNS-FLOOR-DOORS-1 (2026-10-14, R-009):** the `Timestamp` arm of
   `ntz_single` hands every timestamp source to `timestamp_ns_cast::store_micros` with the
   `TIMESTAMP_NTZ` type; its two Arrow casts are gone, and `unlocalize_to_walls` is `pub(crate)`

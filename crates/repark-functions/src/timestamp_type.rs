@@ -150,6 +150,51 @@ pub fn spark_timestamp_type_from_options(options: &ConfigOptions) -> SparkTimest
         })
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct DeferredSparkTimestampTypeConfig;
+
+impl ConfigExtension for DeferredSparkTimestampTypeConfig {
+    const PREFIX: &'static str = "repark.deferred_timestamp_type";
+}
+
+impl ExtensionOptions for DeferredSparkTimestampTypeConfig {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn cloned(&self) -> Box<dyn ExtensionOptions> {
+        Box::new(*self)
+    }
+
+    fn set(&mut self, key: &str, _value: &str) -> Result<()> {
+        Err(DataFusionError::Configuration(format!(
+            "`{}.{key}` is not a settable option",
+            Self::PREFIX
+        )))
+    }
+
+    fn entries(&self) -> Vec<ConfigEntry> {
+        Vec::new()
+    }
+}
+
+#[must_use]
+pub fn with_deferred_spark_timestamp_type(config: SessionConfig) -> SessionConfig {
+    config.with_option_extension(DeferredSparkTimestampTypeConfig)
+}
+
+#[must_use]
+pub fn is_spark_timestamp_type_deferred(options: &ConfigOptions) -> bool {
+    options
+        .extensions
+        .get::<DeferredSparkTimestampTypeConfig>()
+        .is_some()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -220,6 +265,17 @@ mod tests {
         assert_eq!(
             spark_timestamp_type_from_options(config.options()),
             SparkTimestampType::Ntz
+        );
+    }
+
+    #[test]
+    fn deferred_timestamp_type_marker_round_trips() {
+        assert!(!is_spark_timestamp_type_deferred(&ConfigOptions::default()));
+        let config = with_deferred_spark_timestamp_type(SessionConfig::new());
+        assert!(is_spark_timestamp_type_deferred(config.options()));
+        assert_eq!(
+            spark_timestamp_type_from_options(config.options()),
+            SparkTimestampType::Ltz
         );
     }
 }

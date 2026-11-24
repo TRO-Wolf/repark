@@ -23,7 +23,7 @@ mod insert_arity;
 mod insert_by_name;
 mod insert_overwrite;
 mod insert_timestamp_ns;
-mod keyword_lower;
+pub mod keyword_lower;
 mod local_fs_ddl;
 mod merge;
 mod merge_fragments;

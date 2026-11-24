@@ -497,6 +497,7 @@ fn expr_context_defers_zoneless_timestamp_literals_and_folds_zoned_text() {
     let context = super::expr_build::build_expr_context().expect("expression context");
     let config = context.copied_config();
     assert!(repark_functions::session_time_zone::is_session_time_zone_deferred(config.options()));
+    assert!(repark_functions::timestamp_type::is_spark_timestamp_type_deferred(config.options()));
     assert!(
         config
             .options()
@@ -504,26 +505,33 @@ fn expr_context_defers_zoneless_timestamp_literals_and_folds_zoned_text() {
             .get::<repark_functions::session_time_zone::SessionTimeZoneConfig>()
             .is_none()
     );
-    for (sql, expected_udf) in [
-        ("TIMESTAMP '2024-01-01 02:00:00'", "to_timestamp"),
-        ("CAST('2024-01-01 02:00:00' AS TIMESTAMP)", "to_timestamp"),
-        (
-            "TRY_CAST('2024-01-01 02:00:00' AS TIMESTAMP)",
-            "try_to_timestamp",
-        ),
+    for sql in [
+        "TIMESTAMP '2024-01-01 02:00:00'",
+        "CAST('2024-01-01 02:00:00' AS TIMESTAMP)",
+        "CAST('2024-01-01 02:00:00Z' AS TIMESTAMP)",
     ] {
         let column = PyColumn::sql(sql, false).expect(sql);
-        match column.expr() {
-            Expr::ScalarFunction(function) => {
-                assert_eq!(function.func.name(), expected_udf, "{sql}");
-            }
-            other => panic!("{sql}: expected {expected_udf}, got {other:?}"),
-        }
+        assert!(
+            matches!(column.expr(), Expr::Cast(_)),
+            "{sql}: expected deferred Cast, got {:?}",
+            column.expr()
+        );
+    }
+    for sql in [
+        "TRY_CAST('2024-01-01 02:00:00' AS TIMESTAMP)",
+        "TRY_CAST('2024-01-01 02:00:00Z' AS TIMESTAMP)",
+    ] {
+        let column = PyColumn::sql(sql, false).expect(sql);
+        assert!(
+            matches!(column.expr(), Expr::TryCast(_)),
+            "{sql}: expected deferred TryCast, got {:?}",
+            column.expr()
+        );
     }
     for sql in [
         "TIMESTAMP '2024-01-01 02:00:00Z'",
         "TIMESTAMP '2024-01-01 02:00:00+00:00'",
-        "TRY_CAST('2024-01-01 02:00:00Z' AS TIMESTAMP)",
+        "TRY_CAST('2024-01-01 02:00:00Z' AS TIMESTAMP_LTZ)",
     ] {
         let column = PyColumn::sql(sql, false).expect(sql);
         match column.expr() {
@@ -532,6 +540,32 @@ fn expr_context_defers_zoneless_timestamp_literals_and_folds_zoned_text() {
                 assert_eq!(zone.as_ref(), "UTC", "{sql}");
             }
             other => panic!("{sql}: expected folded UTC TimestampMicrosecond, got {other:?}"),
+        }
+    }
+    for (sql, expected_udf) in [
+        (
+            "CAST(TIMESTAMP '2024-01-01 02:00:00' AS TIMESTAMP_NTZ)",
+            repark_functions::timestamp_ntz_cast::TIMESTAMP_NTZ_CAST_NAME,
+        ),
+        (
+            "TRY_CAST(TIMESTAMP '2024-01-01 02:00:00' AS TIMESTAMP_NTZ)",
+            repark_functions::timestamp_ntz_cast::TRY_TIMESTAMP_NTZ_CAST_NAME,
+        ),
+        (
+            "CAST(ts AS TIMESTAMP_NTZ)",
+            repark_functions::timestamp_ntz_cast::TIMESTAMP_NTZ_CAST_NAME,
+        ),
+        (
+            "CAST('2024-01-01 02:00:00' AS TIMESTAMP_LTZ)",
+            repark_functions::instant_ts::TIMESTAMP_LTZ_CAST_NAME,
+        ),
+    ] {
+        let column = PyColumn::sql(sql, false).expect(sql);
+        match column.expr() {
+            Expr::ScalarFunction(function) => {
+                assert_eq!(function.func.name(), expected_udf, "{sql}");
+            }
+            other => panic!("{sql}: expected {expected_udf}, got {other:?}"),
         }
     }
 }

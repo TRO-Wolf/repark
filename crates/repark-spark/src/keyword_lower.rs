@@ -156,6 +156,23 @@ pub(crate) fn lower_spark_keywords(statement: &mut Statement) {
     let _ = statement.visit(&mut KeywordLower);
 }
 
+struct FragmentTimestampCastLower;
+
+impl VisitorMut for FragmentTimestampCastLower {
+    type Break = Infallible;
+
+    fn post_visit_expr(&mut self, expr: &mut Expr) -> ControlFlow<Self::Break> {
+        if !ntz_cast_lower::lower_timestamp_ntz_cast(expr) {
+            ntz_cast_lower::lower_fragment_timestamp_ltz_cast(expr);
+        }
+        ControlFlow::Continue(())
+    }
+}
+
+pub fn lower_fragment_timestamp_casts<T: VisitMut>(node: &mut T) {
+    let _ = node.visit(&mut FragmentTimestampCastLower);
+}
+
 struct TimestampNsCastLower {
     empty_maps: bool,
 }

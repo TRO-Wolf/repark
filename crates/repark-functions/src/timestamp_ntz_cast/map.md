@@ -22,7 +22,8 @@ parameter here would be a second nanosecond conversion beside that one.
   class and names, and the literal answering a naive wall named `TIMESTAMP_NTZ '<wall>'`.
   **WO NTZ-1 re-verify fold (2026-09-28):** the store-wrap idempotence pin
   (an already-wrapped expression keeps a single wrap; `wrap_bare=false`
-  leaves the expression alone).
+  leaves the expression alone). **FEXPR-TIMESTAMP-NTZ-1 (2026-11-24):** pins nullable `NULL`
+  output for malformed string inputs under `ansi=false`.
 
 ## Pointers
 
