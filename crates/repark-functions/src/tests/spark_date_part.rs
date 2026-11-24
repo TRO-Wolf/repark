@@ -660,25 +660,71 @@ async fn a1_interval_inputs_follow_spark_semantics() {
     assert_eq!(
         run_int32_row(
             &ny_ansi,
-            "SELECT date_part('year', INTERVAL '2' YEAR), date_part('y', INTERVAL '2' YEAR), \
-             date_part('month', INTERVAL '14' MONTH), date_part('day', INTERVAL '5' DAY), \
-             date_part('hour', INTERVAL '3' HOUR), date_part('h', INTERVAL '3' HOUR), \
-             date_part('minute', INTERVAL '45' MINUTE), date_part('mins', INTERVAL '45' MINUTE), \
-             date_part('second', INTERVAL '12' SECOND), date_part('secs', INTERVAL '12' SECOND)"
+            "SELECT extract(YEAR FROM INTERVAL '2' YEAR), extract(MONTH FROM INTERVAL '14' MONTH), \
+             extract(DAY FROM INTERVAL '5' DAY), extract(HOUR FROM INTERVAL '3' HOUR), \
+             extract(MINUTE FROM INTERVAL '45' MINUTE), extract(SECOND FROM INTERVAL '12' SECOND)"
         )
         .await,
-        vec![
-            Some(2),
-            Some(2),
-            Some(2),
-            Some(5),
-            Some(3),
-            Some(3),
-            Some(45),
-            Some(45),
-            Some(12),
-            Some(12),
-        ]
+        vec![Some(2), Some(2), Some(5), Some(3), Some(45), Some(12)]
+    );
+
+    for refused_sql in [
+        "SELECT date_part('day', INTERVAL '2' YEAR)",
+        "SELECT date_part('year', INTERVAL '14' MONTH)",
+        "SELECT date_part('year', INTERVAL '5' DAY)",
+        "SELECT date_part('year', INTERVAL '2' YEAR)",
+    ] {
+        let err = run_err(&ny_ansi, refused_sql).await;
+        assert!(err.contains("MonthDayNano"), "{refused_sql}: {err}");
+    }
+    assert!(
+        run_err(&ny_ansi, "SELECT date_part('epoch', INTERVAL '5' DAY)")
+            .await
+            .contains("INVALID_EXTRACT_FIELD")
+    );
+    assert!(
+        run_err(&ny_ansi, "SELECT extract(EPOCH FROM INTERVAL '5' DAY)")
+            .await
+            .contains("INVALID_EXTRACT_FIELD")
+    );
+
+    let facade_udf = crate::datetime::spark_date_part::facade_date_part_udf();
+    let df = ny_ansi
+        .sql("SELECT INTERVAL '2' YEAR AS iy, INTERVAL '3' HOUR AS ihr")
+        .await
+        .expect("plan intervals");
+    let facade_batches = df
+        .select(vec![
+            facade_udf
+                .call(vec![
+                    datafusion::prelude::lit("y"),
+                    datafusion::prelude::col("iy"),
+                ])
+                .alias("y"),
+            facade_udf
+                .call(vec![
+                    datafusion::prelude::lit("hrs"),
+                    datafusion::prelude::col("ihr"),
+                ])
+                .alias("h"),
+        ])
+        .expect("select facade")
+        .collect()
+        .await
+        .expect("collect facade");
+    assert_eq!(
+        facade_batches[0]
+            .column(0)
+            .as_primitive::<Int32Type>()
+            .value(0),
+        2
+    );
+    assert_eq!(
+        facade_batches[0]
+            .column(1)
+            .as_primitive::<Int32Type>()
+            .value(0),
+        3
     );
 
     let iv_schema = Arc::new(Schema::new(vec![
@@ -730,11 +776,6 @@ async fn a1_interval_inputs_follow_spark_semantics() {
     );
     assert!(
         run_err(&ny_ansi, "SELECT date_part('year', dt) FROM t_iv")
-            .await
-            .contains("INVALID_EXTRACT_FIELD")
-    );
-    assert!(
-        run_err(&ny_ansi, "SELECT date_part('epoch', INTERVAL '5' DAY)")
             .await
             .contains("INVALID_EXTRACT_FIELD")
     );

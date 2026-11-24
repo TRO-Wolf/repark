@@ -211,16 +211,25 @@ def test_a1_interval_inputs_across_typed_facade_and_sql(tmp_path: Path) -> None:
                     col_name,
                 )
                 assert typed.column(col_name).to_pylist() == [expected], (iv_sql, field, col_name)
-            sql_table = session.sql(f"SELECT date_part('{field}', {iv_sql}) AS v").to_arrow()
-            assert pa.types.is_int32(sql_table.schema.field("v").type)
-            assert sql_table.column("v").to_pylist() == [expected], (iv_sql, field)
         for extract_sql, expected in [
             ("SELECT extract(YEAR FROM INTERVAL '2' YEAR) AS v", 2),
+            ("SELECT extract(MONTH FROM INTERVAL '14' MONTH) AS v", 2),
             ("SELECT extract(DAY FROM INTERVAL '5' DAY) AS v", 5),
             ("SELECT extract(HOUR FROM INTERVAL '3' HOUR) AS v", 3),
+            ("SELECT extract(MINUTE FROM INTERVAL '45' MINUTE) AS v", 45),
+            ("SELECT extract(SECOND FROM INTERVAL '12' SECOND) AS v", 12),
         ]:
             table = session.sql(extract_sql).to_arrow()
+            assert pa.types.is_int32(table.schema.field("v").type)
             assert table.column("v").to_pylist() == [expected]
+        for refused_sql in (
+            "SELECT date_part('day', INTERVAL '2' YEAR)",
+            "SELECT date_part('year', INTERVAL '14' MONTH)",
+            "SELECT date_part('year', INTERVAL '5' DAY)",
+            "SELECT date_part('year', INTERVAL '2' YEAR)",
+        ):
+            with pytest.raises(Exception, match="MonthDayNano"):
+                session.sql(refused_sql).collect()
         for bad_field in ("quarter", "week", "dow", "doy", "epoch", "millisecond", "nanosecond"):
             with pytest.raises(Exception, match="INVALID_EXTRACT_FIELD"):
                 session.sql("SELECT INTERVAL '5' DAY AS iv").select(
@@ -228,6 +237,46 @@ def test_a1_interval_inputs_across_typed_facade_and_sql(tmp_path: Path) -> None:
                         spark_functions.lit(bad_field), spark_functions.col("iv")
                     )
                 ).collect()
+            with pytest.raises(Exception, match="INVALID_EXTRACT_FIELD"):
+                session.sql(f"SELECT date_part('{bad_field}', INTERVAL '5' DAY)").collect()
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+
+
+def test_d1_1_f_expr_literal_and_column_extract_match_spark(tmp_path: Path) -> None:
+    session = _new_session("date-part-d1-1-fexpr", tmp_path / "wh")
+    try:
+        session.conf.set("spark.sql.session.timeZone", "America/New_York")
+        for ansi in ("true", "false"):
+            session.conf.set("spark.sql.ansi.enabled", ansi)
+            frame = session.sql(
+                "SELECT '2024-01-01T02:00:00Z' AS stz, '2024-03-10 02:30:00' AS sgap, "
+                "'2024-01-01 99:99:99' AS sbadt, '02:30:45' AS stime, "
+                "TIMESTAMP '2024-01-01 02:00:00Z' AS ts"
+            )
+            cases = [
+                ("extract(day FROM '2024-01-01T02:00:00Z')", "extract(day FROM stz)", 1),
+                ("extract(year FROM '2024-01-01T02:00:00Z')", "extract(year FROM stz)", 2024),
+                ("extract(hour FROM '2024-01-01T02:00:00Z')", "extract(hour FROM stz)", 21),
+                ("extract(hour FROM '2024-03-10 02:30:00')", "extract(hour FROM sgap)", 3),
+                ("extract(year FROM '2024-01-01 99:99:99')", "extract(year FROM sbadt)", 2024),
+                ("extract(hour FROM '02:30:45')", "extract(hour FROM stime)", 2),
+                (
+                    "extract(DAY FROM TIMESTAMP '2024-01-01 02:00:00Z')",
+                    "extract(DAY FROM ts)",
+                    31,
+                ),
+            ]
+            for lit_expr, col_expr, expected in cases:
+                table = frame.select(
+                    spark_functions.expr(lit_expr).alias("lit_v"),
+                    spark_functions.expr(col_expr).alias("col_v"),
+                ).to_arrow()
+                assert pa.types.is_int32(table.schema.field("lit_v").type), (ansi, lit_expr)
+                assert pa.types.is_int32(table.schema.field("col_v").type), (ansi, col_expr)
+                assert table.column("lit_v").to_pylist() == [expected], (ansi, lit_expr)
+                assert table.column("col_v").to_pylist() == [expected], (ansi, col_expr)
     finally:
         session.stop()
         _reset_active_session_for_tests()

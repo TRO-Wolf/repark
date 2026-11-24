@@ -5238,31 +5238,44 @@ still open is `isModifiable`.
   `F.date_part` / `F.datepart` / `F.extract` embedded stock DataFusion `date_part`; and bare `NULL`
   raised `Hour does not support: Null`. After (including delta 1):
   `crates/repark-functions/src/datetime/spark_date_part.rs` registers `SparkDatePart` (`date_part` /
-  `datepart`, no `preimage`) and `SparkExtractDatePart` (rewriting stock `date_part` over `Timestamp`,
-  `Date32`, `Date64`, `Utf8`, `LargeUtf8`, `Utf8View`, `Interval`, `Null`, or `Dictionary` thereof
-  before `TypeCoercion`). `SparkDatePart` accepts only the exact 38 Spark 4.1.2 ASCII
-  case-insensitive temporal field spellings (`year`/`y`/`yr`/`yrs`/`years`, `yearofweek`,
-  `quarter`/`qtr`, `month`/`mon`/`mons`/`months`, `week`/`w`/`weeks`, `day`/`d`/`days`,
-  `dayofweek`/`dow`, `dayofweek_iso`/`dow_iso`, `doy`, `hour`/`h`/`hr`/`hrs`/`hours`,
-  `minute`/`m`/`min`/`mins`/`minutes`, `second`/`s`/`sec`/`secs`/`seconds`) and Spark's 6 interval
-  fields (`year`/`month`/`day`/`hour`/`minute`/`second` + aliases, filtered by `YearMonth` /
-  `DayTime` unit), refusing non-Spark names with `[INVALID_EXTRACT_FIELD]` (including on `NULL` and
-  0-row tables). Calendar extraction delegates to `session_wall::extract_calendar_part` (shared with
-  `year`…`second`, covering 1200–2099 via Arrow and outside 1200–2099 via `zone_horizon`). `String`
-  inputs follow Spark's split (`DATE` via `csv::field::spark_string_to_date` for date fields,
-  session-zone `TIMESTAMP` via `spark_string_timestamp::cast_strings_to_ltz` for `hour`/`minute`/
-  `second`, respecting `spark.sql.ansi.enabled` with nullable `Int32` output); `Interval` inputs
-  delegate to stock `date_part`. `SparkExtractDatePart` refuses non-foldable arg-0 expressions
+  `datepart`, no `preimage`) and `SparkExtractDatePart` (seated before DataFusion's first
+  `type_coercion` in both `crates/repark-spark/src/extension.rs` and
+  `crates/repark-python/src/column/expr_build.rs`, rewriting stock `date_part` over `Timestamp`,
+  `Date32`, `Date64`, `Utf8`, `LargeUtf8`, `Utf8View`, `Interval`, `Null`, or `Dictionary` thereof).
+  `SparkDatePart` accepts only the exact 38 Spark 4.1.2 ASCII case-insensitive temporal field
+  spellings (`year`/`y`/`yr`/`yrs`/`years`, `yearofweek`, `quarter`/`qtr`,
+  `month`/`mon`/`mons`/`months`, `week`/`w`/`weeks`, `day`/`d`/`days`, `dayofweek`/`dow`,
+  `dayofweek_iso`/`dow_iso`, `doy`, `hour`/`h`/`hr`/`hrs`/`hours`, `minute`/`m`/`min`/`mins`/
+  `minutes`, `second`/`s`/`sec`/`secs`/`seconds`) and Spark's 6 interval fields (`year`/`month`/
+  `day`/`hour`/`minute`/`second` + aliases, filtered by `YearMonth`/`DayTime` unit), refusing
+  non-Spark names with `[INVALID_EXTRACT_FIELD]` (including on `NULL` and 0-row tables). Calendar
+  extraction delegates to `session_wall::extract_calendar_part` (shared with `year`…`second`,
+  covering 1200–2099 via Arrow and outside 1200–2099 via `zone_horizon`). `String` inputs follow
+  Spark's split (`DATE` via `csv::field::spark_string_to_date` for date fields, session-zone
+  `TIMESTAMP` via `spark_string_timestamp::cast_strings_to_ltz` for `hour`/`minute`/`second`,
+  respecting `spark.sql.ansi.enabled` with nullable `Int32` output). For `Interval`: typed facade
+  `F.date_part`/`F.datepart`/`F.extract` (`facade_date_part_udf`) and SQL `EXTRACT` delegate to
+  stock `date_part`, keeping main's answers on interval columns, while SQL `date_part`/`datepart`
+  refuses `Interval(MonthDayNano)` (restoring main's refusal because DataFusion's SQL parser drops
+  the `YEAR`/`MONTH`/`DAY` qualifier) and accepts Arrow `Interval(YearMonth)` / `Interval(DayTime)`
+  with unit-family validation. `SparkExtractDatePart` refuses non-foldable arg-0 expressions
   (columns, subqueries, volatile/stable calls) with `[NON_FOLDABLE_ARGUMENT]` before optimization,
   while allowing foldable expressions (`lower('HOUR')`, `concat(…)`).
   `crates/repark-python/src/column/function_dispatch.rs` dispatches `date_part` / `datepart` to
-  `repark_functions::datetime::date_part_udf()` (`EXPECTED_DIVERGENCES` ratchets 14→12).
+  `facade_date_part_udf()` (`EXPECTED_DIVERGENCES` stays at 14 for the `MonthDayNano` split).
   `TIMESTAMP_NTZ` and `DATE` calendar values stay zone-invariant, and `extract(DOW)` /
   `extract(DAYOFWEEK)` over `DATE` and `TIMESTAMP_NTZ` now match Spark's 1-based numbering
   (improvement over main's 0-based `DOW` and unsupported `DAYOFWEEK`). `EXTRACT` on `Duration`/`Time`,
-  standalone `year(ts)`/`hour(ts)`, and the native `repark.sql()` door are unchanged. Open sibling
-  cards: `EXTRACT-SECOND-DECIMAL-1` (`second` stays `Int32`), and `EXTRACT-HOUR-DST-GAP-1` (gap
-  literal `TIMESTAMP '2024-03-10 02:30:00'` in New York now answers `3`, matching Spark).
+  standalone `year(ts)`/`hour(ts)`, and the native `repark.sql()` door are unchanged. Remaining
+  recorded boundaries: (a) `EXTRACT-SECOND-DECIMAL-1` (`second` stays `Int32`); (b) SQL `date_part`
+  over `Interval(MonthDayNano)` refuses because DataFusion drops the interval qualifier (and cross-unit
+  typed `F.date_part` / SQL `EXTRACT` on `MonthDayNano` keeps main's stock behavior); (c) a foldable
+  non-literal invalid field (`concat('epo', 'ch')`) over a `LIMIT 0` plan skips validation when
+  `EmptyRelation` short-circuits before constant folding (D1-3); (d) `date_part(NULL, ts)` raises
+  on main and head where Spark answers `double: NULL`; (e) `FEXPR-TIMESTAMP-ZONE-1` (separate open
+  card: zoneless `F.expr("TIMESTAMP '…'")` literals resolve in UTC before reaching `SparkDatePart`);
+  (f) `EXTRACT-HOUR-DST-GAP-1` (gap literal `TIMESTAMP '2024-03-10 02:30:00'` in New York now
+  answers `3`, matching Spark).
 - **Apache Spark** — 150 multi-column oracle cells in
   `python/repark/tests/timestamps/date_part_session_zone_1_spark_oracle.json` (live PySpark 4.1.2 +
   Iceberg 1.11.0, 2026-11-23, recorder `python/repark/tests/timestamps/_record_date_part_session_zone_1.py`):

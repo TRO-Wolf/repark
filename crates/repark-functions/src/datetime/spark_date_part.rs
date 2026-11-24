@@ -24,7 +24,12 @@ use super::session_wall::{extract_calendar_part, extraction_time_zone, unpack_di
 
 #[must_use]
 pub fn date_part_udf() -> Arc<ScalarUDF> {
-    Arc::new(ScalarUDF::new_from_impl(SparkDatePart::new()))
+    Arc::new(ScalarUDF::new_from_impl(SparkDatePart::new(false)))
+}
+
+#[must_use]
+pub fn facade_date_part_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::new_from_impl(SparkDatePart::new(true)))
 }
 
 #[must_use]
@@ -49,10 +54,11 @@ pub fn insert_extract_date_part_before_coercion(
 struct SparkDatePart {
     signature: Signature,
     aliases: Vec<String>,
+    allow_month_day_nano_interval: bool,
 }
 
 impl SparkDatePart {
-    fn new() -> Self {
+    fn new(allow_month_day_nano_interval: bool) -> Self {
         Self {
             signature: Signature::one_of(
                 vec![
@@ -76,6 +82,7 @@ impl SparkDatePart {
                 Volatility::Immutable,
             ),
             aliases: vec![String::from("datepart")],
+            allow_month_day_nano_interval,
         }
     }
 }
@@ -162,6 +169,20 @@ fn invalid_extract_field_plan_err(raw: &str) -> DataFusionError {
 fn invalid_extract_field_exec_err(raw: &str) -> DataFusionError {
     DataFusionError::Execution(format!(
         "[INVALID_EXTRACT_FIELD] Cannot extract `{raw}`. SQLSTATE: 42601"
+    ))
+}
+
+fn unsupported_month_day_nano_plan_err() -> DataFusionError {
+    DataFusionError::Plan(String::from(
+        "SQL `date_part` does not support Interval(MonthDayNano) because the interval qualifier \
+         is not preserved; use EXTRACT or typed F.date_part",
+    ))
+}
+
+fn unsupported_month_day_nano_exec_err() -> DataFusionError {
+    DataFusionError::Execution(String::from(
+        "SQL `date_part` does not support Interval(MonthDayNano) because the interval qualifier \
+         is not preserved; use EXTRACT or typed F.date_part",
     ))
 }
 
@@ -305,6 +326,11 @@ impl ScalarUDFImpl for SparkDatePart {
                 return Err(invalid_extract_field_plan_err(raw));
             }
         }
+        if matches!(source_type, DataType::Interval(IntervalUnit::MonthDayNano))
+            && !self.allow_month_day_nano_interval
+        {
+            return Err(unsupported_month_day_nano_plan_err());
+        }
         let nullable =
             args.arg_fields.iter().any(|item| item.is_nullable()) || is_string_type(source_type);
         Ok(Arc::new(Field::new(self.name(), DataType::Int32, nullable)))
@@ -335,6 +361,9 @@ impl ScalarUDFImpl for SparkDatePart {
             let Some(canonical) = resolve_interval_field(&normalized, *unit) else {
                 return Err(invalid_extract_field_exec_err(&raw_part));
             };
+            if *unit == IntervalUnit::MonthDayNano && !self.allow_month_day_nano_interval {
+                return Err(unsupported_month_day_nano_exec_err());
+            }
             return forward_interval_to_stock(
                 canonical,
                 value_arg,
@@ -446,16 +475,21 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
         }
         return Ok(Transformed::no(Expr::ScalarFunction(func)));
     }
-    let should_rewrite = func.args[1]
-        .get_type(schema)
-        .is_ok_and(|data_type| is_spark_date_part_source(&data_type));
-    if !should_rewrite {
+    let Ok(source_type) = func.args[1].get_type(schema) else {
+        return Ok(Transformed::no(Expr::ScalarFunction(func)));
+    };
+    if !is_spark_date_part_source(&source_type) {
         return Ok(Transformed::no(Expr::ScalarFunction(func)));
     }
     if !is_foldable_field_expr(&func.args[0])? {
         return Err(non_foldable_field_plan_err());
     }
+    let udf = if matches!(unwrap_dictionary_type(&source_type), DataType::Interval(_)) {
+        facade_date_part_udf()
+    } else {
+        date_part_udf()
+    };
     Ok(Transformed::yes(Expr::ScalarFunction(
-        ScalarFunction::new_udf(date_part_udf(), func.args),
+        ScalarFunction::new_udf(udf, func.args),
     )))
 }

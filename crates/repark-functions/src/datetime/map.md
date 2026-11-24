@@ -27,13 +27,15 @@ past its ratcheted size.
   argument (`DATE`, `TIMESTAMP_NTZ`, `TIME`) runs Arrow without zone conversion.
   Not routed here because they are not in this workspace: `datafusion-spark`'s `from_utc_timestamp`
   / `to_utc_timestamp` (ledger R-1, R-2).
-- `spark_date_part.rs` — **DATE-PART-SESSION-ZONE-1 (2026-11-23, delta 1):** owns Spark's
-  `date_part` / `datepart` scalar UDF (`SparkDatePart`, `date_part_udf`) and the
-  `SparkExtractDatePart` analyzer rule (`extract_date_part_rule`,
+- `spark_date_part.rs` — **DATE-PART-SESSION-ZONE-1 (2026-11-23, delta 1 part 2):** owns Spark's
+  `date_part` / `datepart` scalar UDF (`SparkDatePart`, `date_part_udf` for SQL and
+  `facade_date_part_udf` for typed `F.date_part`/`F.datepart`/`F.extract` and SQL `EXTRACT` on
+  `Interval`) and the `SparkExtractDatePart` analyzer rule (`extract_date_part_rule`,
   `insert_extract_date_part_before_coercion`, seated before DataFusion's first `type_coercion` in
-  `SparkExtension::configure_analyzer_rules` as well as in `registration::analyzer_rules` after
-  `ltz_timestamp_cast_rule` so SQL `EXTRACT(<field> FROM <string>)` never hits stock `date_part`'s
-  implicit `Timestamp(ns)` cast before rewrite).
+  both `SparkExtension::configure_analyzer_rules` and `repark-python::column::expr_build::build_expr_context`
+  as well as in `registration::analyzer_rules` after `ltz_timestamp_cast_rule` so SQL and literal
+  `F.expr("extract(... FROM <string>)")` never hit stock `date_part`'s implicit `Timestamp(ns)` cast
+  before rewrite).
   `SparkDatePart` accepts `Timestamp`, `Date`, `String`, and `Interval` sources (plus `Null` and
   `Dictionary` over them) and installs no `preimage` override so `WHERE date_part('year', ts) = …`
   never prunes in UTC. For temporal, `String`, and `Null` inputs it accepts only the exact 38
@@ -48,11 +50,15 @@ past its ratcheted size.
   (session-zone `TIMESTAMP`), both respecting `spark.sql.ansi.enabled` (`NULL` vs
   `[CAST_INVALID_INPUT]`) with nullable `Int32` output. `Interval` inputs validate Spark's interval
   fields (`year`/`month` on `YearMonth`, `day`/`hour`/`minute`/`second` on `DayTime`, all 6 on
-  `MonthDayNano`, with Spark aliases) and delegate to stock DataFusion `date_part`.
+  `MonthDayNano`, with Spark aliases, refusing non-Spark fields with `[INVALID_EXTRACT_FIELD]`) and
+  delegate to stock DataFusion `date_part`; SQL `date_part_udf` refuses `Interval(MonthDayNano)`
+  because DataFusion drops the interval qualifier (restoring main's refusal on cross-unit literals
+  like `date_part('day', INTERVAL '2' YEAR)`), while `facade_date_part_udf` keeps main's answers for
+  typed `F.date_part` and SQL `EXTRACT` over interval columns.
   `SparkExtractDatePart` rejects any non-foldable arg-0 expression (column, subquery, volatile or
   stable function) on `SparkDatePart` and rewritten `EXTRACT` nodes with `[NON_FOLDABLE_ARGUMENT]`
   before optimizer or statistics folding, while allowing foldable expressions (`lower('HOUR')`,
-  `concat(…)`); it rewrites stock `date_part` onto `SparkDatePart` for `Timestamp`, `Date32`,
-  `Date64`, `Utf8`, `LargeUtf8`, `Utf8View`, `Interval`, `Null`, and `Dictionary` over them,
-  leaving `Time`, `Duration`, and the native `repark.sql()` door untouched. `datetime.rs` shrunk
-  1655→1614. Perf guard and mutations: the unit ledger's §Perf and §Mutations.
+  `concat(…)`); it rewrites stock `date_part` onto `facade_date_part_udf` for `Interval` and onto
+  `date_part_udf` for `Timestamp`, `Date32`, `Date64`, `Utf8`, `LargeUtf8`, `Utf8View`, `Null`, and
+  `Dictionary` over them, leaving `Time`, `Duration`, and the native `repark.sql()` door untouched.
+  `datetime.rs` shrunk 1655→1614. Perf guard and mutations: the unit ledger's §Perf and §Mutations.

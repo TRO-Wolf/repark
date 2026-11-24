@@ -17,9 +17,11 @@ Only tests; `mod.rs` is the module manifest.
   non-UTC stored tag (`Europe/Paris`), and `Second`/`Millisecond`/`Nanosecond` units; `WHERE`
   filters on `year` and `hour` (no UTC preimage), `GROUP BY`, and `JOIN` keys; `TIMESTAMP_NTZ`,
   `DATE` (calendar invariant, 1-based `extract(DOW/DAYOFWEEK)`), and `NULL` controls; plus delta-1
-  pins for `INTERVAL` and `STRING` (date vs session-zone timestamp coercion, ANSI on/off), non-Spark
-  field refusals (`[INVALID_EXTRACT_FIELD]` across timestamp/date/string/interval/NULL/empty tables),
-  and pre-optimizer `[NON_FOLDABLE_ARGUMENT]` vs foldable field expressions (`lower('HOUR')`).
+  pins for `INTERVAL` (`EXTRACT`, `facade_date_part_udf`, Arrow `YearMonth`/`DayTime`, and SQL
+  `date_part` `MonthDayNano` refusal) and `STRING` (date vs session-zone timestamp coercion, ANSI
+  on/off), non-Spark field refusals (`[INVALID_EXTRACT_FIELD]` across timestamp/date/string/interval/
+  NULL/empty tables), and pre-optimizer `[NON_FOLDABLE_ARGUMENT]` vs foldable field expressions
+  (`lower('HOUR')`).
 - `spark_string_timestamp.rs` — **CAST-TS-STRING-1 (2026-09-19):** the kernel against Spark
   4.1.2's measured answers: year-only and single-digit fields, fraction truncation and padding,
   time-only strings against a fixed clock, the zone position rule, the trim set, digit counts,

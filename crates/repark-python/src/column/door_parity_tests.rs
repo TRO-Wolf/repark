@@ -69,6 +69,14 @@ const EXPECTED_DIVERGENCES: &[(&str, FacadeShape, &str)] = &[
          door keeps DataFusion's native generate_series, whose table-function callers \
          (df_guard, spill, pg_acceptance) depend on the native spelling",
     ),
+    (
+        "date_part",
+        FacadeShape::Kernel(2),
+        "both doors share SparkDatePart for Timestamp/Date/String/Null/YearMonth/DayTime, while \
+         SQL date_part refuses Interval(MonthDayNano) where DataFusion drops the interval \
+         qualifier and facade F.date_part keeps main's stock interval-column arm",
+    ),
+    ("datepart", FacadeShape::Kernel(2), "alias of date_part"),
 ];
 
 /// Scalar spellings covered by the explicit guard.
@@ -98,8 +106,6 @@ const SCALAR_NAMES: &[(&str, usize)] = &[
     ("map_from_arrays", 2),
     ("datediff", 2),
     ("date_diff", 2),
-    ("date_part", 2),
-    ("datepart", 2),
     ("from_utc_timestamp", 2),
     ("to_utc_timestamp", 2),
     ("to_date", 1),
@@ -275,12 +281,13 @@ fn facade_avg_is_the_repark_retracting_kernel_not_datafusion_core() {
 fn expected_divergences_are_all_still_real() {
     assert_eq!(
         EXPECTED_DIVERGENCES.len(),
-        12,
+        14,
         "DOOR-CONVERGE-1 closed abs/ascii/base64/unbase64/length/character_length/size/\
          array_contains — both doors now resolve the same kernel; ratchet 22 → 14. \
          DOOR-CONVERGE-2 adds generate_series (facade sequence-alias vs door native) → 15. \
          ROUND-DOUBLE-EXACT-1 closes round (both doors build the exact round) → 14. \
-         DATE-PART-SESSION-ZONE-1 closes date_part/datepart → 12"
+         DATE-PART-SESSION-ZONE-1 keeps date_part/datepart at 14 (shared SparkDatePart, \
+         Interval(MonthDayNano) SQL refusal vs facade interval-column arm)"
     );
     let ctx = registered_session();
     let mut already_fixed = Vec::new();
