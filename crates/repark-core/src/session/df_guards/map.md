@@ -12,54 +12,8 @@ wrapped optimizer rule) and declares this directory.
   **Delta 1 (2026-11-08):** `insert_struct_setop_after_coercion` reaches the crate root for Python's expression context. **Item #5:** refusals name `INTERSECT ALL` / `EXCEPT ALL` without `Distinct` left.
 - [signed_zero.rs](signed_zero.rs), [signed_zero/](signed_zero/map.md) — **SIGNED-ZERO-NORMALIZE-1 part A (2026-11-11):** seats 1 and 1b.
 - [cast_shield.rs](cast_shield.rs), [cast_shield/](cast_shield/map.md) — **CAST-LITERAL-UNWRAP-1 (2026-11-16):** the cast shield and `stats_barrier`.
-- `skipping_limit.rs` — **OFFSET-NESTED-SORT-1 (2026-10-08):** a guard for DataFusion 54.1.0's `EnforceSorting` rule (its sort pushdown,
-  `datafusion-physical-optimizer` `enforce_sorting/sort_pushdown.rs`) treats a
-  `GlobalLimitExec` as if it had no `skip`. Two wrong plans: (1) It reads the limit's
-  `fetch` as a row cap for the plan below, so `GlobalLimitExec: skip=4990, fetch=5` over
-  `SortExec: TopK(fetch=4995)` becomes `TopK(fetch=5)`, and the statement answers no rows.
-  (2) A limit with a `skip` and no `fetch` maintains its input order, so the rule moves an outer
-  `SortExec` below the `OFFSET` and the statement skips rows of the wrong order.
-  `skip_safe_physical_optimizer_rules()` returns DataFusion's recommended physical rule list
-  with `EnforceSorting` replaced by `SkipSafeEnforceSorting`, which keeps the rule's name and
-  position. `../df_guards.rs` installs the list before the three RePark physical rules.
-  Without a `GlobalLimitExec` with `skip > 0` the wrapper runs the inner rule unchanged;
-  the only added work is one plan walk (`TreeNode::exists`). Otherwise it
-  goes bottom-up: the inner rule runs on each skipping limit's input as its own
-  plan; the limit is rebuilt over the result and replaced with
-  `SealedSkippingLimitExec`, a leaf reporting the limit's own properties (ordering,
-  one partition), so the rule has nothing below the seal to push a row cap
-  or a sort into. (Verifier mutation D, the seal reporting the limit's `fetch`,
-  left the lane pins, 1356 answered cells and every plan without an `OFFSET` still: the missing
-  `fetch` does not hold the cap back.) The wrapper then runs the inner rule on the sealed plan and puts every limit
-  back top-down. A seal never leaves the rule: later rules cannot see the plan a seal
-  holds (`OutputRequirements` puts its marker node below a top-level limit, so the marker would
-  stay), so `execute` on a seal is an internal error and `no_seal_survives_into_a_final_plan`
-  pins the removal.
-  Correct because a `GlobalLimitExec` wants no input ordering, and EnforceDistribution
-  already met its one-partition requirement, so a skipping limit's input is a complete plan
-  the rule optimizes alone. What the guard gives up: DataFusion could merge a refining
-  outer sort (`ORDER BY v, k` over `ORDER BY v`) into the sort below the limit; stock's one-sort plan answered rightly.
-  The guard's plan is two sorts, the inner one and a second `SortExec` above the `GlobalLimitExec`; with a small `OFFSET` the second re-sorts nearly the whole relation.
-  Verifier-measured (2026-10-08, `ci` profile, 11 rounds, guard vs stock): over a 1M-row
-  memory table at 8 partitions the refining outer sort ran +78.4% guarded (second run
-  +83.7%; stock-vs-stock floor +2.3%). **OPEN for the owner:** accept the cost, or a
-  follow-up merging the two sorts when the outer refines the inner. Statements without
-  an `OFFSET` pay none of it (full table: the unit ledger, §9).
-  Routes not taken: a repair after the rule (the original `fetch` is gone by then); splitting
-  the limit into `skip` over `fetch` (the rule then pushes the sort through the skip-only half).
-  **Retire** at the DataFusion bump that fixes the pushdown: the two
-  `stock_enforce_sorting_still_*` pins in `../tests/skipping_limit.rs` go red when stock
-  DataFusion answers right; delete this file, its wiring line and those two pins then.
-  DataFusion 55.0.0 carries the same pushdown code (read, not run).
-  At the same bump check whether `EnforceSorting` overrides `PhysicalOptimizerRule::optimize_with_context`: the physical planner calls that method and
-  `SkipSafeEnforceSorting` does not forward it (the default calls the wrapper's own `optimize`),
-  so a new version's override would drop silently. In 54.1.0 only `JoinSelection`
-  overrides it, so nothing is lost today.
-  The `skip > 0` boundary is pinned by grid cell `offset_one`: with `is_skipping_limit` at
-  `skip > 1` (verifier mutation A, repeated on the committed pins) it answers `[2,3,4,5]`
-  for Spark's `[2,3,4,5,6]`, and 3 of the 16 pins go red:
-  `one_partition_family_answers_spark_rows_at_one_partition` (on `m`, one partition) and the parquet
-  and Iceberg grids (at 1, 2 and 16). Before the cell, all 16 passed.
+- [scalar_nullable.rs](scalar_nullable.rs), [scalar_nullable_tests.rs](scalar_nullable_tests.rs) — **SCALAR-SUBQUERY-EMPTY-NULL-1 (2026-11-23; Delta 1 2026-11-24):** `ReparkScalarSubqueryNullability` (`AnalyzerRule` before `type_coercion` and again at the end of `finish_session_build` + `expr_build.rs` `build_expr_context`, `OptimizerRule` before `simplify_expressions`, and `PreExecute::execute` for `Prepare`/`CreateView`) wraps single-column non-null scalar subqueries lacking `guaranteed_at_least_one_row` in `Volatile` `__repark_scalar_nullable__` (`schema_name` passthrough, `nullable=true`). Pass 1 defers subqueries containing unexpanded generator placeholders (`explode`/`explode_outer`/`posexplode`/`posexplode_outer`/`inline`/`inline_outer`/`json_tuple`/`stack`/`__repark_gen_alias`/`__repark_gen_bare`) until `GeneratorRewrite`/`StackRewrite` expand them; Pass 2 wraps post-coercion non-null outputs (`SparkNullability`/`GeneratorRewrite`/`StackRewrite`/time-window) and peels stale outer `__repark_spark_nonnull__` cast wrappers whose operand became nullable. Newly synthesized aliases carry `metadata: None` (existing `Expr::Alias` metadata is kept) so downstream cast-to-UDF rewrites never mismatch Iceberg `PARQUET:field_id`. Ancestor schemas (incl. `Union`/`Values`) recompute. `StripScalarNullable` runs after `scalar_subquery_to_join`, preserving `EliminateOuterJoin`, filter pushdown, CSE, and `enable_physical_uncorrelated_scalar_subquery=true`.
+- `skipping_limit.rs` — **OFFSET-NESTED-SORT-1 (2026-10-08):** guards DF 54.1.0 `EnforceSorting` sort pushdown when `GlobalLimitExec` has `skip > 0` (`TopK` cap drops rows; outer `SortExec` moves below `OFFSET`). `skip_safe_physical_optimizer_rules()` replaces `EnforceSorting` with `SkipSafeEnforceSorting` (same name/order). No-op without `skip > 0`; otherwise optimizes each skipping limit's input independently behind `SealedSkippingLimitExec` (never survives final plan; `no_seal_survives_into_a_final_plan`). Cost: refining outer sort over small `OFFSET` uses two sorts (+78-84% on 1M-row memtable; OPEN for follow-up). Retire when DF fixes pushdown (`stock_enforce_sorting_still_*` pins in `../tests/skipping_limit.rs`; verify `optimize_with_context` at bump). Boundary `skip > 0` pinned by `offset_one`.
 - [window_rescan.rs](window_rescan.rs) — **WIN-SLIDE-1 (2026-09-04):** the `sliding_frame_rescan` analyzer rule.
   Its design note, the DataFusion contracts it reads, and the routes it does not take are in
   [../map.md](../map.md); its pins are `../tests/window_rescan.rs` and

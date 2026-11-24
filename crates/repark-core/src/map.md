@@ -900,7 +900,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   load-bearing part, not the surface, which would have to widen (with its call sites) before a
   distributed backend could exist. Distribution is deferred by decision
   ([../../../docs/adr/0004-server-prep-disciplines.md](../../../docs/adr/0004-server-prep-disciplines.md)).
-- `pre_execute.rs` (+ [pre_execute/](pre_execute/map.md): `tests.rs`, SQL-SETOP-ALL-MULTISET-1's `setop_all.rs`) — **the shared pre-execute belt (round 5, Z-2):** Delta #2 analyzes each `PREPARE` body.
+- `pre_execute.rs` (+ [pre_execute/](pre_execute/map.md)) — **pre-execute belt (Z-2):** guards `PREPARE`, wraps `PREPARE`/`CREATE VIEW` scalar subqueries (SCALAR-SUBQUERY-EMPTY-NULL-1, 2026-11-23); `session.rs`/`lib.rs` re-export `scalar_nullable`.
   `PreExecute` = plan (`create_logical_plan`, no execution) → `guard` (the ONE choke point for
   pre-execute refusals; today the tighten DDL-sink refuse and CFG-2's `refuse_source_ddl`,
   refusing `LogicalPlan::Ddl` naming a registered database source — DataFusion's

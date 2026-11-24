@@ -218,37 +218,11 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   module (the join-condition qualifier binder).
   **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** `dead_datafusion_54_1_refusal` and the new `invalid_datafusion_config` echo
   the value masked; `spill.rs`'s `memory_limit` refusal likewise.
-  **STAMP-2-R5P6-2 (2026-10-07):** `df_guards.rs` declares `df_guards/join_exact.rs`, the
-  builder of the facade's H1 join statement without the SQL planner (see `df_guards/map.md`).
-- `tests/df_guard.rs` — the nine `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
-  **U11-EDGE-1 (2026-09-26):** `df_guards.rs` also declares `df_guards/case_bind.rs` (row in
-  `df_guards/map.md`). Round 2 (2026-09-26): `case_bind` is `pub` and `session.rs` re-exports it as
-  `frame_names`.
-  **ATTR-ID-1 S1 (2026-09-30):** `df_guards.rs` also declares the private `df_guards/attr_id.rs`,
-  whose public items leave through `frame_names` (row in `df_guards/map.md`).
-  **ATTR-ID-1 S2b (2026-09-30):** `unnest_safe_optimizer_rules` puts `attr_id::StripAttributeIds`
-  first in every core session's optimizer, so no optimized or physical plan carries `repark.attr`
-  (row in `df_guards/map.md`); `tests/df_guard.rs`'s rule-order pin expects it first.
-  **ATTR-ID-1 S4 (2026-10-02):** `df_guards.rs` also declares the private
-  `df_guards/attr_lineage.rs`, a pure move of the projection lineage out of
-  `attr_id.rs` (row in `df_guards/map.md`).
-  **ATTR-ID-1 SJ-1a and SJ-1b (2026-10-02):** the private `df_guards/frame_lineage.rs` (the self-join lineage core, `FrameNode` and the ambiguity walk) and `df_guards/self_join.rs` (condition preparer, post-join reference check); public items leave through `frame_names`; no facade calls them yet (`df_guards/map.md`).
-- `tests/df_guard.rs` — the seven `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
-  cohort pushed that file past the 1500-line ceiling (the sanctioned "split the module" out, not
-  an EXCEPTIONS row). Guard 1: a bare no-extension session carries the scalar-subquery config
-  default. Guard 2, six pins: the `enable_leaf_expression_pushdown` flag stays ENABLED (the
-  anti-blanket-skip pin), the wrapper is installed under DataFusion's own rule name in
-  DataFusion's own rule order, a no-`Unnest` plan optimizes byte-identically to stock DataFusion,
-  an `Unnest` plan the rule CAN rewrite still gets the optimization (this is what makes the scope
-  "by failure", not "by shape"), an explicit conf can still disable the optimization, and a mixed
-  plan's non-`Unnest` inner-rule error stays loud (`mixed_plan_non_unnest_inner_error_stays_loud`).
-  The eighth (U8 WRITE-SQL PR2 fix round 4, 2026-09-25): a LEFT JOIN projection that stock 54.1
-  cannot optimize (`__datafusion_extracted` collision) answers its field reads on a core session
-  (`a_left_join_projection_the_rule_cannot_rewrite_keeps_its_field_access`). The ninth (fix
-  round 5, verifier V-003): `BoomOnProjection` errors on every Projection, and the error surfaces
-  through the wrapper on a no-`Unnest` plan
-  (`a_projection_inner_error_that_is_not_an_extraction_collision_stays_loud`), so a decline
-  widened to every error reds it.
+  **STAMP-2-R5P6-2 (2026-10-07):** `df_guards.rs` declares `df_guards/join_exact.rs` (`df_guards/map.md`).
+  **SCALAR-SUBQUERY-EMPTY-NULL-1 (2026-11-23; Delta 1 2026-11-24):** `df_guards.rs` declares `df_guards/scalar_nullable.rs`, registers `__repark_scalar_nullable__`, seats `repark_scalar_subquery_nullability` before `type_coercion`, at the end of `finish_session_build`, and before `simplify_expressions`, and seats `repark_strip_scalar_nullable` after `scalar_subquery_to_join`.
+  **U11-EDGE-1 (2026-09-26):** `df_guards.rs` declares `df_guards/case_bind.rs` (`frame_names`).
+  **ATTR-ID-1 S1/S2b/S4/SJ-1 (2026-09-30..10-02):** `df_guards.rs` declares `attr_id.rs`, `attr_lineage.rs`, `frame_lineage.rs`, `self_join.rs` (`df_guards/map.md`); `StripAttributeIds` runs first in `unnest_safe_optimizer_rules`.
+- `tests/df_guard.rs` — DF 54.1 guard pins (split from `tests.rs`): Guard 1 (scalar-subquery default), Guard 2 (six leaf-pushdown pins, eighth `LEFT JOIN` extraction-collision decline, ninth `BoomOnProjection`), and the optimizer rule-order pin (`StripAttributeIds`, subquery, signed-zero, cast-shield, `repark_scalar_subquery_nullability` / `repark_strip_scalar_nullable`).
 - `spill.rs` — **S-1:** FairSpillPool install + runtime `SET datafusion.runtime.memory_limit`
   intercept (R1). DataFusion 54.1 has no in-place resize (`pool_size` lives outside the mutex),
   so SET **swaps** a new `FairSpillPool` (in-flight reservations stay on the old pool).

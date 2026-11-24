@@ -64,6 +64,10 @@ async fn bare_session_without_extension_scopes_leaf_projection_pushdown() {
             "repark_scalar_subquery_guard".to_string(),
         ],
     );
+    expected.insert(
+        scalar_to_join + 3,
+        "repark_strip_scalar_nullable".to_string(),
+    );
     let decorrelate_lateral = expected
         .iter()
         .position(|name| name == "decorrelate_lateral_join")
@@ -79,6 +83,7 @@ async fn bare_session_without_extension_scopes_leaf_projection_pushdown() {
     expected.insert(simplify + 1, "signed_zero_literals".to_string());
     expected.insert(simplify, "signed_zero_literals".to_string());
     expected.insert(simplify, "repark_cast_shield".to_string());
+    expected.insert(simplify, "repark_scalar_subquery_nullability".to_string());
     expected.insert(0, "repark_strip_attribute_ids".to_string());
     expected.push("signed_zero_keys".to_string());
     expected.push("repark_cast_shield".to_string());

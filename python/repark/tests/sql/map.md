@@ -38,6 +38,7 @@ pins.
 - [test_range_tvf_id_1.py](test_range_tvf_id_1.py) — RANGE-TVF-ID-1 — the range() table function names its column id like Spark.
 - [test_range_tvf_id_2.py](test_range_tvf_id_2.py) — RANGE-TVF-ID-2 - range() argument edge cases answer Spark 4.1.2.
 - [test_round_double_exact_1.py](test_round_double_exact_1.py) — ROUND-DOUBLE-EXACT-1 — the step 0 `round`/`bround` table on every Spark door in both ANSI modes, with the native-door gap pin; oracle [round_double_exact_1_spark_oracle.json](round_double_exact_1_spark_oracle.json).
+- [test_scalar_subquery_empty_null_1.py](test_scalar_subquery_empty_null_1.py) — SCALAR-SUBQUERY-EMPTY-NULL-1 (2026-11-23; Delta 1 2026-11-24): Spark SQL (both ANSI modes), DataFrame/`F.expr`/`filter`/`selectExpr`/`.scalar()`, temp views, cache, `PREPARE`, native `repark.sql()` (incl. `CREATE VIEW` + `DESCRIBE`), `enable_physical_uncorrelated_scalar_subquery=true`, plan quality, Iceberg Hadoop writes (`INSERT`/`CTAS`, `DELETE`/`UPDATE` refusals), and Delta 1 F-001/F-002/F-003 pins (generators, Iceberg/Parquet cast metadata, post-coercion non-null temp views and schemas). Cells: [_scalar_subquery_empty_null_1_cells.py](_scalar_subquery_empty_null_1_cells.py).
 - [test_scalar_subquery_sort_pin.py](test_scalar_subquery_sort_pin.py) — DF 54.1 regression pin: ORDER BY must survive an uncorrelated scalar subquery.
 - [test_spark_sql_grammar_1.py](test_spark_sql_grammar_1.py) — SPARK-SQL-GRAMMAR-1 door pins — Spark operators, keywords and type names.
 - [test_sql_alias.py](test_sql_alias.py) — Q1 re-home pins — ``import repark.sql`` fails; ``repark.sql()`` is the ANSI door.
@@ -73,38 +74,7 @@ The move put every file here one level below the old flat directory. Four files 
 
 ## DEEP-BATTERY-SPLIT-1 (2026-10-19)
 
-The four deep batteries ran one subprocess per module fixture that drove every shape in
-sequence and returned one JSON dict. Each test now launches its own shape: a shared preamble
-(session plus the 50-row `base`), the shape's original lines, and the JSON epilogue, through
-the same `sys.executable -c` form and the same per-subprocess timeout. Every assertion keeps its
-key, value and error class. A shape that reads a view registers it itself (`t` for the 5,000-term
-OR; the C-005 shape keeps scalar and `IN` in one interpreter because `IN` reads `deepv`). Ledger
-reading: `deep-filter-chain-crash-1` C-001..C-012, C-014 and C-015 each ask for an
-isolated-interpreter pin per clause, and C-010/C-011 already called two tests sharing one
-interpreter "two isolated-interpreter pins", so isolation means out of the pytest process, not
-one interpreter per battery. `test_deep_reverify_1.py`'s 256 KiB, 512 KiB and GC fixtures were
-already one shape each and are unchanged.
-
-`xdist_group` marks. A module-wide group would put every split shape back on one worker, so
-both module marks go. `--dist loadgroup` queues multi-test groups first and single tests in
-collection order; `sql/` starts at test 11,987 of 20,704, so an ungrouped 20,000-term OR shape
-(about 290 s alone; its time is the Python-door `|` build, 2.3 s at 2,500 terms, 11 s at 5,000,
-58 s at 10,000) starts about 100 s into a 16-worker run and ends last. One group pairs it with
-the 2,000-deep `+1` refusal (1.7 s), the other DataFrame-door expression refusal, so the pair
-starts first. `slow` stays on all four modules.
-
-Measured 2026-10-19 on the `ci` profile, `taskset -c 0-25`, one-minute load 2.7 to 4.4 at each
-start (the box's other work raised it to 10 to 17 during the full runs):
-
-| run | before | after |
-|---|---|---|
-| the two batteries, `-n 8` | 398.2 s (fixtures 338.0 s and 156.9 s) | 307.5 s (20,000-term OR 286.2 s; next 67.7 s) |
-| `test_deep_reverify_1.py` plus `test_deep_expr_build_small_stack_1.py`, `-n 8` | 56.6 s (the main fixture built on four workers, 20.7 s each) | 37.3 s |
-| full facade suite, `-n 16` | 392.5 s, 20065 passed / 1 failed / 493 skipped / 151 xfailed | 355.2 s, 20066 passed / 493 skipped / 151 xfailed |
-
-The before failure is `perf/test_perf_unpivot_1.py::test_stack_is_linear_in_columns`, a timing
-exponent (1.415 against 1.1) under the load spike; that file is not in this change. With no
-group at all the after suite ran 426.4 s, which is why the one group stays. The passed count is unchanged.
+Each deep-battery shape runs in its own isolated `sys.executable -c` interpreter (no module-wide `xdist_group`; `slow` stays on all four modules). One `xdist_group` pairs the 20,000-term OR shape (~286 s) with the 2,000-deep `+1` refusal so `--dist loadgroup` starts them first (full suite `-n 16` dropped 392.5 s → 355.2 s, 20,066 passed; `test_deep_reverify_1.py` + `test_deep_expr_build_small_stack_1.py` `-n 8`: 56.6 s → 37.3 s).
 
 ## Pointers
 

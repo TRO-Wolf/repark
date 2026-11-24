@@ -340,13 +340,15 @@ pub(super) fn build_expr_context() -> datafusion::error::Result<SessionContext> 
             rules,
         )?;
     let rules = repark_functions::cast_map::insert_string_integral_before_coercion(rules)?;
-    let mut rules =
+    let rules =
         repark_functions::datetime::spark_date_part::insert_extract_date_part_before_coercion(
             rules,
         )?;
+    let mut rules = repark_core::scalar_nullable::insert_before_coercion(rules)?;
     rules.push(std::sync::Arc::new(repark_spark::FoldSparkNumericCasts));
     rules.push(std::sync::Arc::new(repark_spark::SparkProjectionDisplay));
     rules.extend(repark_spark::spark_literal_typing::spark_door_post_coercion_rules());
+    rules.push(repark_core::scalar_nullable::analyzer_rule());
     let state = SessionStateBuilder::new()
         .with_type_planner(repark_functions::spark_type_planner())
         .with_config(config)
@@ -356,6 +358,7 @@ pub(super) fn build_expr_context() -> datafusion::error::Result<SessionContext> 
         .build();
     let context = SessionContext::new_with_state(state);
     context.register_udf(repark_core::cast_shield_udf().as_ref().clone());
+    context.register_udf(repark_core::scalar_nullable::udf().as_ref().clone());
     context.register_udf(repark_spark::spark_as_udf().as_ref().clone());
     context.register_udf(repark_spark::suffix_literal_udf().as_ref().clone());
     context.register_udf(
@@ -965,10 +968,15 @@ mod tests {
             .iter()
             .position(|name| name == "type_coercion")
             .unwrap();
-        assert_eq!(seat + 3, coercion);
+        assert_eq!(seat + 4, coercion);
         assert_eq!(names[seat + 1], "spark_string_integral_cast");
         assert_eq!(names[seat + 2], "spark_extract_date_part");
+        assert_eq!(names[seat + 3], "repark_scalar_subquery_nullability");
         assert_eq!(names[seat - 1], "spark_map_subscript");
+        assert_eq!(
+            names.last().map(String::as_str),
+            Some("repark_scalar_subquery_nullability")
+        );
         let planners = context.state().expr_planners().len();
         let bare = SessionContext::new().state().expr_planners().len();
         assert!(planners > bare);

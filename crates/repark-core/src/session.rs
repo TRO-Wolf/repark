@@ -49,13 +49,13 @@ pub mod write_postgres;
 pub mod writer_layout;
 pub(crate) mod zone_localiser;
 
-pub use df_guards::cast_shield_udf;
 pub(crate) use df_guards::normalize_zero_call;
 pub use df_guards::subquery::{resolve_bound_expr, resolve_scoped_expr, resolve_subquery_plan};
 use df_guards::{
     apply_df_54_1_config_guards, context_with_df_54_1_rule_guards, datafusion_config_refusal,
 };
 pub use df_guards::{case_bind as frame_names, insert_struct_setop_after_coercion, struct_walk};
+pub use df_guards::{cast_shield_udf, scalar_nullable};
 pub(crate) use spill::BYTES_PER_GB;
 pub use spill::REPARK_OWNED_DATAFUSION_PSEUDO_KEYS;
 #[cfg(test)]
