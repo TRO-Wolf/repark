@@ -34,7 +34,7 @@ struct StubUdf {
 }
 
 impl StubUdf {
-    fn new(name: &'static str, nullable: bool) -> Arc<ScalarUDF> {
+    fn udf(name: &'static str, nullable: bool) -> Arc<ScalarUDF> {
         Arc::new(ScalarUDF::from(Self {
             name,
             nullable,
@@ -394,7 +394,7 @@ fn unexpanded_generator_placeholders_defer_wrap_until_expanded() {
         "__repark_gen_bare",
     ] {
         let call = Expr::ScalarFunction(ScalarFunction::new_udf(
-            StubUdf::new(placeholder, false),
+            StubUdf::udf(placeholder, false),
             vec![lit(1_i32)],
         ));
         let proj = LogicalPlan::Projection(
@@ -422,7 +422,7 @@ fn unexpanded_generator_placeholders_defer_wrap_until_expanded() {
     }
 
     let unnest_call = Expr::ScalarFunction(ScalarFunction::new_udf(
-        StubUdf::new("unnest", false),
+        StubUdf::udf("unnest", false),
         vec![lit(1_i32)],
     ));
     let unnest_proj = LogicalPlan::Projection(
@@ -457,7 +457,7 @@ fn second_pass_wraps_post_coercion_nonnull_subquery() {
     let pass1 = wrap_plan(outer_before).unwrap();
     assert!(!pass1.transformed);
 
-    let spark_nonnull = StubUdf::new(SPARK_NONNULL_NAME, false);
+    let spark_nonnull = StubUdf::udf(SPARK_NONNULL_NAME, false);
     let forced_nonnull_subq = Subquery {
         subquery: Arc::new(LogicalPlan::Projection(
             Projection::try_new(
@@ -494,7 +494,7 @@ fn second_pass_wraps_post_coercion_nonnull_subquery() {
 
 #[test]
 fn second_pass_peels_stale_cast_nonnull_and_keeps_guaranteed_date() {
-    let spark_nonnull = StubUdf::new(SPARK_NONNULL_NAME, false);
+    let spark_nonnull = StubUdf::udf(SPARK_NONNULL_NAME, false);
     let empty_date_scan = Arc::new(field_id_scan_plan("d", DataType::Date32, false));
     let date_subq = Subquery {
         subquery: Arc::new(LogicalPlan::Projection(
