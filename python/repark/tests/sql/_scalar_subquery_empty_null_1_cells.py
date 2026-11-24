@@ -209,7 +209,7 @@ SPARK_SQL_BUG_CELLS: tuple[tuple[str, str, list[list[Any]]], ...] = (
         "corr_count_groupby_where_isnull",
         "SELECT l.id FROM ice.ns.l_nn l "
         "WHERE (SELECT COUNT(*) FROM ice.ns.r_nn r "
-        "WHERE r.id = l.id GROUP BY r.b) IS NULL ORDER BY l.id",
+        "WHERE r.id = l.id GROUP BY r.id) IS NULL ORDER BY l.id",
         [[1]],
     ),
     (

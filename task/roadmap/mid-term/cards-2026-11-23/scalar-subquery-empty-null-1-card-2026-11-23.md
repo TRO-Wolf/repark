@@ -53,7 +53,10 @@ Implemented refined Option A+ in `crates/repark-core/src/session/df_guards/scala
    with `table not found` (inline subqueries work on both; `selectExpr` and `.scalar()` work on catalog tables).
 4. **Bare `explode(...)` in `SELECT` without `LATERAL VIEW`:** fails with `[UNRESOLVED_ROUTINE]`.
 5. **Subqueries in `DELETE`, `UPDATE`, and `MERGE`:** `DELETE` and `UPDATE` keep their refusal; `MERGE` with a subquery
-   in `ON`/`WHEN` (which Spark refuses with `[UNSUPPORTED_MERGE_CONDITION.SUBQUERY]`) is unchanged and out of scope.
+   in `ON`/`WHEN` (which Spark refuses with `[UNSUPPORTED_MERGE_CONDITION.SUBQUERY]`) is unchanged and out of scope
+   (post-fix on Spark door: `MERGE ... ON ... (subq) IS NULL` updates rows `[[1, 99], [2, 99]]` instead of silently
+   matching 0 rows `[[1, 10], [2, 20]]`, and `MERGE ... WHEN MATCHED AND (subq) IS NULL` raises
+   `UnsupportedOperationException`; native door still raises `UnsupportedOperationException` for both).
 6. **Output schema nullability on provably-1-row subqueries (`COUNT(*)`, `(SELECT 1)`):** Spark Catalyst marks all
    `ScalarSubquery` outputs nullable even when provably non-null; RePark intentionally keeps provably-1-row subqueries
    non-null to preserve constant folding (never producing `NONNULL_WITH_NULLS`).
