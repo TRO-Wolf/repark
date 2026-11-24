@@ -7,7 +7,7 @@ calendar-dimension build that could not run on RePark: `SELECT explode(sequence(
 DAY)) AS d`, then a projection of date parts of `d`, among them `CAST(extract(YEAROFWEEK FROM d) AS SMALLINT)`.
 **Severity:** S2 (loud: every spelling refuses).
 
-**Status:** **FIXED on the branch** (not merged).
+**Status:** **FIXED**; merged as PR #1415 (`ed637ffb`, 2026-11-24).
 
 ## The defect
 
