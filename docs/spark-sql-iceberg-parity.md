@@ -5263,6 +5263,10 @@ still open is `isModifiable`.
   while allowing foldable expressions (`lower('HOUR')`, `concat(…)`).
   `crates/repark-python/src/column/function_dispatch.rs` dispatches `date_part` / `datepart` to
   `facade_date_part_udf()` (`EXPECTED_DIVERGENCES` stays at 14 for the `MonthDayNano` split).
+  `crates/repark-python/src/column/expr_build.rs` attaches `DeferredSessionTimeZoneConfig`
+  (`with_deferred_session_time_zone`) so `SparkLtzTimestampCast` and `rewrite_string_try_cast` fold
+  only zone-bearing text in `EXPR_CONTEXT` and defer zoneless `TIMESTAMP` / `CAST` / `TRY_CAST`
+  literals to runtime `to_timestamp` / `try_to_timestamp` (binding the active session zone at use).
   `TIMESTAMP_NTZ` and `DATE` calendar values stay zone-invariant, and `extract(DOW)` /
   `extract(DAYOFWEEK)` over `DATE` and `TIMESTAMP_NTZ` now match Spark's 1-based numbering
   (improvement over main's 0-based `DOW` and unsupported `DAYOFWEEK`). `EXTRACT` on `Duration`/`Time`,
@@ -5272,8 +5276,8 @@ still open is `isModifiable`.
   typed `F.date_part` / SQL `EXTRACT` on `MonthDayNano` keeps main's stock behavior); (c) a foldable
   non-literal invalid field (`concat('epo', 'ch')`) over a `LIMIT 0` plan skips validation when
   `EmptyRelation` short-circuits before constant folding (D1-3); (d) `date_part(NULL, ts)` raises
-  on main and head where Spark answers `double: NULL`; (e) `FEXPR-TIMESTAMP-ZONE-1` (separate open
-  card: zoneless `F.expr("TIMESTAMP '…'")` literals resolve in UTC before reaching `SparkDatePart`);
+  on main and head where Spark answers `double: NULL`; (e) other `EXPR_CONTEXT`-baked settings such
+  as `spark.sql.timestampType=TIMESTAMP_NTZ` remain on a separate card (`FEXPR-TIMESTAMP-ZONE-1`);
   (f) `EXTRACT-HOUR-DST-GAP-1` (gap literal `TIMESTAMP '2024-03-10 02:30:00'` in New York now
   answers `3`, matching Spark).
 - **Apache Spark** — 150 multi-column oracle cells in

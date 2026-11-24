@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import contextlib
+import datetime as dt
+import io
 import json
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
 import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 from _record_date_part_session_zone_1 import (
     ANSI_MODES,
@@ -515,3 +519,272 @@ def test_native_repark_sql_door_is_unchanged() -> None:
     assert table.column("dp_dow").to_pylist() == [1, 6]
     assert table.column("ex_h").to_pylist() == [2, 12]
     assert table.column("ex_dow").to_pylist() == [1, 6]
+
+
+def _capture_explain(frame: Any) -> str:
+    buffer = io.StringIO()
+    with contextlib.redirect_stdout(buffer):
+        frame.explain(extended=True)
+    return buffer.getvalue()
+
+
+def test_d1_part3_f_expr_zoneless_timestamp_defers_to_session_zone(tmp_path: Path) -> None:
+    session = _new_session("date-part-d1-p3-fexpr-zone", tmp_path / "wh")
+    lit_ts = "TIMESTAMP '2024-01-01 02:00:00'"
+    expected_epoch = {
+        "America/New_York": 1704092400,
+        "Asia/Kolkata": 1704054600,
+        "UTC": 1704074400,
+    }
+    expected_z_hour = {"America/New_York": 21, "Asia/Kolkata": 7, "UTC": 2}
+    expected_gap_hour = {"America/New_York": 3, "Asia/Kolkata": 2, "UTC": 2}
+    expected_overlap_epoch = {
+        "America/New_York": 1730611800,
+        "Asia/Kolkata": 1730577600,
+        "UTC": 1730597400,
+    }
+    try:
+        for zone in ("America/New_York", "Asia/Kolkata", "UTC"):
+            session.conf.set("spark.sql.session.timeZone", zone)
+            for ansi in ("false", "true"):
+                session.conf.set("spark.sql.ansi.enabled", ansi)
+                frame = session.sql("SELECT 1 AS id")
+                projected = frame.select(
+                    spark_functions.expr(lit_ts).alias("ts"),
+                    spark_functions.expr(f"hour({lit_ts})").alias("hr"),
+                    spark_functions.expr(f"day({lit_ts})").alias("dy"),
+                    spark_functions.expr(f"extract(HOUR FROM {lit_ts})").alias("ex_hr"),
+                    spark_functions.expr(f"extract(DAY FROM {lit_ts})").alias("ex_dy"),
+                    spark_functions.expr(f"date_part('day', {lit_ts})").alias("dp_dy"),
+                    spark_functions.expr(f"date_format({lit_ts}, 'yyyy-MM-dd HH:mm')").alias("fmt"),
+                    spark_functions.expr(f"CAST({lit_ts} AS STRING)").alias("as_str"),
+                    spark_functions.expr(f"unix_timestamp({lit_ts})").alias("ep"),
+                    spark_functions.expr(
+                        "extract(DAY FROM CAST('2024-01-01 02:00:00' AS TIMESTAMP))"
+                    ).alias("cast_dy"),
+                    spark_functions.expr(f"extract(HOUR FROM {lit_ts} + INTERVAL 1 HOUR)").alias(
+                        "plus1_hr"
+                    ),
+                    spark_functions.expr(
+                        "extract(HOUR FROM TRY_CAST('2024-01-01 02:00:00' AS TIMESTAMP))"
+                    ).alias("try_hr"),
+                    spark_functions.extract(
+                        spark_functions.lit("hour"), spark_functions.expr(lit_ts)
+                    ).alias("fn_ex"),
+                    spark_functions.date_part(
+                        spark_functions.lit("hour"), spark_functions.expr(lit_ts)
+                    ).alias("fn_dp"),
+                    spark_functions.datepart(
+                        spark_functions.lit("hour"), spark_functions.expr(lit_ts)
+                    ).alias("fn_datepart"),
+                    spark_functions.expr(
+                        f"TRY_CAST('2024-01-01 02:00:00' AS TIMESTAMP) = {lit_ts}"
+                    ).alias("eq_try"),
+                    spark_functions.expr(f"{lit_ts} = '2024-01-01 02:00:00'").alias("eq_str"),
+                    spark_functions.expr(
+                        f"{lit_ts} BETWEEN TIMESTAMP '2024-01-01 01:00:00' "
+                        "AND TIMESTAMP '2024-01-01 03:00:00'"
+                    ).alias("btw"),
+                    spark_functions.expr(
+                        f"{lit_ts} IN (TIMESTAMP '2024-01-01 01:00:00', "
+                        "TIMESTAMP '2024-01-01 02:00:00')"
+                    ).alias("in_list"),
+                    spark_functions.expr(f"{lit_ts} = TIMESTAMP_NTZ '2024-01-01 02:00:00'").alias(
+                        "eq_ntz"
+                    ),
+                    spark_functions.expr(
+                        "extract(HOUR FROM TIMESTAMP '2024-01-01 02:00:00Z')"
+                    ).alias("z_hr"),
+                    spark_functions.expr(
+                        "extract(HOUR FROM TIMESTAMP '2024-01-01 02:00:00+00:00')"
+                    ).alias("off_hr"),
+                    spark_functions.expr(
+                        "extract(HOUR FROM TIMESTAMP '2024-03-10 02:30:00')"
+                    ).alias("gap_hr"),
+                    spark_functions.expr("unix_timestamp(TIMESTAMP '2024-11-03 01:30:00')").alias(
+                        "ov_ep"
+                    ),
+                    spark_functions.expr(
+                        "extract(DAY FROM TIMESTAMP_NTZ '2024-01-01 02:00:00')"
+                    ).alias("ntz_dy"),
+                    spark_functions.expr("TRY_CAST('bad' AS TIMESTAMP)").alias("try_bad"),
+                )
+                arrow = projected.to_arrow()
+                assert arrow.column("hr").to_pylist() == [2], (zone, ansi)
+                assert arrow.column("dy").to_pylist() == [1], (zone, ansi)
+                assert arrow.column("ex_hr").to_pylist() == [2], (zone, ansi)
+                assert arrow.column("ex_dy").to_pylist() == [1], (zone, ansi)
+                assert arrow.column("dp_dy").to_pylist() == [1], (zone, ansi)
+                assert arrow.column("fmt").to_pylist() == ["2024-01-01 02:00"], (zone, ansi)
+                assert arrow.column("as_str").to_pylist() == ["2024-01-01 02:00:00"], (zone, ansi)
+                assert arrow.column("ep").to_pylist() == [expected_epoch[zone]], (zone, ansi)
+                assert arrow.column("cast_dy").to_pylist() == [1], (zone, ansi)
+                assert arrow.column("plus1_hr").to_pylist() == [3], (zone, ansi)
+                assert arrow.column("try_hr").to_pylist() == [2], (zone, ansi)
+                assert arrow.column("fn_ex").to_pylist() == [2], (zone, ansi)
+                assert arrow.column("fn_dp").to_pylist() == [2], (zone, ansi)
+                assert arrow.column("fn_datepart").to_pylist() == [2], (zone, ansi)
+                assert arrow.column("eq_try").to_pylist() == [True], (zone, ansi)
+                assert arrow.column("eq_str").to_pylist() == [True], (zone, ansi)
+                assert arrow.column("btw").to_pylist() == [True], (zone, ansi)
+                assert arrow.column("in_list").to_pylist() == [True], (zone, ansi)
+                assert arrow.column("eq_ntz").to_pylist() == [True], (zone, ansi)
+                assert arrow.column("z_hr").to_pylist() == [expected_z_hour[zone]], (zone, ansi)
+                assert arrow.column("off_hr").to_pylist() == [expected_z_hour[zone]], (zone, ansi)
+                assert arrow.column("gap_hr").to_pylist() == [expected_gap_hour[zone]], (zone, ansi)
+                assert arrow.column("ov_ep").to_pylist() == [expected_overlap_epoch[zone]], (
+                    zone,
+                    ansi,
+                )
+                assert arrow.column("ntz_dy").to_pylist() == [1], (zone, ansi)
+                assert arrow.column("try_bad").to_pylist() == [None], (zone, ansi)
+                unaliased = frame.select(
+                    spark_functions.expr(lit_ts),
+                    spark_functions.expr(f"extract(HOUR FROM {lit_ts})"),
+                )
+                assert unaliased.columns == [lit_ts, f"extract(HOUR FROM {lit_ts})"]
+                assert unaliased.dtypes == [
+                    (lit_ts, "timestamp"),
+                    (f"extract(HOUR FROM {lit_ts})", "int"),
+                ]
+                if ansi == "true":
+                    with pytest.raises(Exception, match="CAST_INVALID_INPUT"):
+                        frame.select(spark_functions.expr("TIMESTAMP 'bad'")).collect()
+                else:
+                    bad = frame.select(
+                        spark_functions.expr("TIMESTAMP 'bad'").alias("b")
+                    ).to_arrow()
+                    assert bad.column("b").to_pylist() == [None]
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+
+
+def test_d1_part3_f_expr_frame_doors_pruning_and_zone_lifecycle(tmp_path: Path) -> None:
+    lit_ts = "TIMESTAMP '2024-01-01 02:00:00'"
+    pre_session_ts = spark_functions.expr(lit_ts)
+    pre_session_hr = spark_functions.expr(f"extract(HOUR FROM {lit_ts})")
+    pq_path = tmp_path / "scan.parquet"
+    schema = pa.schema(
+        [
+            pa.field("id", pa.int32(), nullable=False),
+            pa.field("ts", pa.timestamp("us", tz="UTC"), nullable=True),
+        ]
+    )
+    with pq.ParquetWriter(str(pq_path), schema) as writer:
+        writer.write_table(
+            pa.Table.from_pydict(
+                {
+                    "id": [1, 2],
+                    "ts": [
+                        dt.datetime(2023, 12, 31, 20, 0, tzinfo=dt.UTC),
+                        dt.datetime(2024, 1, 1, 2, 0, tzinfo=dt.UTC),
+                    ],
+                },
+                schema=schema,
+            )
+        )
+        writer.write_table(
+            pa.Table.from_pydict(
+                {
+                    "id": [3, 4],
+                    "ts": [
+                        dt.datetime(2024, 1, 1, 7, 0, tzinfo=dt.UTC),
+                        dt.datetime(2024, 1, 1, 12, 0, tzinfo=dt.UTC),
+                    ],
+                },
+                schema=schema,
+            )
+        )
+    warehouse = tmp_path / "wh"
+    session = _new_session("date-part-d1-p3-doors", warehouse)
+    try:
+        session.conf.set("spark.sql.session.timeZone", "America/New_York")
+        session.conf.set("spark.sql.ansi.enabled", "true")
+        session.sql("CREATE NAMESPACE IF NOT EXISTS dp1.p3")
+        session.sql("CREATE TABLE dp1.p3.scan (id INT, ts TIMESTAMP) USING iceberg")
+        session.sql(
+            "INSERT INTO dp1.p3.scan VALUES "
+            "(1, TIMESTAMP '2023-12-31 20:00:00Z'), (2, TIMESTAMP '2024-01-01 02:00:00Z')"
+        )
+        session.sql(
+            "INSERT INTO dp1.p3.scan VALUES "
+            "(3, TIMESTAMP '2024-01-01 07:00:00Z'), (4, TIMESTAMP '2024-01-01 12:00:00Z')"
+        )
+        base = session.sql("SELECT 1 AS id")
+        pq_filtered = session.read.parquet(str(pq_path)).filter(
+            spark_functions.col("ts") >= spark_functions.expr(lit_ts)
+        )
+        ice_filtered = session.table("dp1.p3.scan").filter(
+            spark_functions.col("ts") >= spark_functions.expr(lit_ts)
+        )
+        assert pq_filtered.orderBy("id").to_arrow().column("id").to_pylist() == [3, 4]
+        assert ice_filtered.orderBy("id").to_arrow().column("id").to_pylist() == [3, 4]
+        pq_plan = _capture_explain(pq_filtered)
+        ice_plan = _capture_explain(ice_filtered)
+        assert "1704092400000000" in pq_plan and "pruning_predicate" in pq_plan
+        assert "ts >= 2024-01-01 07:00:00 UTC" in ice_plan and "N=1" in ice_plan
+        assert base.withColumn("t", spark_functions.expr(lit_ts)).select(
+            spark_functions.expr("extract(HOUR FROM t)").alias("h")
+        ).to_arrow().column("h").to_pylist() == [2]
+        assert base.selectExpr(f"extract(HOUR FROM {lit_ts}) AS h").to_arrow().column(
+            "h"
+        ).to_pylist() == [2]
+        assert session.read.parquet(str(pq_path)).alias("a").join(
+            base.alias("b"), spark_functions.col("a.ts") == spark_functions.expr(lit_ts)
+        ).select("a.id").to_arrow().column("id").to_pylist() == [3]
+        assert session.read.parquet(str(pq_path)).groupBy(
+            spark_functions.expr(f"extract(HOUR FROM {lit_ts})").alias("h")
+        ).count().to_arrow().column("h").to_pylist() == [2]
+        assert session.read.parquet(str(pq_path)).agg(
+            spark_functions.max(spark_functions.expr(lit_ts)).alias("mx")
+        ).to_arrow().column("mx").cast(pa.int64()).to_pylist() == [1704092400000000]
+        base.select(
+            spark_functions.col("id"), spark_functions.expr(lit_ts).alias("t")
+        ).createOrReplaceTempView("dp1_p3_view")
+        assert session.sql("SELECT extract(HOUR FROM t) AS h FROM dp1_p3_view").to_arrow().column(
+            "h"
+        ).to_pylist() == [2]
+        before_set_ts = spark_functions.expr(lit_ts)
+        before_set_hr = spark_functions.expr(f"extract(HOUR FROM {lit_ts})")
+        ny_lc = base.select(
+            pre_session_ts.alias("pre_t"),
+            pre_session_hr.alias("pre_h"),
+            before_set_ts.alias("set_t"),
+            before_set_hr.alias("set_h"),
+        ).to_arrow()
+        assert ny_lc.column("pre_t").cast(pa.int64()).to_pylist() == [1704092400000000]
+        assert ny_lc.column("pre_h").to_pylist() == [2]
+        assert ny_lc.column("set_t").cast(pa.int64()).to_pylist() == [1704092400000000]
+        assert ny_lc.column("set_h").to_pylist() == [2]
+        base.select(
+            spark_functions.col("id"),
+            spark_functions.expr(lit_ts).alias("t"),
+            spark_functions.expr(f"extract(HOUR FROM {lit_ts})").alias("h"),
+        ).writeTo("dp1.p3.written").create()
+        session.conf.set("spark.sql.session.timeZone", "Asia/Tokyo")
+        tokyo_lc = (
+            session.sql("SELECT 1 AS id")
+            .select(
+                pre_session_ts.alias("pre_t"),
+                pre_session_hr.alias("pre_h"),
+                before_set_ts.alias("set_t"),
+                before_set_hr.alias("set_h"),
+            )
+            .to_arrow()
+        )
+        assert tokyo_lc.column("pre_t").cast(pa.int64()).to_pylist() == [1704042000000000]
+        assert tokyo_lc.column("pre_h").to_pylist() == [2]
+        assert tokyo_lc.column("set_t").cast(pa.int64()).to_pylist() == [1704042000000000]
+        assert tokyo_lc.column("set_h").to_pylist() == [2]
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+    cold = _new_session("date-part-d1-p3-cold", warehouse)
+    try:
+        readback = cold.read.format("iceberg").load(str(warehouse / "p3" / "written")).to_arrow()
+        assert readback.column("t").cast(pa.int64()).to_pylist() == [1704092400000000]
+        assert readback.column("h").to_pylist() == [2]
+    finally:
+        cold.stop()
+        _reset_active_session_for_tests()
