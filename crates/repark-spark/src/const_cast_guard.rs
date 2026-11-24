@@ -30,7 +30,7 @@ mod eval;
 #[cfg(test)]
 mod tests;
 
-use eval::{EvalContext, eval_expr, has_spark_error_class};
+use eval::{EvalContext, eval_expr};
 
 const MAX_PLAN_DEPTH: usize = 48;
 const MAX_BRANCH_ENVS: usize = 64;
@@ -279,7 +279,18 @@ async fn validate_probe_sql(
 }
 
 fn is_cast_error(error: &DataFusionError) -> bool {
-    has_spark_error_class(&error.to_string())
+    let text = error.to_string();
+    text.contains("[CAST_INVALID_INPUT]")
+        || text.contains("[CAST_OVERFLOW]")
+        || text.contains("[CAST_OVERFLOW_IN_TABLE_INSERT]")
+        || text.contains("[NUMERIC_VALUE_OUT_OF_RANGE")
+        || text.contains("[INVALID_FORMAT")
+        || text.contains("[CANNOT_PARSE_TIMESTAMP]")
+        || text.contains("[CANNOT_PARSE_INTERVAL]")
+        || text.contains("[DATETIME_OVERFLOW]")
+        || text.contains("[DATETIME_FIELD_OUT_OF_BOUNDS")
+        || text.contains("[CONVERSION_INVALID_INPUT]")
+        || text.contains("[DATATYPE_MISMATCH.CAST_")
 }
 
 fn qualified_table_sql(catalog_name: &str, ident: &iceberg::TableIdent) -> String {

@@ -12,7 +12,7 @@ This module runs only on Spark write doors (`insert_overwrite.rs`, `insert_by_na
 
 | File | Role |
 |---|---|
-| [`../const_cast_guard.rs`](../const_cast_guard.rs) | Write-door entry points (`validate_write_plan`, `validate_write_query`, `validate_where_predicate`, `validate_identity_dml_predicate`, `validate_merge_spec`) and relational constant-propagation walker (`walk_plan`: `Projection` column pruning, `Limit(0)` elimination, `Union` multi-branch envs, `Join`, `Aggregate`, `Values` non-propagation, `Dml(Update)` WHERE-only unwrapping, `ReplanningTempView`/`FrameView`/`FrameSettingsNode` settings overlay). |
+| [`../const_cast_guard.rs`](../const_cast_guard.rs) | Write-door entry points (`validate_write_plan`, `validate_write_query`, `sql_expr_has_explicit_cast`, `validate_identity_dml_predicate`, `validate_merge_spec`) and relational constant-propagation walker (`walk_plan`: `Projection` column pruning, `Limit(0)` elimination, `Union` multi-branch envs, `Join`, `Aggregate`, `Values` non-propagation, `Dml(Update)` WHERE-only unwrapping, `ReplanningTempView`/`FrameView`/`FrameSettingsNode` settings overlay). |
 | [`eval.rs`](eval.rs) | Catalyst-equivalent expression evaluator (`eval_expr`): dead-branch pruning for `Case`/`if`/`nvl2`/`coalesce`/`nvl`/`ifnull`, non-foldable `ConditionalExpression` stop rule, `And`/`Or` foldability + short-circuiting, `TryCast` & safe-cast UDF handling, 1-row batch evaluation via `create_physical_expr`, `FloatToDecimal` NaN/Inf NULL + finite overflow formatting, and Spark error-class formatting. |
 | [`tests.rs`](tests.rs) | Unit tests covering types, indirections, dead branches, short-circuit ordering, DML doors (`INSERT OVERWRITE`, `INSERT INTO`, `CTAS`, `MERGE`, `UPDATE`, `DELETE`), ANSI off, and temp-view ANSI-mode capture. |
 
@@ -22,3 +22,4 @@ This module runs only on Spark write doors (`insert_overwrite.rs`, `insert_by_na
 - `spark.sql.ansi.enabled = false` (or an unwrapped view whose captured `TempViewSettings` has ANSI off) never raises a value-level cast error.
 - `UPDATE` validates only its `WHERE` predicate (`unwrap_update_filter`), matching Spark Iceberg's measured `UPDATE SET ... WHERE 1 = 0` acceptance vs `UPDATE ... WHERE <bad const cast>` refusal.
 - `FloatToDecimal` non-finite inputs (`NaN`, `±Infinity`) yield `NULL` without raising, matching Spark 4.1.2.
+- SQL-probe helpers (`validate_write_query`, `validate_probe_sql`, `clause_predicate_is_const_false`) propagate only cast error classes (`is_cast_error`) so non-cast planning errors (e.g., `DATATYPE_MISMATCH.INVALID_ORDERING_TYPE` in `MERGE ON`) reach the DML executor's own formatter untouched.

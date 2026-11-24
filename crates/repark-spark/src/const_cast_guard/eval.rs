@@ -758,7 +758,7 @@ fn normalize_cast_udf_error(
     error
 }
 
-pub(super) fn has_spark_error_class(message: &str) -> bool {
+fn has_spark_error_class(message: &str) -> bool {
     message.contains("[CAST_INVALID_INPUT]")
         || message.contains("[CAST_OVERFLOW]")
         || message.contains("[NUMERIC_VALUE_OUT_OF_RANGE")

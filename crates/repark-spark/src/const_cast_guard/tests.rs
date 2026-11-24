@@ -347,3 +347,23 @@ async fn ansi_off_allows_empty_writes_and_temp_view_captures_ansi() -> Result<()
     assert_eq!(row_count(&session, "ice.ns.t_off").await?, 0);
     Ok(())
 }
+
+#[test]
+fn is_cast_error_ignores_non_cast_spark_errors() {
+    let ordering = DataFusionError::Plan(
+        "[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c = m)\"".to_string(),
+    );
+    assert!(!super::is_cast_error(&ordering));
+
+    for msg in [
+        "[CAST_INVALID_INPUT] bad",
+        "[CAST_OVERFLOW] big",
+        "[NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION] big",
+        "[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] bad",
+    ] {
+        assert!(
+            super::is_cast_error(&DataFusionError::Execution(msg.to_string())),
+            "{msg}"
+        );
+    }
+}
