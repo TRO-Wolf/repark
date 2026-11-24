@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-_SCRATCH_PATH_RE = re.compile(r"(?:file://)?/tmp/claude-[^\s'\"]+")
+_SCRATCH_PATH_RE = re.compile(r"(?:file://)?/tmp/[^\s'\"]+")
 
 
 def _norm(val: Any) -> Any:
