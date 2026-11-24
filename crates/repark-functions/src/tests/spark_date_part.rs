@@ -690,7 +690,7 @@ async fn a1_interval_inputs_follow_spark_semantics() {
 
     let facade_udf = crate::datetime::spark_date_part::facade_date_part_udf();
     let df = ny_ansi
-        .sql("SELECT INTERVAL '2' YEAR AS iy, INTERVAL '3' HOUR AS ihr")
+        .sql("SELECT INTERVAL '2' YEAR AS iv_year, INTERVAL '3' HOUR AS iv_hour")
         .await
         .expect("plan intervals");
     let facade_batches = df
@@ -698,13 +698,13 @@ async fn a1_interval_inputs_follow_spark_semantics() {
             facade_udf
                 .call(vec![
                     datafusion::prelude::lit("y"),
-                    datafusion::prelude::col("iy"),
+                    datafusion::prelude::col("iv_year"),
                 ])
                 .alias("y"),
             facade_udf
                 .call(vec![
                     datafusion::prelude::lit("hrs"),
-                    datafusion::prelude::col("ihr"),
+                    datafusion::prelude::col("iv_hour"),
                 ])
                 .alias("h"),
         ])
