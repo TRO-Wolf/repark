@@ -528,7 +528,7 @@ fn expr_context_defers_zoneless_timestamp_literals_and_folds_zoned_text() {
         let column = PyColumn::sql(sql, false).expect(sql);
         match column.expr() {
             Expr::Literal(ScalarValue::TimestampMicrosecond(Some(micros), Some(zone)), _) => {
-                assert_eq!(*micros, 1_704_074_400_000_000, "{sql}");
+                assert_eq!(micros, 1_704_074_400_000_000, "{sql}");
                 assert_eq!(zone.as_ref(), "UTC", "{sql}");
             }
             other => panic!("{sql}: expected folded UTC TimestampMicrosecond, got {other:?}"),
