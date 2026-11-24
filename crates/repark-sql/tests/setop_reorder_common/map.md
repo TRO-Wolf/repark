@@ -11,11 +11,9 @@ outcome checks.
 
 - `mod.rs` — STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-08): the domain table on the ANSI, DataFusion
   and Spark doors over v2 copy-on-write tables; reordered operands refuse, controls answer,
-  refusals persist nothing. **SQL-SETOP-ALL-REFUSE-1 (2026-11-12):** the `INTERSECT ALL` and
-  `EXCEPT ALL` rows expect that unit's statement refusal on every door (`is_multiset`,
-  `check_multiset_refusal`: the error carries `(SQL-SETOP-ALL-MULTISET-1)`, and a refused
-  `INSERT` leaves the rows and the snapshot as they were), because the session's statement seat
-  refuses before the struct rule runs.
+  refusals persist nothing. **SQL-SETOP-ALL-MULTISET-1 (2026-11-23):** the `INTERSECT ALL` and
+  `EXCEPT ALL` rows are checked like the distinct ones again: the struct rule runs before the
+  multiset rewrite, so a reordered operand refuses with `[INCOMPATIBLE_COLUMN_TYPE]`.
 
 ## Pointers
 

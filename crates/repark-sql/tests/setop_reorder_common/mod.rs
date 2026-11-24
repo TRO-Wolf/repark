@@ -689,10 +689,7 @@ fn expected_rows(shape: &Shape, op: Op) -> &'static str {
 fn is_answer_shape(shape: &Shape, op: Op) -> bool {
     match shape.expect {
         Expect::Answer(_) => true,
-        Expect::MapAnswer(_) => matches!(
-            op,
-            Op::UnionAll | Op::DfUnion | Op::DfUnionByName | Op::IntersectAll | Op::ExceptAll
-        ),
+        Expect::MapAnswer(_) => matches!(op, Op::UnionAll | Op::DfUnion | Op::DfUnionByName),
         Expect::Refuse(_) | Expect::MapRefuse(_) => false,
     }
 }
@@ -753,24 +750,6 @@ async fn check_sql_cell(
     .await;
 }
 
-fn is_multiset(op: Op) -> bool {
-    matches!(op, Op::IntersectAll | Op::ExceptAll)
-}
-
-fn check_multiset_refusal(
-    label: &str,
-    failures: &mut Vec<String>,
-    outcome: &Result<Vec<RecordBatch>, String>,
-) {
-    match outcome {
-        Err(error) if error.contains("(SQL-SETOP-ALL-MULTISET-1)") => {}
-        Err(error) => failures.push(format!(
-            "{label}: refused without the multiset card {error}"
-        )),
-        Ok(batches) => failures.push(format!("{label}: answered {}", render_rows(batches))),
-    }
-}
-
 fn check_read_outcome(
     label: &str,
     failures: &mut Vec<String>,
@@ -778,10 +757,6 @@ fn check_read_outcome(
     op: Op,
     shape: &Shape,
 ) {
-    if is_multiset(op) {
-        check_multiset_refusal(label, failures, &outcome);
-        return;
-    }
     let answer_shape = is_answer_shape(shape, op);
     match outcome {
         Ok(batches) => {
@@ -817,14 +792,6 @@ async fn check_insert_outcome(
     shape: &Shape,
     before: &State,
 ) {
-    if is_multiset(op) {
-        let after = observe(doors, door, table).await;
-        if after.rows != before.rows || after.snapshot != before.snapshot {
-            failures.push(format!("{label}: the refused write changed {}", after.rows));
-        }
-        check_multiset_refusal(label, failures, &outcome);
-        return;
-    }
     let answer_shape = is_answer_shape(shape, op);
     match outcome {
         Ok(_) => {

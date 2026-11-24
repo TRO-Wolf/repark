@@ -138,6 +138,7 @@ async fn default_hooks_are_noops_and_build_succeeds_without_extension() {
         .position(|name| name == "type_coercion")
         .expect("type_coercion in the default analyzer");
     expected.insert(coercion + 1, "struct_setop_names".to_string());
+    expected.insert(coercion + 2, "setop_all_multiset".to_string());
     expected.push("sliding_frame_rescan".to_string());
     expected.push("repark_float_decimal_store".to_string());
     expected.push("repark_optimizer_seat_config".to_string());
