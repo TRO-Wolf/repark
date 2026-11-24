@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-19. **Filed by:** the records clerk (`claude-haiku-5-5`), under the owner's ruling of 2026-11-19 (ruling 1, about 12:17 UTC: the sketch's §7 Q3 default for the neighbours' severities). **Source:** [domain table](../../../wo/string-hour-minute-second-1/domain-table.md) §6, row N6 (the step 0 of STRING-HOUR-MINUTE-SECOND-1, merged as #1369, `81ae984e`).
 
-**Status:** filed 2026-11-19; **FIXED 2026-11-23 on branch `fix/sql-explode-extract-fields-1`** (not merged), with [SQL-EXPLODE-1](../cards-2026-11-23/sql-explode-1-card-2026-11-23.md); measured scope, fix and residue in the [registry row](../../../../docs/spark-sql-iceberg-parity.md) EXTRACT-FIELD-ALIASES-1.
+**Status:** filed 2026-11-19; **FIXED 2026-11-23**, merged as PR #1415 (`ed637ffb`, 2026-11-24), with [SQL-EXPLODE-1](../cards-2026-11-23/sql-explode-1-card-2026-11-23.md); measured scope, fix and residue in the [registry row](../../../../docs/spark-sql-iceberg-parity.md) EXTRACT-FIELD-ALIASES-1.
 
 **Severity: S2, not label-blocking** (ruling 1, about 12:17 UTC: the sketch's §7 Q3 default, "the loud ones (N2, N5, N6, N9, N10) S2").
 
