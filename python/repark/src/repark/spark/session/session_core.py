@@ -9,6 +9,12 @@ from typing import Any
 import repark.spark.session._funcs as _sf
 import repark.spark.session.session_surface as _session_surface
 import repark.spark.session.sql_run as _sql_run
+from repark.spark.filter_quote import (
+    _is_string_prefix_at,
+    _quoted_span_end,
+    _spark_block_comment_end,
+    _spark_line_comment_end,
+)
 from repark.spark.session._coerce import range_bound_as_int as _range_bound_as_int
 from repark.spark.session._coerce import sql_clause_end_after as _sql_clause_end_after
 from repark.spark.session.builder_conf import RuntimeConfig, SparkContext
@@ -595,37 +601,25 @@ class ReparkSession:
         length = len(query)
         while index < length:
             char = query[index]
-            # Line / block comments — copy opaque so FROM inside comments is not rewritten.
             if char == "-" and index + 1 < length and query[index + 1] == "-":
-                end = query.find("\n", index)
-                if end < 0:
-                    result.append(query[index:])
-                    break
-                result.append(query[index : end + 1])
-                index = end + 1
+                end = _spark_line_comment_end(query, index)
+                result.append(query[index:end])
+                index = end
                 continue
             if char == "/" and index + 1 < length and query[index + 1] == "*":
-                end = query.find("*/", index + 2)
-                if end < 0:
-                    result.append(query[index:])
-                    break
-                result.append(query[index : end + 2])
-                index = end + 2
+                end = _spark_block_comment_end(query, index)
+                result.append(query[index:end])
+                index = end
+                continue
+            if _is_string_prefix_at(query, index):
+                end = _quoted_span_end(query, index + 1, raw=True)
+                result.append(query[index:end])
+                index = end
                 continue
             if char in {'"', "'", "`"}:
-                quote = char
-                result.append(char)
-                index += 1
-                while index < length:
-                    current = query[index]
-                    result.append(current)
-                    index += 1
-                    if current == quote:
-                        if quote == '"' and index < length and query[index] == '"':
-                            result.append(query[index])
-                            index += 1
-                            continue
-                        break
+                end = _quoted_span_end(query, index)
+                result.append(query[index:end])
+                index = end
                 continue
             if char == "(":
                 # Subquery ``(SELECT|WITH …)`` → expand inside; else copy opaque (EXTRACT FROM…).

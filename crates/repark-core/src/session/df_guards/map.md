@@ -400,14 +400,12 @@ wrapped optimizer rule) and declares this directory.
     facade's one-line shape plus Spark's `SQLSTATE: XX000`. The operator renders as `!Join` (Spark
     prints the plan node with exprIds).
   The join type is not an input: `emits_right` is never a verdict input (SJ-1a ruling 2).
-  Pins: `../tests/self_join.rs`; the bindings in `crates/repark-python/src/frame_lineage.rs`.
-  **CASESENS-2 port (2026-10-03):** `JoinSide` carries the facade's
-  `qualifiers` (attribute id to alias names, `None` when the frame holds none),
-  and `prepare_join_condition` first hands the placeholder text to
-  `predicate_names::bind_condition_qualifiers` (only with a `.`). When
-  that rewrites a free alias-qualified name, the final SQL is the rewritten tree
-  with each placeholder restored to its rendered side text; otherwise the
-  byte-span splice runs unchanged. Pins: `../tests/join_qualifiers.rs`.
+  Pins: `../tests/self_join.rs`, `crates/repark-python/src/frame_lineage.rs`.
+  **CASESENS-2 (2026-10-03):** `JoinSide.qualifiers` lets `prepare_join_condition` bind
+  free alias-qualified names via `predicate_names::bind_condition_qualifiers` (pins:
+  `../tests/join_qualifiers.rs`). **FILTER-STRING-ESCAPED-QUOTE-1 (2026-11-24):**
+  `self_join::parse_attr_refs` skips Spark escapes/raw/nested comments; `case_bind::sql_text_tokens`
+  keeps literal words conservative while keeping backticks inside literals/comments inert.
 - `case_bind.rs` — **U11-EDGE-1 (2026-09-26):** `bind_case_insensitive`, run first by
   `subquery.rs`'s `resolve_bound_expr` (the DataFrame door's one binding hook). An
   unqualified column the frame schema does not hold exactly binds the single field

@@ -113,7 +113,32 @@ pub fn parse_attr_refs(sql: &str) -> Result<AttrRefText> {
     let mut copied = 0;
     let mut index = 0;
     while let Some(&byte) = bytes.get(index) {
-        if matches!(byte, b'\'' | b'"' | b'`') {
+        if byte == b'-' && bytes.get(index + 1) == Some(&b'-') {
+            index += 2;
+            while index < bytes.len() && !matches!(bytes[index], b'\n' | b'\r') {
+                index += 1;
+            }
+        } else if byte == b'/' && bytes.get(index + 1) == Some(&b'*') {
+            index += 2;
+            let mut depth = 1usize;
+            while index < bytes.len() && depth > 0 {
+                if bytes.get(index..index + 2) == Some(b"/*") {
+                    depth += 1;
+                    index += 2;
+                } else if bytes.get(index..index + 2) == Some(b"*/") {
+                    depth -= 1;
+                    index += 2;
+                } else {
+                    index += 1;
+                }
+            }
+        } else if matches!(byte, b'r' | b'R' | b'x' | b'X')
+            && matches!(bytes.get(index + 1), Some(b'\'' | b'"'))
+            && (index == 0
+                || !(bytes[index - 1].is_ascii_alphanumeric() || bytes[index - 1] == b'_'))
+        {
+            index = after_raw_quoted(bytes, index + 1, bytes[index + 1]);
+        } else if matches!(byte, b'\'' | b'"' | b'`') {
             index = after_quoted(bytes, index, byte);
         } else if bytes[index..].starts_with(TOKEN.as_bytes()) {
             let (reference, leaf, end) = attr_token(sql, index)?;
@@ -135,6 +160,17 @@ pub fn parse_attr_refs(sql: &str) -> Result<AttrRefText> {
         spans,
         leaves,
     })
+}
+
+fn after_raw_quoted(bytes: &[u8], start: usize, quote: u8) -> usize {
+    let mut index = start + 1;
+    while let Some(&byte) = bytes.get(index) {
+        if byte == quote {
+            return index + 1;
+        }
+        index += 1;
+    }
+    bytes.len()
 }
 
 fn after_quoted(bytes: &[u8], start: usize, quote: u8) -> usize {
@@ -733,5 +769,21 @@ pub fn missing_message(names: &[String], input: &[String], operation: &[String])
              the right attribute(s) are used. SQLSTATE: XX000",
             quoted_names(operation)
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_attr_refs;
+
+    #[test]
+    fn parse_attr_refs_skips_comments_and_raw_strings() {
+        let token = "__REPARK_ATTR_a1__F1__l__D61__";
+        let commented = format!("/* it's {token} */ -- {token}\n{token} = r'a\\'");
+        let parsed = parse_attr_refs(&commented).unwrap();
+        assert_eq!(parsed.refs.len(), 1);
+        let raw_after = format!("r'a\\' = {token}");
+        let parsed_raw = parse_attr_refs(&raw_after).unwrap();
+        assert_eq!(parsed_raw.refs.len(), 1);
     }
 }

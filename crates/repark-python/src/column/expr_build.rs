@@ -182,7 +182,7 @@ pub(crate) async fn plan_expr_column(
 ) -> PyResult<Expr> {
     let rewritten = repark_functions::cast_map::rewrite_map_casts(canonical);
     let canonical = rewritten.as_deref().unwrap_or(canonical);
-    let select_sql = format!("SELECT ({canonical}) AS _repark_expr");
+    let select_sql = format!("SELECT ({canonical}\n) AS _repark_expr");
     let plan = match repark_spark::values_marker::plan_marked_fragment(context, &select_sql).await {
         Ok(None) => {
             return parse_unresolved_expr(context, canonical)

@@ -78,23 +78,64 @@ fn windowed_line(line: &str, units: usize, start: usize, end: usize) -> String {
 fn uuid_token_offset(sql: &str) -> Option<usize> {
     let bytes = sql.as_bytes();
     let mut index = 0;
-    let mut quote: Option<u8> = None;
     while index + 4 <= bytes.len() {
         let byte = bytes[index];
-        if let Some(open) = quote {
-            if byte == open {
-                if bytes.get(index + 1) == Some(&open) {
-                    index += 1;
-                } else {
-                    quote = None;
-                }
+        if byte == b'-' && bytes.get(index + 1) == Some(&b'-') {
+            index += 2;
+            while index < bytes.len() && !matches!(bytes[index], b'\n' | b'\r') {
+                index += 1;
             }
-            index += 1;
             continue;
         }
-        if byte == b'\'' || byte == b'"' || byte == b'`' {
-            quote = Some(byte);
+        if byte == b'/' && bytes.get(index + 1) == Some(&b'*') {
+            index += 2;
+            let mut depth = 1usize;
+            while index < bytes.len() && depth > 0 {
+                if bytes.get(index..index + 2) == Some(b"/*") {
+                    depth += 1;
+                    index += 2;
+                } else if bytes.get(index..index + 2) == Some(b"*/") {
+                    depth -= 1;
+                    index += 2;
+                } else {
+                    index += 1;
+                }
+            }
+            continue;
+        }
+        if matches!(byte, b'r' | b'R' | b'x' | b'X')
+            && matches!(bytes.get(index + 1), Some(b'\'' | b'"'))
+            && (index == 0 || !is_word_byte(bytes[index - 1]))
+        {
+            let quote = bytes[index + 1];
+            index += 2;
+            while index < bytes.len() {
+                if bytes[index] == quote {
+                    index += 1;
+                    break;
+                }
+                index += 1;
+            }
+            continue;
+        }
+        if matches!(byte, b'\'' | b'"' | b'`') {
+            let quote = byte;
             index += 1;
+            while index < bytes.len() {
+                if bytes[index] == b'\\' && quote != b'`' {
+                    index = (index + 2).min(bytes.len());
+                    continue;
+                }
+                if bytes[index] == quote {
+                    if bytes.get(index + 1) == Some(&quote) {
+                        index += 2;
+                        continue;
+                    }
+                    index += 1;
+                    break;
+                }
+                index += 1;
+            }
             continue;
         }
         if bytes[index..index + 4].eq_ignore_ascii_case(b"uuid")
@@ -168,5 +209,17 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn uuid_token_offset_skips_escaped_quotes_raw_and_comments() {
+        let escaped = r"SELECT 'it\'s uuid', CAST('a' AS UUID)";
+        assert_eq!(uuid_token_offset(escaped), escaped.rfind("UUID"));
+        let commented = "SELECT /* a /* it's uuid */ b */ CAST('a' AS UUID)";
+        assert_eq!(uuid_token_offset(commented), commented.rfind("UUID"));
+        let raw_end = r"SELECT r'a\', CAST('a' AS UUID)";
+        assert_eq!(uuid_token_offset(raw_end), raw_end.rfind("UUID"));
+        let backtick_end = r"SELECT `a\`, CAST('a' AS UUID)";
+        assert_eq!(uuid_token_offset(backtick_end), backtick_end.rfind("UUID"));
     }
 }

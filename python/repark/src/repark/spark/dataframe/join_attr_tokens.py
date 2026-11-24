@@ -10,7 +10,7 @@ from repark import _native
 from repark.spark import column_fields as _column_fields
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import scratch_view_name
-from repark.spark.filter_quote import _frame_qualifiers_for_bind
+from repark.spark.filter_quote import _frame_qualifiers_for_bind, _iter_spark_sql_spans
 
 if TYPE_CHECKING:
     from repark.spark.column import Column
@@ -132,12 +132,17 @@ def _replace_local_attr_token(
 def _rewrite_attr_tokens_local(join_sql: str, frame: DataFrame, spell: Any = str) -> str:
     """Rewrite attribute tokens to quoted engine fields, or their ``spell`` names."""
     held, engines = _column_fields._stamped_ids_and_engines(frame)
-    return _ATTR_TOKEN_RE.sub(
-        functools.partial(
-            _replace_local_attr_token, frame=frame, held=held, engines=engines, spell=spell
-        ),
-        join_sql,
+    replacer = functools.partial(
+        _replace_local_attr_token, frame=frame, held=held, engines=engines, spell=spell
     )
+    parts: list[str] = []
+    for kind, start, end in _iter_spark_sql_spans(join_sql):
+        piece = join_sql[start:end]
+        if kind == "code":
+            parts.append(_ATTR_TOKEN_RE.sub(replacer, piece))
+        else:
+            parts.append(piece)
+    return "".join(parts)
 
 
 def _select_via_attr_sql(
@@ -184,7 +189,11 @@ def _select_via_attr_sql(
         while engine in used_engines:
             engine = f"{engine}_"
         used_engines.add(engine)
-        proj_parts.append(f"({expr_sql}) AS {_quote_ident(engine)}")
+        proj_parts.append(
+            f"({expr_sql}\n) AS {_quote_ident(engine)}"
+            if "--" in expr_sql
+            else f"({expr_sql}) AS {_quote_ident(engine)}"
+        )
         display_names.append(display)
         engine_names.append(engine)
 

@@ -139,26 +139,69 @@ fn is_non_table_describe_text_head(word: &str) -> bool {
 }
 
 pub(crate) fn unclosed_describe_quote(sql: &str) -> Option<char> {
-    let mut quote: Option<char> = None;
+    let bytes = sql.as_bytes();
     let mut position = 0;
-    while position < sql.len() {
+    while position < bytes.len() {
         let tail = sql.get(position..)?;
-        if quote.is_none() && (tail.starts_with("/*") || tail.starts_with("--")) {
+        if tail.starts_with("/*") || tail.starts_with("--") {
             position = skip_sql_whitespace_and_comments(sql, position)?;
             continue;
         }
-        let character = tail.chars().next()?;
-        let next_position = position + character.len_utf8();
-        if let Some(open_quote) = quote {
-            if character == open_quote {
-                quote = None;
+        if matches!(bytes[position], b'r' | b'R' | b'x' | b'X')
+            && matches!(bytes.get(position + 1), Some(b'\'' | b'"'))
+            && (position == 0
+                || !(bytes[position - 1].is_ascii_alphanumeric() || bytes[position - 1] == b'_'))
+        {
+            let delimiter = bytes[position + 1];
+            position += 2;
+            let mut closed = false;
+            while position < bytes.len() {
+                if bytes[position] == delimiter {
+                    position += 1;
+                    closed = true;
+                    break;
+                }
+                position += 1;
             }
-        } else if matches!(character, '\'' | '`' | '"') {
-            quote = Some(character);
+            if !closed {
+                return Some(char::from(delimiter));
+            }
+            continue;
         }
-        position = next_position;
+        if matches!(bytes[position], b'\'' | b'"' | b'`') {
+            let delimiter = bytes[position];
+            position += 1;
+            let mut closed = false;
+            while position < bytes.len() {
+                if bytes[position] == b'\\' && delimiter != b'`' {
+                    if let Some(escaped) =
+                        sql.get(position + 1..).and_then(|rest| rest.chars().next())
+                    {
+                        position += 1 + escaped.len_utf8();
+                    } else {
+                        position = bytes.len();
+                    }
+                    continue;
+                }
+                if bytes[position] == delimiter {
+                    if bytes.get(position + 1) == Some(&delimiter) {
+                        position += 2;
+                        continue;
+                    }
+                    position += 1;
+                    closed = true;
+                    break;
+                }
+                position += 1;
+            }
+            if !closed {
+                return Some(char::from(delimiter));
+            }
+            continue;
+        }
+        position += tail.chars().next()?.len_utf8();
     }
-    quote
+    None
 }
 
 pub(crate) fn describe_table_name_parse_error(token: &Token, sql: &str) -> DataFusionError {
@@ -422,4 +465,42 @@ fn unresolved_describe_column_error(
             ("suggestions", suggestions.as_str()),
         ],
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::unclosed_describe_quote;
+
+    #[test]
+    fn unclosed_describe_quote_honors_escaped_quotes_raw_and_backtick_bs() {
+        assert_eq!(unclosed_describe_quote(r"DESCRIBE t 'it\'s'"), None);
+        assert_eq!(unclosed_describe_quote(r"DESCRIBE t 'it\'s"), Some('\''));
+        assert_eq!(unclosed_describe_quote(r"DESCRIBE t r'a\'"), None);
+        assert_eq!(unclosed_describe_quote(r"DESCRIBE `a\`"), None);
+    }
+
+    #[test]
+    fn unclosed_describe_quote_advances_across_multibyte_utf8() {
+        assert_eq!(
+            unclosed_describe_quote("DESCRIBE café 'unclosed"),
+            Some('\'')
+        );
+        assert_eq!(
+            unclosed_describe_quote("DESCRIBE café `unclosed"),
+            Some('`')
+        );
+        assert_eq!(
+            unclosed_describe_quote("DESCRIBE café \"unclosed"),
+            Some('"')
+        );
+        assert_eq!(
+            unclosed_describe_quote(r"DESCRIBE 'a\é' 'unclosed"),
+            Some('\'')
+        );
+        assert_eq!(
+            unclosed_describe_quote("DESCRIBE 日本語 /* it's */ 'ok'"),
+            None
+        );
+        assert_eq!(unclosed_describe_quote("DESCRIBE 日本語 'ok'"), None);
+    }
 }

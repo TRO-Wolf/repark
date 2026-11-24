@@ -47,10 +47,7 @@ from repark.spark.session.session_time_zone import (
     SESSION_TIME_ZONE_KEY,
     refresh_session_zone_canonical,
 )
-from repark.spark.session.sql_relations import (
-    _split_leading_sql_trivia,
-    _sql_mask_strings_and_comments,
-)
+from repark.spark.session.sql_relations import _split_leading_sql_trivia
 from repark.spark.types import refuse_collation_session_key
 from repark.spark._secrets import mask_credentials
 
@@ -123,7 +120,7 @@ def try_sql_set_statement(session: ReparkSession, query: str) -> DataFrame | Non
     text = text.strip()
     if text.endswith(";"):
         text = text[:-1].rstrip()
-    if ";" in text and ";" in _sql_mask_strings_and_comments(text):
+    if ";" in text and _has_unquoted_semicolon(text):
         return None
     interval_match = _SET_TIME_ZONE_INTERVAL_RE.fullmatch(text)
     if interval_match is not None:
@@ -210,6 +207,30 @@ def _strip_sql_comments(text: str) -> tuple[str, bool]:
         out.append(char)
         index += 1
     return "".join(out), quote is None
+
+
+def _has_unquoted_semicolon(text: str) -> bool:
+    index = 0
+    quote: str | None = None
+    length = len(text)
+    while index < length:
+        char = text[index]
+        if quote is not None:
+            if char == quote:
+                if index + 1 < length and text[index + 1] == quote:
+                    index += 2
+                    continue
+                quote = None
+            index += 1
+            continue
+        if char in "'\"`":
+            quote = char
+            index += 1
+            continue
+        if char == ";":
+            return True
+        index += 1
+    return False
 
 
 def _apply_set(session: ReparkSession, key: str, value: str) -> DataFrame:

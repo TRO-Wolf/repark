@@ -424,22 +424,113 @@ pub fn sql_mentions_duplicate(sql: &str, displays: &[String], rule: NameRule) ->
         .any(|token| dups.iter().any(|display| rule.matches(token, display)))
 }
 
+fn skip_spark_literal(bytes: &[u8], start: usize, raw: bool) -> usize {
+    let quote = bytes[start];
+    let mut index = start + 1;
+    while index < bytes.len() {
+        if !raw && bytes[index] == b'\\' {
+            index = (index + 2).min(bytes.len());
+            continue;
+        }
+        if bytes[index] == quote {
+            if !raw && bytes.get(index + 1) == Some(&quote) {
+                index += 2;
+                continue;
+            }
+            return index + 1;
+        }
+        index += 1;
+    }
+    bytes.len()
+}
+
+fn push_ascii_words<'a>(slice: &'a str, tokens: &mut Vec<&'a str>) {
+    let bytes = slice.as_bytes();
+    let mut word: Option<usize> = None;
+    for (pos, &byte) in bytes.iter().enumerate() {
+        if byte.is_ascii_alphanumeric() || byte == b'_' {
+            if word.is_none() {
+                word = Some(pos);
+            }
+        } else if let Some(begin) = word.take() {
+            tokens.push(&slice[begin..pos]);
+        }
+    }
+    if let Some(begin) = word {
+        tokens.push(&slice[begin..]);
+    }
+}
+
 fn sql_text_tokens(sql: &str) -> Vec<&str> {
     let bytes = sql.as_bytes();
     let mut tokens = Vec::new();
     let mut word: Option<usize> = None;
     let mut index = 0;
     while index < bytes.len() {
+        if bytes[index] == b'-' && bytes.get(index + 1) == Some(&b'-') {
+            if let Some(begin) = word.take() {
+                tokens.push(&sql[begin..index]);
+            }
+            index += 2;
+            while index < bytes.len() && !matches!(bytes[index], b'\n' | b'\r') {
+                index += 1;
+            }
+            continue;
+        }
+        if bytes[index] == b'/' && bytes.get(index + 1) == Some(&b'*') {
+            if let Some(begin) = word.take() {
+                tokens.push(&sql[begin..index]);
+            }
+            index += 2;
+            let mut depth = 1usize;
+            while index < bytes.len() && depth > 0 {
+                if bytes.get(index..index + 2) == Some(b"/*") {
+                    depth += 1;
+                    index += 2;
+                } else if bytes.get(index..index + 2) == Some(b"*/") {
+                    depth -= 1;
+                    index += 2;
+                } else {
+                    index += 1;
+                }
+            }
+            continue;
+        }
+        if word.is_none()
+            && matches!(bytes[index], b'r' | b'R' | b'x' | b'X')
+            && matches!(bytes.get(index + 1), Some(b'\'' | b'"'))
+        {
+            let lit_end = skip_spark_literal(bytes, index + 1, true);
+            push_ascii_words(&sql[index + 2..lit_end], &mut tokens);
+            index = lit_end;
+            continue;
+        }
+        if matches!(bytes[index], b'\'' | b'"') {
+            if let Some(begin) = word.take() {
+                tokens.push(&sql[begin..index]);
+            }
+            let lit_end = skip_spark_literal(bytes, index, false);
+            push_ascii_words(&sql[index + 1..lit_end], &mut tokens);
+            index = lit_end;
+            continue;
+        }
         if bytes[index] == b'`' {
             if let Some(begin) = word.take() {
                 tokens.push(&sql[begin..index]);
             }
-            match sql[index + 1..].find('`') {
-                Some(end) => {
-                    tokens.push(&sql[index + 1..index + 1 + end]);
-                    index += end + 2;
+            let content_start = index + 1;
+            index += 1;
+            while index < bytes.len() {
+                if bytes[index] == b'`' {
+                    if bytes.get(index + 1) == Some(&b'`') {
+                        index += 2;
+                        continue;
+                    }
+                    tokens.push(&sql[content_start..index]);
+                    index += 1;
+                    break;
                 }
-                None => index += 1,
+                index += 1;
             }
             continue;
         }
@@ -757,4 +848,43 @@ fn field_names(frame: &DataFrame) -> BTreeSet<String> {
         .iter()
         .map(|field| field.name().clone())
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{NameRule, sql_mentions_duplicate, sql_text_tokens};
+
+    #[test]
+    fn sql_text_tokens_skips_escaped_quotes_raw_and_comments() {
+        let displays = vec!["id".to_string(), "v".to_string(), "v".to_string()];
+        assert!(sql_mentions_duplicate(
+            "name = 'v'",
+            &displays,
+            NameRule::Exact
+        ));
+        assert!(sql_mentions_duplicate(
+            "s = 'a`' AND v = 1 AND k = '`b'",
+            &displays,
+            NameRule::Exact
+        ));
+        assert!(sql_mentions_duplicate(
+            r"s = 'it\'s `' AND v = 1 AND `id` = 2",
+            &displays,
+            NameRule::Exact
+        ));
+        assert!(sql_mentions_duplicate(
+            "/* a /* it's ` */ b */ v = 1 AND `id` = 2",
+            &displays,
+            NameRule::Exact
+        ));
+        assert!(sql_mentions_duplicate(
+            r"s = r'a\`' AND v = 1 AND `id` = 2",
+            &displays,
+            NameRule::Exact
+        ));
+        assert_eq!(
+            sql_text_tokens("/* a /* it's ` */ b */ id = 1"),
+            vec!["id", "1"]
+        );
+    }
 }

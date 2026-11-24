@@ -777,8 +777,12 @@ def _split_sql_call_args(args_blob: str, session: Any) -> list[Any]:
 
 def _strip_sql_comments(text: str) -> str:
     """Remove ``--`` line comments and ``/* */`` block comments (best-effort)."""
-    without_block = re.sub(r"/\*.*?\*/", " ", text, flags=re.DOTALL)
-    return re.sub(r"--[^\n]*", " ", without_block)
+    from repark.spark.filter_quote import _iter_spark_sql_spans
+
+    return "".join(
+        " " if kind == "comment" else text[start:end]
+        for kind, start, end in _iter_spark_sql_spans(text)
+    )
 
 
 def _sql_from_clause_region(body: str) -> str:
@@ -823,9 +827,9 @@ def try_sql_registered_udtf(session: Any, query: str) -> Any | None:
 
     # Leading trivia strip (comments / whitespace) — match session SQL helpers.
     body = query
-    trivia_match = re.match(r"(?s)^(\s*(?:--[^\n]*\n|/\*.*?\*/\s*)*)", body)
-    trivia = trivia_match.group(1) if trivia_match else ""
-    body = body[len(trivia) :]
+    from repark.spark.filter_quote import _skip_spark_sql_trivia
+
+    body = body[_skip_spark_sql_trivia(body, 0) :]
     if not body.strip():
         return None
 

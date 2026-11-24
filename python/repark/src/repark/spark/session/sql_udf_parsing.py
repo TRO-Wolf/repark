@@ -6,6 +6,14 @@ import re
 
 from typing import Any
 
+from repark.spark.filter_quote import (
+    _is_string_prefix_at,
+    _quoted_span_closed,
+    _quoted_span_end,
+    _spark_block_comment_end,
+    _spark_line_comment_end,
+)
+
 
 def _sql_top_level_keyword_index(query: str, keyword: str) -> int | None:
     """Index of top-level ``keyword`` (paren depth 0), or ``None``."""
@@ -20,50 +28,26 @@ def _sql_top_level_keyword_index(query: str, keyword: str) -> int | None:
 
     length = len(query)
 
-    in_single = False
-
-    in_double = False
-
     while index < length:
         char = query[index]
 
-        if in_single:
-            if char == "'":
-                if index + 1 < length and query[index + 1] == "'":
-                    index += 2
-
-                    continue
-
-                in_single = False
-
-            index += 1
+        if char == "-" and index + 1 < length and query[index + 1] == "-":
+            index = _spark_line_comment_end(query, index)
 
             continue
 
-        if in_double:
-            if char == '"':
-                if index + 1 < length and query[index + 1] == '"':
-                    index += 2
-
-                    continue
-
-                in_double = False
-
-            index += 1
+        if char == "/" and index + 1 < length and query[index + 1] == "*":
+            index = _spark_block_comment_end(query, index)
 
             continue
 
-        if char == "'":
-            in_single = True
-
-            index += 1
+        if _is_string_prefix_at(query, index):
+            index = _quoted_span_end(query, index + 1, raw=True)
 
             continue
 
-        if char == '"':
-            in_double = True
-
-            index += 1
+        if char in {"'", '"', "`"}:
+            index = _quoted_span_end(query, index)
 
             continue
 
@@ -82,8 +66,6 @@ def _sql_top_level_keyword_index(query: str, keyword: str) -> int | None:
             continue
 
         if depth == 0 and upper.startswith(target, index):
-            # Word boundary: prev not alnum/_, next not alnum/_
-
             prev_ok = index == 0 or not (query[index - 1].isalnum() or query[index - 1] == "_")
 
             end = index + len(target)
@@ -115,50 +97,26 @@ def _sql_udf_in_nested_subquery(query: str, udf_index: int) -> bool:
 
     length = len(query)
 
-    in_single = False
-
-    in_double = False
-
     while index < udf_index and index < length:
         char = query[index]
 
-        if in_single:
-            if char == "'":
-                if index + 1 < length and query[index + 1] == "'":
-                    index += 2
-
-                    continue
-
-                in_single = False
-
-            index += 1
+        if char == "-" and index + 1 < length and query[index + 1] == "-":
+            index = _spark_line_comment_end(query, index)
 
             continue
 
-        if in_double:
-            if char == '"':
-                if index + 1 < length and query[index + 1] == '"':
-                    index += 2
-
-                    continue
-
-                in_double = False
-
-            index += 1
+        if char == "/" and index + 1 < length and query[index + 1] == "*":
+            index = _spark_block_comment_end(query, index)
 
             continue
 
-        if char == "'":
-            in_single = True
-
-            index += 1
+        if _is_string_prefix_at(query, index):
+            index = _quoted_span_end(query, index + 1, raw=True)
 
             continue
 
-        if char == '"':
-            in_double = True
-
-            index += 1
+        if char in {"'", '"', "`"}:
+            index = _quoted_span_end(query, index)
 
             continue
 
@@ -212,50 +170,26 @@ def _split_sql_select_list(select_list: str) -> list[str]:
 
     length = len(select_list)
 
-    in_single = False
-
-    in_double = False
-
     while index < length:
         char = select_list[index]
 
-        if in_single:
-            if char == "'":
-                if index + 1 < length and select_list[index + 1] == "'":
-                    index += 2
-
-                    continue
-
-                in_single = False
-
-            index += 1
+        if char == "-" and index + 1 < length and select_list[index + 1] == "-":
+            index = _spark_line_comment_end(select_list, index)
 
             continue
 
-        if in_double:
-            if char == '"':
-                if index + 1 < length and select_list[index + 1] == '"':
-                    index += 2
-
-                    continue
-
-                in_double = False
-
-            index += 1
+        if char == "/" and index + 1 < length and select_list[index + 1] == "*":
+            index = _spark_block_comment_end(select_list, index)
 
             continue
 
-        if char == "'":
-            in_single = True
-
-            index += 1
+        if _is_string_prefix_at(select_list, index):
+            index = _quoted_span_end(select_list, index + 1, raw=True)
 
             continue
 
-        if char == '"':
-            in_double = True
-
-            index += 1
+        if char in {"'", '"', "`"}:
+            index = _quoted_span_end(select_list, index)
 
             continue
 
@@ -304,52 +238,32 @@ def _sql_strip_comments_preserve_strings(query: str) -> str:
         char = query[index]
 
         if char == "-" and index + 1 < length and query[index + 1] == "-":
-            end = query.find("\n", index)
-
-            if end < 0:
-                break
-
-            out.append("\n")
-
-            index = end + 1
+            index = _spark_line_comment_end(query, index)
 
             continue
 
         if char == "/" and index + 1 < length and query[index + 1] == "*":
-            end = query.find("*/", index + 2)
-
-            if end < 0:
-                break
-
             out.append(" ")
 
-            index = end + 2
+            index = _spark_block_comment_end(query, index)
+
+            continue
+
+        if _is_string_prefix_at(query, index):
+            end = _quoted_span_end(query, index + 1, raw=True)
+
+            out.append(query[index:end])
+
+            index = end
 
             continue
 
         if char in {"'", '"', "`"}:
-            quote = char
+            end = _quoted_span_end(query, index)
 
-            out.append(char)
+            out.append(query[index:end])
 
-            index += 1
-
-            while index < length:
-                current = query[index]
-
-                out.append(current)
-
-                index += 1
-
-                if current == quote:
-                    if index < length and query[index] == quote:
-                        out.append(query[index])
-
-                        index += 1
-
-                        continue
-
-                    break
+            index = end
 
             continue
 
@@ -476,10 +390,21 @@ def _parse_simple_sql_udf_call(
 
             continue
 
-        if re.fullmatch(r"'(?:[^']|'')*'", arg):
-            simple_args.append(arg)
+        if arg.startswith(("'", '"')):
+            span_end, closed = _quoted_span_closed(arg, 0)
 
-            continue
+            if closed and span_end == len(arg):
+                simple_args.append(arg)
+
+                continue
+
+        if _is_string_prefix_at(arg, 0):
+            span_end, closed = _quoted_span_closed(arg, 1, raw=True)
+
+            if closed and span_end == len(arg):
+                simple_args.append(arg)
+
+                continue
 
         if arg.upper() in {"NULL", "TRUE", "FALSE"}:
             simple_args.append(arg)

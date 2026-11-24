@@ -76,18 +76,57 @@ def strip_sql_comments(query: str) -> str:
     while index < length:
         char = query[index]
         pair = query[index : index + 2]
-        if pair in {"--", "/*"}:
-            closer = "\n" if pair == "--" else "*/"
-            end = query.find(closer, index + 2)
-            index = length if end < 0 else end + len(closer)
+        if pair == "--":
+            end = index + 2
+            while end < length and query[end] not in "\n\r":
+                end += 1
+            index = end + 1 if end < length else length
             kept.append(" ")
+            continue
+        if pair == "/*":
+            end = index + 2
+            depth = 1
+            while end < length and depth > 0:
+                if query[end : end + 2] == "/*":
+                    depth += 1
+                    end += 2
+                elif query[end : end + 2] == "*/":
+                    depth -= 1
+                    end += 2
+                else:
+                    end += 1
+            index = end
+            kept.append(" ")
+            continue
+        if (
+            char in "rRxX"
+            and index + 1 < length
+            and query[index + 1] in "'\""
+            and (index == 0 or not (query[index - 1].isalnum() or query[index - 1] == "_"))
+        ):
+            quote = query[index + 1]
+            end = index + 2
+            while end < length and query[end] != quote:
+                end += 1
+            end = min(end + 1, length)
+            kept.append(query[index:end])
+            index = end
             continue
         if char in {"'", '"', "`"}:
             end = index + 1
-            while end < length and query[end] != char:
-                end += 2 if query[end] == "\\" and char != "`" else 1
-            kept.append(query[index : end + 1])
-            index = end + 1
+            while end < length:
+                if query[end] == "\\" and char != "`":
+                    end = min(end + 2, length)
+                    continue
+                if query[end] == char:
+                    if end + 1 < length and query[end + 1] == char:
+                        end += 2
+                        continue
+                    end += 1
+                    break
+                end += 1
+            kept.append(query[index:end])
+            index = end
             continue
         kept.append(char)
         index += 1

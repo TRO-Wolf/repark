@@ -124,8 +124,7 @@ here and is re-exported in one line.
   unclosed `/*+` hint on its existing path and returns Spark's parser condition otherwise.
   WO-C11 (2026-09-23): the inline test module pins `outermost_unclosed_bracketed_comment`,
   `skip_quoted_text` and `skip_line_comment` to exact indexes, so removing any quote kind,
-  escape form, line break, nesting push or pop fails a test. The doubled-quote escape and the
-  end-of-input escape guard only change `skip_quoted_text`'s resume index.
+  escape form, line break, nesting push or pop fails a test. **FILTER-STRING-ESCAPED-QUOTE-1 (2026-11-24):** `skip_quoted_text` treats backslashes as escapes only in `'`/`"` (not `` ` ``) and skips raw `r'`/`R'`/`r"`/`R"` and hex `x'`/`X'` literals without escapes.
 
 - `struct_position.rs`, `struct_position/udf.rs`, `struct_position/tests.rs`,
   `struct_position/join.rs`, `struct_position/forms.rs` —

@@ -580,3 +580,22 @@ fn fexpr_and_filter_respell_minus_all_after_spark_canonicalization() {
         }
     });
 }
+
+#[test]
+fn plan_expr_column_handles_trailing_line_comment() {
+    let context = super::expr_build::build_expr_context().unwrap();
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let original = "'it\\'s' = 'it\\'s' -- it's";
+    let canonical = repark_spark::spark_literals::canonicalize(original).unwrap();
+    let expr = rt
+        .block_on(super::expr_build::plan_expr_column(
+            &context,
+            canonical.as_ref(),
+            original,
+        ))
+        .unwrap();
+    assert!(format!("{expr}").contains("it's"), "got: {expr}");
+}

@@ -11,6 +11,13 @@ from repark.spark._idents import strip_sql_comments as _strip_sql_comments
 from repark.spark._idents import quote_ident as _quote_ident
 
 from repark.spark._idents import reject_path_escape_segment as _reject_path_escape_segment
+from repark.spark.filter_quote import (
+    _is_string_prefix_at,
+    _iter_spark_sql_spans,
+    _quoted_span_end,
+    _spark_block_comment_end,
+    _spark_line_comment_end,
+)
 from repark.spark.session.catalog_resolution import _spark_unparsable_target
 
 from repark.errors import PySparkValueError
@@ -195,87 +202,19 @@ def _sql_mask_strings_and_comments(query: str) -> str:
 
     single quotes (``''`` escape), double quotes (``""`` escape), backticks, ``--``
 
-    line comments, and ``/* … */`` block comments. Does not interpret nested block
-
-    comments (SQL standard single-level).
+    line comments, and ``/* … */`` block comments.
 
     """
 
     if not query:
         return query
-
-    chars = list(query)
-
-    length = len(query)
-
-    index = 0
-
-    while index < length:
-        char = query[index]
-
-        if char == "-" and index + 1 < length and query[index + 1] == "-":
-            end = query.find("\n", index)
-
-            if end < 0:
-                for pos in range(index, length):
-                    chars[pos] = " "
-
-                break
-
-            for pos in range(index, end):
-                chars[pos] = " "
-
-            index = end
-
-            continue
-
-        if char == "/" and index + 1 < length and query[index + 1] == "*":
-            end = query.find("*/", index + 2)
-
-            if end < 0:
-                for pos in range(index, length):
-                    chars[pos] = " "
-
-                break
-
-            for pos in range(index, end + 2):
-                chars[pos] = " "
-
-            index = end + 2
-
-            continue
-
-        if char in {"'", '"', "`"}:
-            quote = char
-
-            chars[index] = " "
-
-            index += 1
-
-            while index < length:
-                current = query[index]
-
-                chars[index] = " "
-
-                index += 1
-
-                if current == quote:
-                    # SQL doubled-quote escape inside the same quote style.
-
-                    if index < length and query[index] == quote:
-                        chars[index] = " "
-
-                        index += 1
-
-                        continue
-
-                    break
-
-            continue
-
-        index += 1
-
-    return "".join(chars)
+    parts: list[str] = []
+    for kind, start, end in _iter_spark_sql_spans(query):
+        if kind == "code":
+            parts.append(query[start:end])
+        else:
+            parts.append(" " * (end - start))
+    return "".join(parts)
 
 
 def _split_leading_sql_trivia(query: str) -> tuple[str, str]:
@@ -308,22 +247,12 @@ def _skip_sql_ws_and_comments(query: str, index: int) -> int:
             continue
 
         if char == "-" and index + 1 < length and query[index + 1] == "-":
-            end = query.find("\n", index)
-
-            if end < 0:
-                return length
-
-            index = end + 1
+            index = _spark_line_comment_end(query, index)
 
             continue
 
         if char == "/" and index + 1 < length and query[index + 1] == "*":
-            end = query.find("*/", index + 2)
-
-            if end < 0:
-                return length
-
-            index = end + 2
+            index = _spark_block_comment_end(query, index)
 
             continue
 
@@ -347,23 +276,23 @@ def _find_matching_paren(query: str, open_index: int) -> int | None:
     while index < length:
         char = query[index]
 
+        if char == "-" and index + 1 < length and query[index + 1] == "-":
+            index = _spark_line_comment_end(query, index)
+
+            continue
+
+        if char == "/" and index + 1 < length and query[index + 1] == "*":
+            index = _spark_block_comment_end(query, index)
+
+            continue
+
+        if _is_string_prefix_at(query, index):
+            index = _quoted_span_end(query, index + 1, raw=True)
+
+            continue
+
         if char in {'"', "'", "`"}:
-            quote = char
-
-            index += 1
-
-            while index < length:
-                current = query[index]
-
-                index += 1
-
-                if current == quote:
-                    if quote == '"' and index < length and query[index] == '"':
-                        index += 1
-
-                        continue
-
-                    break
+            index = _quoted_span_end(query, index)
 
             continue
 

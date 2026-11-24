@@ -41,20 +41,304 @@ _FILTER_TOKEN_PATTERN = re.compile(
 )
 
 _SQL_LITERAL_KEYWORDS = frozenset({"true", "false", "null"})
+_STRING_PREFIX_CHARS = frozenset({"r", "R", "x", "X"})
+_BOOL_OPERATOR_WORDS = frozenset({"and", "or", "not"})
+_INFIX_AFTER_NOT = frozenset({"in", "like", "ilike", "rlike", "regexp", "between"})
+_PREFIX_EXPR_KEYWORDS = frozenset(
+    {
+        "and",
+        "or",
+        "not",
+        "when",
+        "then",
+        "else",
+        "case",
+        "where",
+        "on",
+        "having",
+        "select",
+        "between",
+        "in",
+        "is",
+        "like",
+        "ilike",
+        "rlike",
+        "regexp",
+        "distinct",
+        "from",
+        "as",
+        "by",
+        "exists",
+    }
+)
+_POSTFIX_OR_INFIX_KEYWORDS = frozenset(
+    {
+        "is",
+        "in",
+        "like",
+        "ilike",
+        "rlike",
+        "regexp",
+        "between",
+        "and",
+        "or",
+        "then",
+        "else",
+        "end",
+        "as",
+        "from",
+        "where",
+        "group",
+        "order",
+        "having",
+        "limit",
+        "union",
+        "intersect",
+        "except",
+        "when",
+    }
+)
+_CODE_TOKEN_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*|\d+(?:\.\d*)?|\S")
 
 
-def _quoted_span_end(sql: str, index: int) -> int:
+def _spark_line_comment_end(sql: str, index: int) -> int:
+    cursor = index + 2
+    bound = len(sql)
+    while cursor < bound and sql[cursor] not in "\n\r":
+        cursor += 1
+    return cursor
+
+
+def _spark_block_comment_end(sql: str, index: int) -> int:
+    cursor = index + 2
+    bound = len(sql)
+    depth = 1
+    while cursor < bound and depth > 0:
+        if sql[cursor] == "/" and cursor + 1 < bound and sql[cursor + 1] == "*":
+            depth += 1
+            cursor += 2
+        elif sql[cursor] == "*" and cursor + 1 < bound and sql[cursor + 1] == "/":
+            depth -= 1
+            cursor += 2
+        else:
+            cursor += 1
+    return cursor
+
+
+def _skip_spark_sql_trivia(sql: str, index: int = 0) -> int:
+    cursor = index
+    bound = len(sql)
+    while cursor < bound:
+        if sql[cursor].isspace():
+            cursor += 1
+            continue
+        if sql[cursor] == "-" and cursor + 1 < bound and sql[cursor + 1] == "-":
+            cursor = _spark_line_comment_end(sql, cursor)
+            continue
+        if sql[cursor] == "/" and cursor + 1 < bound and sql[cursor + 1] == "*":
+            cursor = _spark_block_comment_end(sql, cursor)
+            continue
+        break
+    return cursor
+
+
+def _is_string_prefix_at(sql: str, index: int) -> bool:
+    if index + 1 >= len(sql):
+        return False
+    if sql[index] not in _STRING_PREFIX_CHARS:
+        return False
+    if sql[index + 1] not in "'\"":
+        return False
+    return not (index > 0 and (sql[index - 1].isalnum() or sql[index - 1] == "_"))
+
+
+def _quoted_span_closed(sql: str, index: int, *, raw: bool = False) -> tuple[int, bool]:
     quote = sql[index]
     cursor = index + 1
     bound = len(sql)
+    if raw:
+        while cursor < bound:
+            if sql[cursor] == quote:
+                return (cursor + 1, True)
+            cursor += 1
+        return (bound, False)
     while cursor < bound:
-        if sql[cursor] == quote:
+        char = sql[cursor]
+        if char == "\\" and quote != "`":
+            cursor = min(cursor + 2, bound)
+            continue
+        if char == quote:
             if cursor + 1 < bound and sql[cursor + 1] == quote:
                 cursor += 2
                 continue
-            return cursor + 1
+            return (cursor + 1, True)
         cursor += 1
-    return bound
+    return (bound, False)
+
+
+def _quoted_span_end(sql: str, index: int, *, raw: bool = False) -> int:
+    return _quoted_span_closed(sql, index, raw=raw)[0]
+
+
+def _iter_spark_sql_spans(sql: str) -> list[tuple[str, int, int]]:
+    spans: list[tuple[str, int, int]] = []
+    bound = len(sql)
+    index = 0
+    code_start = 0
+    while index < bound:
+        char = sql[index]
+        if char == "-" and index + 1 < bound and sql[index + 1] == "-":
+            if code_start < index:
+                spans.append(("code", code_start, index))
+            end = _spark_line_comment_end(sql, index)
+            spans.append(("comment", index, end))
+            index = end
+            code_start = index
+            continue
+        if char == "/" and index + 1 < bound and sql[index + 1] == "*":
+            if code_start < index:
+                spans.append(("code", code_start, index))
+            end = _spark_block_comment_end(sql, index)
+            spans.append(("comment", index, end))
+            index = end
+            code_start = index
+            continue
+        if _is_string_prefix_at(sql, index):
+            if code_start < index:
+                spans.append(("code", code_start, index))
+            end = _quoted_span_end(sql, index + 1, raw=True)
+            spans.append(("string", index, end))
+            index = end
+            code_start = index
+            continue
+        if char in "'\"":
+            if code_start < index:
+                spans.append(("code", code_start, index))
+            end = _quoted_span_end(sql, index)
+            spans.append(("string", index, end))
+            index = end
+            code_start = index
+            continue
+        if char == "`":
+            if code_start < index:
+                spans.append(("code", code_start, index))
+            end = _quoted_span_end(sql, index)
+            spans.append(("backtick", index, end))
+            index = end
+            code_start = index
+            continue
+        index += 1
+    if code_start < bound:
+        spans.append(("code", code_start, bound))
+    return spans
+
+
+def _sql_token_stream(
+    sql: str, spans: list[tuple[str, int, int]]
+) -> list[tuple[str, str, int, int]]:
+    tokens: list[tuple[str, str, int, int]] = []
+    for kind, start, end in spans:
+        if kind == "comment":
+            continue
+        if kind in {"string", "backtick"}:
+            tokens.append((kind, sql[start:end], start, end))
+            continue
+        for match in _CODE_TOKEN_RE.finditer(sql, start, end):
+            text = match.group(0)
+            tok_kind = "word" if (text[0].isalnum() or text[0] == "_") else "punct"
+            tokens.append((tok_kind, text, match.start(), match.end()))
+    return tokens
+
+
+def _token_is_binary_or_end(token: tuple[str, str, int, int] | None) -> bool:
+    if token is None:
+        return True
+    kind, text, _, _ = token
+    if kind in {"string", "backtick"}:
+        return False
+    if kind == "punct":
+        return text not in {"(", "~"}
+    return text.casefold() in _POSTFIX_OR_INFIX_KEYWORDS
+
+
+def _not_token_is_operator(
+    tokens: list[tuple[str, str, int, int]],
+    position: int,
+    prev_word: str | None,
+    prev_ends_value: bool,
+) -> bool:
+    if prev_word == "is":
+        return True
+    next_tok = tokens[position + 1] if position + 1 < len(tokens) else None
+    if (
+        next_tok is not None
+        and next_tok[0] == "word"
+        and next_tok[1].casefold() in _INFIX_AFTER_NOT
+    ):
+        return True
+    if prev_ends_value:
+        return False
+    if next_tok is None:
+        return False
+    if (
+        prev_word == "by"
+        and next_tok[0] == "word"
+        and next_tok[1].casefold() in {"asc", "desc", "nulls"}
+    ):
+        return False
+    if next_tok[0] == "word" and next_tok[1].casefold() == "not":
+        return True
+    if next_tok[0] == "word" and next_tok[1].casefold() in {"and", "or"}:
+        after = tokens[position + 2] if position + 2 < len(tokens) else None
+        after2 = tokens[position + 3] if position + 3 < len(tokens) else None
+        if after is None or after2 is None:
+            return True
+        if after[0] == "punct":
+            return after[1] not in {"(", "~"}
+        if after[0] == "word":
+            return after[1].casefold() in _POSTFIX_OR_INFIX_KEYWORDS
+        return False
+    return not _token_is_binary_or_end(next_tok)
+
+
+def _boolean_operator_spans(
+    sql: str, spans: list[tuple[str, int, int]]
+) -> frozenset[tuple[int, int]]:
+    tokens = _sql_token_stream(sql, spans)
+    operators: set[tuple[int, int]] = set()
+    prev_ends_value = False
+    prev_word: str | None = None
+    for position, (kind, text, start, end) in enumerate(tokens):
+        if kind in {"string", "backtick"}:
+            prev_ends_value = True
+            prev_word = None
+            continue
+        if kind == "punct":
+            prev_ends_value = text in {")", "]"}
+            prev_word = None
+            continue
+        folded = text.casefold()
+        if folded in {"and", "or"}:
+            if prev_ends_value:
+                operators.add((start, end))
+                prev_ends_value = False
+                prev_word = folded
+            else:
+                prev_ends_value = True
+                prev_word = folded
+            continue
+        if folded == "not":
+            if _not_token_is_operator(tokens, position, prev_word, prev_ends_value):
+                operators.add((start, end))
+                prev_ends_value = False
+                prev_word = folded
+            else:
+                prev_ends_value = True
+                prev_word = folded
+            continue
+        prev_ends_value = folded not in _PREFIX_EXPR_KEYWORDS
+        prev_word = folded
+    return frozenset(operators)
 
 
 def _lambda_paren_match(sql: str, arrows: list[int]) -> dict[int, int]:
@@ -64,7 +348,13 @@ def _lambda_paren_match(sql: str, arrows: list[int]) -> dict[int, int]:
     bound = len(sql)
     while index < bound:
         char = sql[index]
-        if char in "'\"`":
+        if char == "-" and index + 1 < bound and sql[index + 1] == "-":
+            index = _spark_line_comment_end(sql, index)
+        elif char == "/" and index + 1 < bound and sql[index + 1] == "*":
+            index = _spark_block_comment_end(sql, index)
+        elif _is_string_prefix_at(sql, index):
+            index = _quoted_span_end(sql, index + 1, raw=True)
+        elif char in "'\"`":
             index = _quoted_span_end(sql, index)
         elif char == "(":
             opener.append(index)
@@ -117,8 +407,17 @@ def _lambda_group_params(sql: str, opener: int, closer: int) -> list[tuple[int, 
             params.append(piece)
             break
         char = sql[cursor]
+        if char == "-" and cursor + 1 < closer and sql[cursor + 1] == "-":
+            cursor = min(_spark_line_comment_end(sql, cursor), closer)
+            continue
+        if char == "/" and cursor + 1 < closer and sql[cursor + 1] == "*":
+            cursor = min(_spark_block_comment_end(sql, cursor), closer)
+            continue
+        if _is_string_prefix_at(sql, cursor):
+            cursor = min(_quoted_span_end(sql, cursor + 1, raw=True), closer)
+            continue
         if char in "'\"`":
-            cursor = _quoted_span_end(sql, cursor)
+            cursor = min(_quoted_span_end(sql, cursor), closer)
             continue
         if char == "(":
             depth += 1
@@ -192,6 +491,15 @@ def _lambda_body_end(sql: str, start: int) -> int:
     nested = 0
     while index < bound:
         char = sql[index]
+        if char == "-" and index + 1 < bound and sql[index + 1] == "-":
+            index = _spark_line_comment_end(sql, index)
+            continue
+        if char == "/" and index + 1 < bound and sql[index + 1] == "*":
+            index = _spark_block_comment_end(sql, index)
+            continue
+        if _is_string_prefix_at(sql, index):
+            index = _quoted_span_end(sql, index + 1, raw=True)
+            continue
         if char in "'\"`":
             index = _quoted_span_end(sql, index)
             continue
@@ -381,6 +689,7 @@ def _bind_filter_token(
     base: int,
     collision: bool,
     frame_qualifiers: dict[str, list[str]] | None = None,
+    operator_spans: frozenset[tuple[int, int]] = frozenset(),
 ) -> str:
     from repark.spark._idents import quote_ident as _quote_ident
 
@@ -392,7 +701,7 @@ def _bind_filter_token(
     parts = token.split(".")
     name = parts[-1]
     if len(parts) == 1:
-        if name.casefold() in _SQL_LITERAL_KEYWORDS:
+        if name.casefold() in _SQL_LITERAL_KEYWORDS or (start, end) in operator_spans:
             return token
         param = _scope_param_for(scopes, start, end, name, exact)
         if param is not None:
@@ -564,18 +873,13 @@ def _quote_select_expr_dotted(frame: Any, expr: str) -> str:
         qualifiers=qualifiers,
         payload=payload,
     )
-    pieces = re.split(r"('(?:[^']|'')*')", expr)
     rebuilt: list[str] = []
-    for piece in pieces:
-        if piece.startswith("'"):
+    for kind, start, end in _iter_spark_sql_spans(expr):
+        piece = expr[start:end]
+        if kind == "code":
+            rebuilt.append(_DOTTED_TOKEN_PATTERN.sub(binder, piece))
+        else:
             rebuilt.append(piece)
-            continue
-        subpieces = re.split(r'("(?:[^"]|"")*"|`(?:[^`]|``)*`)', piece)
-        for subpiece in subpieces:
-            if subpiece.startswith(('"', "`")):
-                rebuilt.append(subpiece)
-            else:
-                rebuilt.append(_DOTTED_TOKEN_PATTERN.sub(binder, subpiece))
     return "".join(rebuilt)
 
 
@@ -593,8 +897,8 @@ def _select_expr_frame(frame: Any, expr: tuple[str, ...]) -> Any:
     view = scratch_view_name(frame._session, "__repark_selx_")
     frame._session.create_or_replace_temp_view(view, frame._plan())
     try:
-        projection = ", ".join(_quote_select_expr_dotted(frame, item) for item in expr)
-        planned = frame._session.sql(f"SELECT {projection} FROM {view}")
+        projection = "\n, ".join(_quote_select_expr_dotted(frame, item) for item in expr)
+        planned = frame._session.sql(f"SELECT {projection}\nFROM {view}")
         return frame._spawn(planned)
     finally:
         frame._session.drop_temp_view(view)
@@ -603,11 +907,19 @@ def _select_expr_frame(frame: Any, expr: tuple[str, ...]) -> Any:
 _MAIN_IDENT_PATTERN = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\b(?!\s*\()")
 
 
-def _main_path_filter_token(match: re.Match[str], *, columns_by_fold: dict[str, list[str]]) -> str:
+def _main_path_filter_token(
+    match: re.Match[str],
+    *,
+    columns_by_fold: dict[str, list[str]],
+    base: int = 0,
+    operator_spans: frozenset[tuple[int, int]] = frozenset(),
+) -> str:
     from repark.spark._idents import quote_ident as _quote_ident
 
     token = match.group(1)
-    if token.casefold() in _SQL_LITERAL_KEYWORDS:
+    start = base + match.start(1)
+    end = base + match.end(1)
+    if token.casefold() in _SQL_LITERAL_KEYWORDS or (start, end) in operator_spans:
         return token
     matches = columns_by_fold.get(token.casefold())
     if matches is None:
@@ -624,21 +936,24 @@ def _main_path_filter_sql(sql: str, displays: list[str]) -> str:
     columns_by_fold: dict[str, list[str]] = {}
     for column in displays:
         columns_by_fold.setdefault(column.casefold(), []).append(column)
-    pieces = re.split(r"('(?:[^']|'')*')", sql)
+    spans = _iter_spark_sql_spans(sql)
+    has_bool = any(column.casefold() in _BOOL_OPERATOR_WORDS for column in displays)
+    operator_spans = _boolean_operator_spans(sql, spans) if has_bool else frozenset()
     rebuilt: list[str] = []
-    for piece in pieces:
-        if piece.startswith("'"):
-            rebuilt.append(piece)
-            continue
-        subpieces = re.split(r'("(?:[^"]|"")*"|`(?:[^`]|``)*`)', piece)
-        for subpiece in subpieces:
-            if subpiece.startswith(('"', "`")):
-                rebuilt.append(subpiece)
-            else:
-                rebuilt.append(
-                    _MAIN_IDENT_PATTERN.sub(
-                        functools.partial(_main_path_filter_token, columns_by_fold=columns_by_fold),
-                        subpiece,
-                    )
+    for kind, start, end in spans:
+        piece = sql[start:end]
+        if kind == "code":
+            rebuilt.append(
+                _MAIN_IDENT_PATTERN.sub(
+                    functools.partial(
+                        _main_path_filter_token,
+                        columns_by_fold=columns_by_fold,
+                        base=start,
+                        operator_spans=operator_spans,
+                    ),
+                    piece,
                 )
+            )
+        else:
+            rebuilt.append(piece)
     return "".join(rebuilt)

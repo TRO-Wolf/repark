@@ -523,6 +523,4 @@ First checks: `bash scripts/check_map_md.sh`, `python3 scripts/sync_map_md.py --
 
 IPI-19 + IPI-37 (2026-09-20): `check_lib_py.py` ratchets `dataframe/writer_readwriter.py` 1091 → 1077 (both `_by_name_projection` bodies collapse into `dataframe/writer_schema.py`), shrink-only.
 
-U11-EDGE-1 rounds 2 to 6 (2026-09-26), shrink-only with the CAP-1 mirror: `check_rust_file_size.py` ratchets `repark-python/src/dataframe.rs` 1017 → 1016 (round 2) → 1005 (round 4); `check_lib_py.py` ratchets `dataframe/core.py` 3991 → 3981 (round 2) → 3979 (round 4) → 3976 (round 5) → 3973 (round 6).
-
-**ICE-RESOURCE-BOUND-1 (U-11, 2026-10-26):** `check_rust_file_size.py` lowers the `crates/repark-iceberg/src/write/append.rs` exception from 1737 to 1736 lines. Its call sites net one line fewer; no ceiling rises.
+U11-EDGE-1 (2026-09-26): `check_rust_file_size.py` ratchets `dataframe.rs` 1017→1005; `check_lib_py.py` ratchets `dataframe/core.py` 3991→3973. **ICE-RESOURCE-BOUND-1 (2026-10-26):** `append.rs` 1737→1736. **FILTER-STRING-ESCAPED-QUOTE-1 (2026-11-24):** `check_lib_py.py` ratchets `session_core.py` 2274 → 2268.
