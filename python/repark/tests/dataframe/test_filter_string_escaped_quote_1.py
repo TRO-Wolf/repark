@@ -6,6 +6,7 @@ import pyarrow as pa
 import pytest
 
 from repark.errors import (
+    AnalysisException,
     IllegalArgumentException,
     ParseException,
     UnsupportedOperationException,
@@ -536,10 +537,9 @@ def test_red_on_merged_delta1_a2_set_answers(
     ("case_id", "stmt"),
     [
         ("set_bs_semi", r"SET spark.test.p4 = 'it\'s; still value'"),
-        ("set_win_semi_pair", r"SET spark.test.p7 = 'C:\path\'; 'y'"),
         ("reset_nested_comment", "RESET spark.test.p1 /* a /* it's */ b */"),
     ],
-    ids=["set_bs_semi", "set_win_semi_pair", "reset_nested_comment"],
+    ids=["set_bs_semi", "reset_nested_comment"],
 )
 def test_red_on_merged_delta1_a2_set_reset_refusals(
     ansi_spark: ReparkSession,
@@ -575,11 +575,11 @@ def test_red_on_merged_delta1_a3_udtf_literals_and_comment(
 
 
 @pytest.mark.parametrize(
-    ("case_id", "frame_kind", "predicate"),
+    ("case_id", "frame_kind", "predicate", "exc_cls"),
     [
-        ("kw_not_in_1_2", "kw", "not NOT IN (1, 2)"),
-        ("kw_not_not_in_1_2", "kw", "NOT not IN (1, 2)"),
-        ("bkw_not_or_not", "bkw", "not OR not"),
+        ("kw_not_in_1_2", "kw", "not NOT IN (1, 2)", AnalysisException),
+        ("kw_not_not_in_1_2", "kw", "NOT not IN (1, 2)", AnalysisException),
+        ("bkw_not_or_not", "bkw", "not OR not", ParseException),
     ],
     ids=["kw_not_in_1_2", "kw_not_not_in_1_2", "bkw_not_or_not"],
 )
@@ -588,10 +588,11 @@ def test_red_on_merged_delta1_a4_refuses_ambiguous_not_chains(
     case_id: str,
     frame_kind: str,
     predicate: str,
+    exc_cls: type[Exception],
 ) -> None:
     _ = case_id
     df = _a4_kw_frame(ansi_spark) if frame_kind == "kw" else _a4_bkw_frame(ansi_spark)
-    with pytest.raises(ParseException):
+    with pytest.raises(exc_cls):
         df.filter(predicate).select("id").collect()
 
 

@@ -1,6 +1,6 @@
 # task/wo/filter-string-escaped-quote-1/evidence/domain-table.md
 
-Measured cell-by-cell against live PySpark 4.1.2, RePark `main` (`01c15ffa2`), and branch head (`5327f5cb0`) in both ANSI modes.
+Measured cell-by-cell against live PySpark 4.1.2, RePark `main` (`01c15ffa2` / `af9ff7251`), and Delta 1 branch head (`1784f185b`; identical across `5327f5cb0` and `755c6e6ee`) in both ANSI modes.
 
 ## Core domain table (338 cells per ANSI mode; 676 total)
 
