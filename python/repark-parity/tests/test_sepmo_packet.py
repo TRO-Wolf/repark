@@ -62,7 +62,7 @@ _RULE_MARKERS: tuple[str, ...] = (
     "test_cap_1_source_file_line_cap.py",
     "1000 lines",
     "Do not change what any gate requires",
-    "`map.md` in every directory",
+    "no new ones under `task/wo`",
     "No amends",
     "frozen",
 )
