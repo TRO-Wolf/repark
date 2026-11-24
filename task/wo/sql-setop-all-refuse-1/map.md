@@ -8,7 +8,7 @@ real fix is the card SQL-SETOP-ALL-MULTISET-1
 
 **Retired 2026-11-23** by SQL-SETOP-ALL-MULTISET-1 (owner ruling 2026-11-22: replace the refusal with
 Spark's multiset answer); its evidence is
-[../sql-setop-all-multiset-1/map.md](../sql-setop-all-multiset-1/map.md). This directory stays as the
+[../sql-setop-all-multiset-1/](../sql-setop-all-multiset-1/). This directory stays as the
 refusal's record.
 
 - [evidence/map.md](evidence/map.md) — the step-0 table on main against Spark 4.1.2, the same cells on
