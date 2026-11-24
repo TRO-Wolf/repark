@@ -1,8 +1,8 @@
 # TEMP-VIEW-FRAME-READER-PARSE-1 — the domain table (measured)
 
 **Builds:** main `4c365814` (`main`), main before part 2 `6286ba19` (`part1`), Spark 4.1.2. **Cells:** 5,732 per RePark
-build (3,030 cross-setting, the rest matching controls), [evidence/raw/cells-verdicts.jsonl](evidence/raw/map.md); every
-table below is printed by `probes/tables.py` ([evidence/raw/tables.txt](evidence/raw/map.md)).
+build (3,030 cross-setting, the rest matching controls), [evidence/raw/cells-verdicts.jsonl](evidence/raw/); every
+table below is printed by `probes/tables.py` ([evidence/raw/tables.txt](evidence/raw/)).
 
 **Verdicts.** EQUAL: the rows equal Spark's, or both raise. WRONG: RePark answers other rows, or answers where Spark
 raises. RAISE: RePark raises (or cannot make the frame or view) where Spark answers. No Spark: `smartCsv` and the two
@@ -175,7 +175,7 @@ table), Spark answers. Not a door of this card (inventory P16).
 ## 8. Revision (critic round 1): the cells the first table missed
 
 Asked for by the critic (Opus 5.5 medium, 2026-11-19, `VERDICT: GAPS`;
-[evidence/raw-r1/critic-verdict.md](evidence/raw-r1/map.md)) and measured on main, part 1 and Spark 4.1.2 by
+[evidence/raw-r1/critic-verdict.md](evidence/raw-r1/)) and measured on main, part 1 and Spark 4.1.2 by
 `probes/rv.py` and `probes/rp.py … midnight`. **The data crosses midnight both ways:** `(1, '2024-01-01 03:00:00')` and
 `(2, '2024-06-01 23:30:00')`. Made under one zone and read under the other unless said; ANSI on outside §8.1. **Every
 cell is checked per column** (`probes/rvcmp.py`, `wrong_main` in `raw-r1/verdicts-r1.jsonl`), so a cell already WRONG

@@ -8,7 +8,7 @@ DataFusion 54.1.0 and datafusion-spark 54.1.0 sources in the cargo registry, and
 **How searched.** `grep -rn '"sum"\|sum_udaf\|try_sum\|TrySum\|SparkSum'` over `crates/` and `python/repark/src`;
 `grep -rn 'register_all\|all_default_aggregate_functions\|with_default_features'` for the registration lists;
 `grep -rn 'simplify_expr_op_literal\|add_wrapping'` over the DataFusion sources; `EXPLAIN` of eight cells on both
-engines (`raw/*-true.jsonl`, keys `explain/*`); the jar by `javap` ([evidence/jar/](evidence/jar/map.md)).
+engines (`raw/*-true.jsonl`, keys `explain/*`); the jar by `javap` ([evidence/jar/](evidence/jar/)).
 **Revision (after the critic):** each seat the critic named was read at its cited lines and `grep`ped
 (`_agg_via_sql_group`, `_grouping_sets_grouped`, `_pivot_aggregate_builder`, `_resolve_routine`, `needs_frame_rescan`,
 `analyzer_rules_with_sliding_rescan`, `collects_bounds`, `limit_field_ids`, `aggregate`/`pushdown` in

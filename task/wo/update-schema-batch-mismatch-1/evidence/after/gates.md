@@ -25,5 +25,3 @@ branch with the fix, 2026-11-13.
 | `uvx ruff@0.15.22 check .` | 0 | |
 | `uvx ruff@0.15.22 format --check .` | 0 | |
 | the comment gate (`comment_ban.py <clone> origin/main HEAD`) | 0 | 0 hits |
-
-Up: [../map.md](../map.md).

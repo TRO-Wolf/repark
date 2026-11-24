@@ -59,5 +59,3 @@ committed JSONL carries no local path.
 - The native door is one shared process session: tables from earlier cells stay in the catalog, so the "state
   changed" check compares the set of table directories before and after each statement, plus a post statement
   for the schema cell (R2).
-
-Up: [map.md](map.md).

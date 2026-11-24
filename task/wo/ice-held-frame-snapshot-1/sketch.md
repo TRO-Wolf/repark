@@ -2,7 +2,7 @@
 
 By Claude Opus 5.5 (`claude-opus-5-5`), effort xhigh. No product code, no build. Marks: **[M]** measured, **[R]**
 read, **[Rec]** recommendation. The cells: [domain-table.md](domain-table.md). The sites:
-[inventory.md](inventory.md). The probes, raw output and `javap` excerpts: [evidence/](evidence/map.md).
+[inventory.md](inventory.md). The probes, raw output and `javap` excerpts: [evidence/](evidence/).
 
 **The rulings carried.** The owner, 2026-11-20, about 00:22 UTC, verbatim: "Let's go with defaults across the board"
 (the window's terms; the questions in §7 go to a Fable medium consult and the orchestrator acts on its guidance).

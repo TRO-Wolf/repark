@@ -87,5 +87,3 @@ with zulu-17 `javap -c -p`:
   the threshold it falls back to sort-based aggregation, whose buffer is an `UnsafeRow`.
 - `org.apache.spark.sql.internal.SQLConf$`: `spark.sql.objectHashAggregate.sortBased.fallbackThreshold` is built
   with `sipush 128` (bytecode 12727), the 128 groups of the critic's table.
-
-Up: [map.md](map.md).

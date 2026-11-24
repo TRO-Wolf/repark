@@ -13,7 +13,7 @@ owner's ruling of 2026-11-17 (evening), as the orchestrator reads it. Measured o
   mode on the Spark door (SQL, DataFrame, Iceberg), the named wrong writes, the native-door sample, the controls.
 - [inventory.md](inventory.md) — every seat that types, accumulates, checks or evaluates a decimal `sum`, "seen at
   the seat: yes / no, because", with file:line and how it was searched.
-- [evidence/](evidence/map.md) — the probes, the raw cells and verdicts, the `javap` excerpts, the provenance.
+- [evidence/](evidence/) — the probes, the raw cells and verdicts, the `javap` excerpts, the provenance.
 
 **Revised 2026-11-17** after the critic's verdict (GAPS): the Iceberg writer checks precision only from bounds, so
 39-digit values commit under `none` / `counts` and past column 100 (proposed card ICE-DECIMAL-WRITE-PRECISION-1),
@@ -23,7 +23,7 @@ agrees and disagrees with the critic.
 
 **Built 2026-11-17** (product commit `a8016e75`, owner's "defaults on both"): seat A, a RePark `sum` / `try_sum`
 (`crates/repark-functions/src/aggregate/`), sentinel marker. HALT on the bar: 46 EQUAL→other cells, all pass-back
-sums that depend on the split or the partial order. [evidence/built/](evidence/built/map.md) holds the bar, the cost,
+sums that depend on the split or the partial order. [evidence/built/](evidence/built/) holds the bar, the cost,
 the card's "Built" append and their scripts.
 
 Up: [../map.md](../map.md).

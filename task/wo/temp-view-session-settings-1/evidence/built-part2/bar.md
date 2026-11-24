@@ -7,7 +7,7 @@
 `pkg-avg-27d6149f`), main with part 1 (`part1`, `pkg-view1-c54f5fc7`), delta 1's head (`513208ce`) and Spark 4.1.2.
 Delta 2 re-ran every RePark set fresh on the head, `part1` and `pre` at 17:05–17:07 UTC; Spark's sets are delta 1's
 (14:35–14:47 UTC) except the current-time set (`rev.py`), re-run on all four at 17:06–17:07 so its hours pair. Pairing
-[probes/bar2.py](probes/map.md); cells [raw/](raw/map.md), delta 2's in [raw/delta2/](raw/map.md).
+[probes/bar2.py](probes/); cells [raw/](raw/), delta 2's in [raw/delta2/](raw/).
 
 ## The build's bar (3,004 cells: `run.py` both start modes, `rev.py`, `rc.py`, the delta 1 sweep)
 
@@ -62,7 +62,7 @@ reader is present. A frame inlined at the top level is planned under the live op
 analyses under one state, and a held `DataFrame` analyses under the snapshot taken when it was built. Clippy's
 `single_match` at `frame_settings.rs:174` is now an `if let`.
 
-**The write sweep** ([probes/wsweep.py](probes/map.md), [raw/delta2/wsweep.jsonl](raw/map.md)): one session per
+**The write sweep** ([probes/wsweep.py](probes/), [raw/delta2/wsweep.jsonl](raw/)): one session per
 build and ANSI mode, settings never changed; 13 doors (`writeTo` `append`, `overwrite`, `overwritePartitions`,
 `create`, `createOrReplace`; `insertInto` and its overwrite; `saveAsTable` append and overwrite; `mergeInto`; SQL
 `INSERT` and `MERGE` from a DataFrame view; `write.parquet`); 5 sources (a bare literal, a derived subquery, a frame
@@ -165,8 +165,8 @@ released, and no writer waits for the GIL while it holds the lock.
   beside six writer threads (`writeTo`, `insertInto` and SQL `INSERT` from a same-mode and an other-mode view, into
   `DATE` and `BOOLEAN`), 100 writes each; every write must refuse and both tables stay empty. It ran in about 4 s per call. On the head it passed 5 of 5 runs; on `pkg-view2-d4423a69` it failed 10 of 10, each with at least 17 to 33 writes landed across four or five of the six door and target cells; on main now (`pkg-main-6286ba19`) it passes, with delta 2's negated-null pins.
 
-**Race and hang** ([probes/race.py](probes/map.md), the verifier's probe with a duration mode; outputs in
-[raw/delta3/](raw/map.md)): five doors on five threads (`writeTo` and `insertInto` of a bare frame, `writeTo` from an
+**Race and hang** ([probes/race.py](probes/), the verifier's probe with a duration mode; outputs in
+[raw/delta3/](raw/)): five doors on five threads (`writeTo` and `insertInto` of a bare frame, `writeTo` from an
 other-mode view, `insertInto` from a same-mode view, SQL `INSERT` from an other-mode view) beside two setter threads.
 
 | build | run | writes | landed | rows stored | `conf.set` calls overlapped | slowest write (s) |
@@ -185,7 +185,7 @@ over 0.5 s (two, at 0.51 s and 0.53 s; main's slowest 0.47 s), and the hang runs
 writes, so a contended read waits milliseconds, not the bound.
 
 **The bar** (package `pkg-view2-9aa2f182`, `BUILT_FROM` `9aa2f182…`; main now `pkg-main-6286ba19`). Every check as delta 2's:
-- **The write sweep** ([probes/wsweep.py](probes/map.md), 13 doors, 3,100 cells, both ANSI modes): the head and main
+- **The write sweep** ([probes/wsweep.py](probes/), 13 doors, 3,100 cells, both ANSI modes): the head and main
   now answer **the same in all 3,100 cells**.
 - **The pins:** the part 1 and part 2 pin files, `test_temp_view_reader_lineage.py`, `test_store_ts_to_numeric_1.py`
   and DECIMAL-DIVIDE-LITERAL-1's `test_decimal_divide_literal_1.py`: 2,041 passed, 20 xfailed (DECIMAL-DIVIDE-LITERAL-1's
@@ -243,7 +243,7 @@ Spark raises (both recorded under question 4, outside the label's ANSI-on scope)
 | Fable's `probe.py` | 14 | 0 answers moved; `EXPLAIN` differs only by the warehouse path and (delta 2) the lane's partition count | `jf.filter("n > 0")` and `jf.selectExpr("n + 1 AS n1", "ts")` back at Spark's answer; `hour(ts)` WRONG as on part 1 |
 
 Delta 2 re-ran these sets with the reader, join and `smartCsv` sweeps (1,622 cells; the Postgres cells not run, with no
-server up) on the head, `part1` and `pre` against Spark's delta 1 files ([probes/probes_cmp.py](probes/map.md)): 0
+server up) on the head, `part1` and `pre` against Spark's delta 1 files ([probes/probes_cmp.py](probes/)): 0
 cells EQUAL on part 1 and not on the head. Against delta 1's head, 0 answers moved but four artefacts of the run: two
 of Fable's plans print the partition count of this lane's ten cores, and two time-travel refusals print the run's
 own timestamp.
@@ -375,5 +375,3 @@ Fable's guidance under the owner's delegation allowed an eighth, `crates/repark-
 four of the seven (`repark-core/src/extension.rs`, `repark-core/src/session/temp_views.rs`, `frame_settings.rs`,
 `temp_view.rs`) and no other product file: **seven of seven**. Delta 3 touched two of the seven
 (`repark-core/src/extension.rs`, `repark-core/src/session/temp_views.rs`) and no other: **seven of seven**.
-
-Up: [map.md](map.md).

@@ -260,7 +260,7 @@ the 50 pins of §1.1 are red on it and green on the head's module (§4).
 ## 6. Never worse (step 6)
 
 106's §13.6 census shape, widened to the four verbs and four doors (evidence:
-[census](../../../wo/explain-dml-write-1/evidence/map.md)). 106 cells per door; every seed is an
+[census](../../../wo/explain-dml-write-1/evidence/)). 106 cells per door; every seed is an
 `IcebergTableScan` on main and head (424 of 424). Main is `c91f69c5`'s code (module `60286bb3…`
 for the Python doors; the three call sites restored to `origin/main` for the Rust doors); head is
 `57031982` (module `11e5bd48…`).

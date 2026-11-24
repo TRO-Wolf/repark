@@ -3,7 +3,7 @@
 By Claude Opus 5.5 (`claude-opus-5-5`), effort xhigh. No product code, no build. Marks: **[M]** measured, **[R]**
 read, **[Rec]** recommendation. The cells: [domain-table.md](domain-table.md). The kernel's oracle:
 [oracle.md](oracle.md). The sites: [inventory.md](inventory.md). The probes and raw output:
-[evidence/](evidence/map.md).
+[evidence/](evidence/).
 
 **The revision.** The critic (Claude Opus 5.5 medium) returned GAPS: it re-measured 268 cells with 0 disagreements and
 kept seat A, the split and the WRONG set. This revision closes its items: the scan condition (§4), positional
@@ -177,7 +177,7 @@ read and the facade's casts on the same package. Medians in ms:
   exclusively, five rounds**, and attribute any row over 1.05x by swap or instruction counts.
 - **Unit 1's own rows:** the last column is unit 1's package against main, not this seat. `k0_hour`'s 1.081x has a
   wide spread (unit 1 base 56.87 to 68.12 ms), noted for unit 1's records.
-- Raw: [evidence/raw/](evidence/raw/map.md) (`cost-samples.jsonl`, `cost-table.md.txt`).
+- Raw: [evidence/raw/](evidence/raw/) (`cost-samples.jsonl`, `cost-table.md.txt`).
 
 ## 5. What the build must also hold
 

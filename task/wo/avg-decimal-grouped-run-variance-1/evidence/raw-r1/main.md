@@ -130,5 +130,3 @@
 | `t4/c38_0/g/avg/g21` | true | NVOOR | NVOOR | NVOOR | NVOOR | NVOOR x18 / AO x2 | NVOOR | NVOOR |
 | `t4/c38_0/g/try_avg/g21` | true | 21:NULL | 21:NULL | 21:NULL | 21:NULL | 21:NULL | 21:NULL | 21:NULL |
 | `t4/corr/avg` | true | NVOOR | NVOOR x12 / AO x8 | AO x14 / NVOOR x6 | AO x11 / NVOOR x9 | AO x12 / NVOOR x8 | NVOOR x11 / AO x9 | AO / NVOOR |
-
-Up: [map.md](map.md).

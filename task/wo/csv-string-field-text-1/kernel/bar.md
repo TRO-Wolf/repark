@@ -62,5 +62,3 @@ modes) on main's package and on the head's, one after the other per part, `TZ=UT
   one.
 - The reader is untouched (`git diff e5e90a1b..HEAD -- python/repark/src` is empty), so this is the expected
   answer: nothing reads through the kernel until the wiring unit.
-
-Up: [map.md](map.md).

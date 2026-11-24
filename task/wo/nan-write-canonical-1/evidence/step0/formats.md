@@ -1,7 +1,7 @@
 # NAN-WRITE-CANONICAL-1 step 0 addendum — data-file formats, nested leaves, map keys, the rewrite repair
 
 Added after the inventory critic (2026-11-13). Main `1d9d2808` against Spark 4.1.2 / Iceberg 1.11.0, same builds and
-locks as [map.md](map.md). `format_cells_probe.py` writes the step 0 `ROWS` into tables with `write.format.default`
+locks as [map.md](./). `format_cells_probe.py` writes the step 0 `ROWS` into tables with `write.format.default`
 set to each format: `u_` (INSERT, unpartitioned), `p_` (INSERT, `PARTITIONED BY (d, f)`), `c_` (partitioned CTAS),
 `n_` (INSERT into `STRUCT<a DOUBLE, b FLOAT>`, `ARRAY<DOUBLE>`, `MAP<STRING, DOUBLE>`), then rewrites `u_` with
 `CALL … rewrite_data_files(… options => map('rewrite-all', 'true'))` on a copy written by main. Rendered by

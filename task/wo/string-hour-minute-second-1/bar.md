@@ -4,7 +4,7 @@ Head package `pkg-shms-58b2725e` (`BUILT_FROM` `58b2725e`, the product commit) a
 (main `2900efde`; `git diff --name-only 2900efde 81ae984e -- crates python/repark/src` is empty) and Spark 4.1.2's
 recording from step 0. The base package reproduces step 0's `pkg-main-4c365814` on all 75,032 cells (0 moved). Lane
 A, under the shared measure lock; every run printed `repark._native.__file__`. The probes are in
-[evidence/built/](evidence/built/map.md); raw runs stay in `N/string-hms-out/`.
+[evidence/built/](evidence/built/); raw runs stay in `N/string-hms-out/`.
 
 ## The rulings this unit carries
 

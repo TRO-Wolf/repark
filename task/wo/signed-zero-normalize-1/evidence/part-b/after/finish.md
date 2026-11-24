@@ -80,5 +80,3 @@ twin's head label. The 38 that answer were explained on the head's release build
 | GB-11 typed pivot (2) | 0 | the pivot has no seat-2 key; its float pairing is the per-value literal comparison, part A's seat 1 |
 
 No wrapper is nested in any cell.
-
-Up: [map.md](map.md).

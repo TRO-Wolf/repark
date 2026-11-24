@@ -55,7 +55,7 @@ every door.
 | `PREPARE p AS MERGE …; EXECUTE p` | main and branch: plan refusal, no write | main: plan refusal; branch: the ruled refusal | the same as ANSI | refused |
 
   The full census (106 cells on each of four doors, main and branch) is in
-  [the unit's evidence](../../wo/explain-dml-write-1/evidence/map.md) and its reading in the
+  [the unit's evidence](../../wo/explain-dml-write-1/evidence/) and its reading in the
   [unit ledger](../../ledgers/archive/2026-10/2026-10-30-explain-dml-write-1-ledger.md) §6.
 
 ## 2026-10-17: owner rulings 136, 138 and 139, and the measured table

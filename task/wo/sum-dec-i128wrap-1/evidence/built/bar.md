@@ -2,7 +2,7 @@
 
 **Head** `a8016e75` (package `pkg-sum-a8016e75`, `BUILT_FROM` `a8016e75a033906e5bb49fcce9d79bdfa924ad3b`), **main**
 the step 0's RePark raw (`pkg-avg-27d6149f`, main's product tree), **Spark 4.1.2** the step 0's Spark raw: the same
-probes, fixtures and settings ([../probes/](../probes/map.md)). The head re-ran the step 0's whole domain table:
+probes, fixtures and settings ([../probes/](../probes/)). The head re-ran the step 0's whole domain table:
 `run_door.py`, `run_mp.py`, `run_native.py`, `run_revision.py` (RePark, each mode) and `crossread.py` (Spark reading
 the head's revision warehouses, each Spark mode); `compact.py`, `trim_revision.py`, `analyze.py` and
 `analyze_revision.py` unchanged; [compare_bar.py](compare_bar.py) pairs main's verdicts with the head's. Every run
@@ -112,7 +112,7 @@ Fable's earlier answers (the reply's questions 1 and 3) are Fable's guidance, no
 
 ### Sizing, recorded before any product file of the delta changed
 
-Scripts and raw output: [delta1/](delta1/map.md). Both engines read the same Parquet files (written once by
+Scripts and raw output: [delta1/](delta1/). Both engines read the same Parquet files (written once by
 `pyarrow`: `s` one file, `s4` four, `p2` two, and Fable's probe table `fq` four), each query repeated 20 times in one
 session, both ANSI modes. Every RePark run printed its package's `_native.abi3.so`.
 
@@ -182,8 +182,8 @@ accumulators, `DecimalSumDistinct`, `avg` and the non-decimal delegation are unc
 
 The step 0's whole domain table re-ran on the head package and on main's (`pkg-view1-c54f5fc7`), Spark's side the
 step 0's; compared with [compare_bar.py](compare_bar.py) against both bases, `pkg-view1-c54f5fc7` and the build's base
-`pkg-avg-27d6149f` (the step 0's raw). Compacted output and verdicts: [delta1/raw/](delta1/raw/map.md); comparisons:
-[delta1/compare/](delta1/compare/map.md).
+`pkg-avg-27d6149f` (the step 0's raw). Compacted output and verdicts: [delta1/raw/](delta1/raw/); comparisons:
+[delta1/compare/](delta1/compare/).
 
 **Counts per verdict** (Spark door, default and multi-partition passes; 2,537 cells per mode):
 
@@ -311,7 +311,7 @@ the grouped path only; the ungrouped `update_batch` trusted the declared precisi
    of `−9 × 10^36` merged, shipped by a final step's spill as `−9 × 10^37`, then NULL or `ARITHMETIC_OVERFLOW` at
    `evaluate`; input past its precision raises an error in both accumulators).
 
-### Determinism (check 3, [delta2/det/](delta2/det/map.md))
+### Determinism (check 3, [delta2/det/](delta2/det/))
 
 The sizing's step 3 on the pin file's tables with columns at precision 10, 18, 19, 20 and 38: `big` (three Parquet
 files of 300,000 rows, 3,000 groups; per group `M` in file a, `5` in b, `−M` in c, exact total `5`) and `t4x` (groups
@@ -331,7 +331,7 @@ which this unit does not touch, varies (up to 4 answers; `t4x` 2 at 2 cores and 
 
 ### The bar (head `pkg-sum-fcb0c888`; main now `pkg-main-6286ba19`)
 
-The step 0's whole domain table re-ran on the head and on main now (raw: [delta2/raw/](delta2/raw/map.md)).
+The step 0's whole domain table re-ran on the head and on main now (raw: [delta2/raw/](delta2/raw/)).
 
 | build | ANSI | EQUAL | BOTH_RAISE | SPARK_RAISES | VALUE | REPARK_RAISES | BOTH_RAISE_OTHER | FORMAT |
 |---|---|---|---|---|---|---|---|---|
@@ -487,7 +487,7 @@ count stays at 5 of 6.
 | `avg` ungrouped (`avg_decimal.rs` `DecimalAvgAccumulator::update_batch` / `retract_batch`, `add_batch` with `safe_rows`) | **not this unit (reported):** the same over-precision wrap; measured below |
 | `avg` grouped (`DecimalAvgGroups`) | every row with the carry; measured NULL or `ARITHMETIC_OVERFLOW` below |
 
-### The verifier's files, measured ([delta3/overprec/](delta3/overprec/map.md))
+### The verifier's files, measured ([delta3/overprec/](delta3/overprec/))
 
 The verifier's six files re-made byte for byte, plus a two-file table of each (a second file of one `0` row, so the
 ungrouped plan has a partial step), at `target_partitions` 1, 2, 4 and 8, both modes: 384 `sum` and `try_sum`
@@ -545,7 +545,7 @@ both modes; cores 48–57) and analysed with the same pipeline against the recor
   mains answer the wrapped 39-digit total there in either mode, so they cannot show it. The batch add this delta
   changed cannot choose an ANSI mode.
 
-### Determinism ([delta3/det/](delta3/det/map.md))
+### Determinism ([delta3/det/](delta3/det/))
 
 The verifier's own runner (`S/verify-sum/det/det.py`), its five configurations, both modes, 240 queries each, 20 runs:
 **one answer everywhere, and every answer the exact total** (or the raise / NULL for a total past the result precision)

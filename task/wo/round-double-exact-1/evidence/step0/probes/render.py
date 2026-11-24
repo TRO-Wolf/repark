@@ -480,7 +480,5 @@ P(
     "is never wrong where"
 )
 P("  its SELECT cell is right.")
-P("")
-P("Up: [map.md](map.md).")
 (out_dir / "domain-table.md").write_text("\n".join(lines) + "\n")
 print(len(tsv_rows), same_sel, modes_equal)

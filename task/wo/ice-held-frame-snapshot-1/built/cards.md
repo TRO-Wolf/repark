@@ -54,5 +54,3 @@ Two of round 0's open cells already have cards, so they are not carded again her
 [STRING-CAST-LENIENT-1](../../../roadmap/mid-term/string-cast-lenient-1-card-2026-11-16.md) (`M|held_cast`) and
 [LOCAL-CHECKPOINT-NEW-FRAME-1](../../../roadmap/mid-term/local-checkpoint-new-frame-1-card-2026-10-03.md)
 (`local_checkpoint_after_collect`).
-
-Up: [map.md](map.md).

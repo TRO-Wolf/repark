@@ -6,6 +6,6 @@ does on Spark-door frames (first for `ASC`, last for `DESC`, an explicit `NULLS 
 wins); native-door frames keep `nulls_max`. The card, with the inventory, the seat and three
 findings, is [filter-string-null-order-1-card-2026-11-13.md](../../roadmap/mid-term/filter-string-null-order-1-card-2026-11-13.md).
 
-- [evidence/](evidence/map.md) — step 0 on the base `35c5de77` against PySpark 4.1.2, and the same probe on the fix.
+- [evidence/](evidence/) — step 0 on the base `35c5de77` against PySpark 4.1.2, and the same probe on the fix.
 
 Up: [../map.md](../map.md).

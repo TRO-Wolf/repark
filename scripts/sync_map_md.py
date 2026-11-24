@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Keep every `map.md` honest about the tree it navigates.
 
-The repo's hard rule is "`map.md` in every directory, updated in the same pull request"
-(AGENTS.md). `scripts/check_map_md.sh` holds the *lockstep* half: CI diffs the branch
+A `map.md` sits where the architecture needs one (AGENTS.md); one under `task/wo` must be listed
+in `TASK_WO_MAPS`. `scripts/check_map_md.sh` holds the *lockstep* half: CI diffs the branch
 (`--base <ref>`) on every pull request, and the local hook's staged mode only warns. This
 script holds the *content* half — a touched map can still point at a file that moved and stay
 silent about a file that arrived.
@@ -83,6 +83,85 @@ STUB_SUFFIX = "TODO(describe)"
 
 MISSING = "does not exist"
 ABSOLUTE = "is an absolute path — map links must be relative to the map"
+
+TASK_WO_PREFIX = "task/wo/"
+
+TASK_WO_MAPS: tuple[str, ...] = (
+    "task/wo/asof-join-1/map.md",
+    "task/wo/attr-view-semantics-1/map.md",
+    "task/wo/avg-decimal-grouped-run-variance-1/map.md",
+    "task/wo/avg-decimal-round-1/map.md",
+    "task/wo/aws-ephemeral-runs-1/map.md",
+    "task/wo/cast-literal-unwrap-1/map.md",
+    "task/wo/csv-schema-timestamp-zone-1/map.md",
+    "task/wo/csv-string-field-text-1/map.md",
+    "task/wo/ctas-query-failure-cleanup-1/map.md",
+    "task/wo/decimal-common-type-1/map.md",
+    "task/wo/decimal-divide-literal-1/map.md",
+    "task/wo/decimal-double-union-coercion-1/map.md",
+    "task/wo/door-protection-inventory-1/map.md",
+    "task/wo/double-decimal-store-round-1/map.md",
+    "task/wo/empty-dml-shared-guard-1/map.md",
+    "task/wo/explain-dml-write-1/map.md",
+    "task/wo/fexpr-window-null-order-1/map.md",
+    "task/wo/filter-string-null-order-1/map.md",
+    "task/wo/followup-dml-conjunct-and-signed-zero/map.md",
+    "task/wo/ice-held-frame-snapshot-1/map.md",
+    "task/wo/ice-integrity-pins-1/map.md",
+    "task/wo/ice-ntz-nested-refuse-1/map.md",
+    "task/wo/ice-ntz-nested-wall-1/map.md",
+    "task/wo/ice-replace-kill-doors-1/map.md",
+    "task/wo/ice-resource-bound-1/map.md",
+    "task/wo/ice-spark-cross-read-1/map.md",
+    "task/wo/ice-struct-pairing-1/map.md",
+    "task/wo/ice-tsns-coercion-1/map.md",
+    "task/wo/ice-tsns-floor-doors-1/map.md",
+    "task/wo/ice-tsns-frame-door-1/map.md",
+    "task/wo/ice-tsns-type-planner-1/map.md",
+    "task/wo/ice-tsns-update-range-class-1/map.md",
+    "task/wo/ice-v2-flat-aws-label-1/map.md",
+    "task/wo/ice-v2-label-1/map.md",
+    "task/wo/listview-inner-join-key-1/map.md",
+    "task/wo/local-drop-recreate-stale-write-1/map.md",
+    "task/wo/map-column-panic-1/map.md",
+    "task/wo/map-column-panic-native-door-1/map.md",
+    "task/wo/map.md",
+    "task/wo/merge-mod-split-1/map.md",
+    "task/wo/microbatch/map.md",
+    "task/wo/nan-compare-spark-1/map.md",
+    "task/wo/nan-minmax-1/map.md",
+    "task/wo/nan-partition-value-1/map.md",
+    "task/wo/nan-write-canonical-1/map.md",
+    "task/wo/native-ctas-iceberg-refuse-1/map.md",
+    "task/wo/native-dataframe-write-silent-1/map.md",
+    "task/wo/native-door-ansi-route-1/map.md",
+    "task/wo/ns-array-floor-1/map.md",
+    "task/wo/ns-truthup-1/map.md",
+    "task/wo/panic-fatal-suite-1/map.md",
+    "task/wo/repark-sql-update-subquery-where-1/map.md",
+    "task/wo/replace-linear-pin-1/map.md",
+    "task/wo/round-double-exact-1/map.md",
+    "task/wo/signed-zero-const-compare-1/map.md",
+    "task/wo/signed-zero-normalize-1/map.md",
+    "task/wo/spill-reach-fair-pool-flake-1/map.md",
+    "task/wo/sql-setop-all-refuse-1/map.md",
+    "task/wo/string-hour-minute-second-1/map.md",
+    "task/wo/struct-compare-by-position-1/map.md",
+    "task/wo/struct-compare-seat-family-1/map.md",
+    "task/wo/struct-setop-reorder-refusal-1/map.md",
+    "task/wo/struct-setop-type-family-1/map.md",
+    "task/wo/sum-dec-i128wrap-1/map.md",
+    "task/wo/temp-view-cache-lazy-parse-1/map.md",
+    "task/wo/temp-view-frame-reader-parse-1/map.md",
+    "task/wo/temp-view-session-settings-1/map.md",
+    "task/wo/update-schema-batch-mismatch-1/map.md",
+    "task/wo/write-body-carriers-1/map.md",
+    "task/wo/write-path-envelope-matrix-1/map.md",
+    "task/wo/write-spine-1/map.md",
+    "task/wo/zero-partition-merge-1/map.md",
+    "task/wo/zone-oracle-1/map.md",
+    "task/wo/zone-seam-1/map.md",
+)
 
 
 def tracked_paths(repo: Path) -> list[str]:
@@ -328,6 +407,21 @@ def check_map(map_path: Path, tracked: list[str], map_relative: str, strict: boo
     return findings
 
 
+def _task_wo_findings(maps: list[str]) -> list[str]:
+    tracked = set(maps)
+    findings = [
+        f"{path}: a map.md under task/wo that TASK_WO_MAPS does not list — delete it"
+        for path in maps
+        if path.startswith(TASK_WO_PREFIX) and path not in TASK_WO_MAPS
+    ]
+    findings.extend(
+        f"{path}: listed in TASK_WO_MAPS but not tracked — delete its row"
+        for path in TASK_WO_MAPS
+        if path not in tracked
+    )
+    return findings
+
+
 def build_parser() -> argparse.ArgumentParser:
     """The CLI surface: `--check` (default), `--fix`, `--strict`."""
     parser = argparse.ArgumentParser(
@@ -364,7 +458,7 @@ def run(repo: Path, fix: bool, strict: bool) -> int:
         print("ERROR: no tracked map.md found — refuse to pass closed", file=sys.stderr)
         return 2
 
-    findings: list[str] = []
+    findings = _task_wo_findings(maps)
     fixed: list[str] = []
     for map_relative in maps:
         map_path = repo / map_relative

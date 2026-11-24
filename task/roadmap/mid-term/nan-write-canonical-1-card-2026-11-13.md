@@ -85,7 +85,7 @@ partitioned by the float column is NAN-AVRO-REWRITE-PARTITION-1. Data written by
   - A strict xfail, `test_repark_filters_stored_avro_nan_as_spark_does`, asserts Spark's answer (rows 1–6, measured)
     for `f = CAST('NaN' AS FLOAT)` and `f > CAST('Infinity' AS FLOAT)` on the Avro table; the head answers `[4]` and
     `[4, 5]`. NAN-COMPARE-SPARK-1 turns it green.
-- **Cost** ([cost/](../../wo/nan-write-canonical-1/evidence/cost/map.md)): 10 M DOUBLE rows, plain and partitioned, no NaN
+- **Cost** ([cost/](../../wo/nan-write-canonical-1/evidence/cost/)): 10 M DOUBLE rows, plain and partitioned, no NaN
   and 1 % NaN, six alternated pairs: head/base median 1.005x to 1.048x per case, 1.032x over the sum, under the
   1.05x bar; base/base noise 0.90x to 1.08x.
 
