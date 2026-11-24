@@ -1,7 +1,7 @@
 # map — task/roadmap/mid-term/cards-2026-11-23/
 
 Cards filed by the orchestrator on 2026-11-23, during the owner's overnight window, from the verifiers and builders
-of PRs #1411 and #1413 and the review of 2026-11-23. The owner rated each on 2026-11-23. None is dispatched.
+of PRs #1411 and #1413 and the review of 2026-11-23. A severity marked proposed awaits the owner's rating. None is dispatched.
 
 ## Cards
 
