@@ -53,6 +53,10 @@ pub(crate) async fn execute_view_body_query(
         Some(rewritten) => std::borrow::Cow::Owned(rewritten),
         None => std::borrow::Cow::Borrowed(routed_sql),
     };
+    let sql_storage = repark_core::minus_all_as_except_all(
+        ctx.state_ref().read().config_options().sql_parser.dialect,
+        sql_storage.as_ref(),
+    );
     let result = spark_ast::execute_passthrough(ctx, catalogs, sql_storage.as_ref()).await;
     lineage_pins.release(ctx);
     pinned.release(ctx);

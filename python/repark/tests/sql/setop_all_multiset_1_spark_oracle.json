@@ -1,0 +1,7329 @@
+{
+ "cells": {
+  "false": {
+   "control|EXCEPT": {
+    "kind": "rows",
+    "rows": [
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "control|EXCEPT DISTINCT": {
+    "kind": "rows",
+    "rows": [
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "control|INTERSECT": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "control|INTERSECT DISTINCT": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "control|UNION": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      3
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "control|UNION ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ],
+     [
+      3
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "dataframe|bigint|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      4
+     ],
+     [
+      9000000000
+     ],
+     [
+      9000000000
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:bigint>"
+   },
+   "dataframe|bigint|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      4
+     ],
+     [
+      9000000000
+     ],
+     [
+      9000000000
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:bigint>"
+   },
+   "dataframe|bigint|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      -7
+     ],
+     [
+      -7
+     ],
+     [
+      9000000000
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:bigint>"
+   },
+   "dataframe|bigint|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      -7
+     ],
+     [
+      -7
+     ],
+     [
+      9000000000
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:bigint>"
+   },
+   "dataframe|columns|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      1,
+      "b",
+      "f0000000000000000"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string,d:double>"
+   },
+   "dataframe|columns|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      1,
+      "b",
+      "f0000000000000000"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string,d:double>"
+   },
+   "dataframe|columns|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      2,
+      "a",
+      "f7ff8000000000000"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string,d:double>"
+   },
+   "dataframe|columns|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      2,
+      "a",
+      "f7ff8000000000000"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string,d:double>"
+   },
+   "dataframe|date|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t2024-01-01"
+     ],
+     [
+      "t2024-01-01"
+     ],
+     [
+      "t2024-02-29"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:date>"
+   },
+   "dataframe|date|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t2024-01-01"
+     ],
+     [
+      "t2024-01-01"
+     ],
+     [
+      "t2024-02-29"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:date>"
+   },
+   "dataframe|date|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t1970-01-01"
+     ],
+     [
+      "t1970-01-01"
+     ],
+     [
+      "t2024-01-01"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:date>"
+   },
+   "dataframe|date|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t1970-01-01"
+     ],
+     [
+      "t1970-01-01"
+     ],
+     [
+      "t2024-01-01"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:date>"
+   },
+   "dataframe|decimal|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d1.1"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      "d4"
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "dataframe|decimal|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d1.1"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      "d4"
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "dataframe|decimal|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d-2.2"
+     ],
+     [
+      "d-2.2"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "dataframe|decimal|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d-2.2"
+     ],
+     [
+      "d-2.2"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "dataframe|double-signs|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "dataframe|double-signs|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "dataframe|double-signs|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "dataframe|double-signs|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "dataframe|double|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "dataframe|double|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "dataframe|double|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "dataframe|double|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "dataframe|float-signs|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "dataframe|float-signs|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "dataframe|float-signs|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "dataframe|float-signs|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "dataframe|float|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "dataframe|float|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "dataframe|float|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "dataframe|float|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "dataframe|int|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "dataframe|int|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "dataframe|int|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "dataframe|int|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "dataframe|null|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:void>"
+   },
+   "dataframe|null|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:void>"
+   },
+   "dataframe|null|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:void>"
+   },
+   "dataframe|null|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:void>"
+   },
+   "dataframe|string|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      ""
+     ],
+     [
+      "A"
+     ],
+     [
+      "a"
+     ],
+     [
+      "a"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:string>"
+   },
+   "dataframe|string|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      ""
+     ],
+     [
+      "A"
+     ],
+     [
+      "a"
+     ],
+     [
+      "a"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:string>"
+   },
+   "dataframe|string|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ],
+     [
+      "b"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:string>"
+   },
+   "dataframe|string|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ],
+     [
+      "b"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:string>"
+   },
+   "dataframe|struct|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        null
+       ],
+       [
+        "y",
+        "b"
+       ]
+      ]
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:struct<x:int,y:string>>"
+   },
+   "dataframe|struct|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        null
+       ],
+       [
+        "y",
+        "b"
+       ]
+      ]
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:struct<x:int,y:string>>"
+   },
+   "dataframe|struct|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        2
+       ],
+       [
+        "y",
+        null
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        2
+       ],
+       [
+        "y",
+        null
+       ]
+      ]
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:struct<x:int,y:string>>"
+   },
+   "dataframe|struct|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        2
+       ],
+       [
+        "y",
+        null
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        2
+       ],
+       [
+        "y",
+        null
+       ]
+      ]
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:struct<x:int,y:string>>"
+   },
+   "dataframe|timestamp|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      "t2024-02-29T23:59:59.123456"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:timestamp>"
+   },
+   "dataframe|timestamp|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      "t2024-02-29T23:59:59.123456"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:timestamp>"
+   },
+   "dataframe|timestamp|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t1970-01-01T00:00:00"
+     ],
+     [
+      "t1970-01-01T00:00:00"
+     ],
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:timestamp>"
+   },
+   "dataframe|timestamp|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t1970-01-01T00:00:00"
+     ],
+     [
+      "t1970-01-01T00:00:00"
+     ],
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:timestamp>"
+   },
+   "edge|both-empty|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:int>"
+   },
+   "edge|both-empty|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:int>"
+   },
+   "edge|both-empty|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:int>"
+   },
+   "edge|empty-left|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:int>"
+   },
+   "edge|empty-left|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:int>"
+   },
+   "edge|empty-left|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:int>"
+   },
+   "edge|empty-right|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "edge|empty-right|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:int>"
+   },
+   "edge|empty-right|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "edge|only-duplicates-right-more|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:int>"
+   },
+   "edge|only-duplicates-right-more|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      7
+     ],
+     [
+      7
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "edge|only-duplicates-right-more|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:int>"
+   },
+   "edge|only-duplicates|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      7
+     ],
+     [
+      7
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "edge|only-duplicates|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      7
+     ],
+     [
+      7
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "edge|only-duplicates|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      7
+     ],
+     [
+      7
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "error|column-count|EXCEPT ALL": {
+    "bracket": "NUM_COLUMNS_MISMATCH",
+    "class": "AnalysisException",
+    "condition": "NUM_COLUMNS_MISMATCH",
+    "kind": "error",
+    "sqlstate": "42826",
+    "state": "42826",
+    "text": "[NUM_COLUMNS_MISMATCH] EXCEPT ALL can only be performed on inputs with the same number of columns, but the first input has 2 columns and the second input has 1 columns. SQLSTATE: 42826; line 1 pos 0; 'Except All true :- Project [a#9988, b#9989] : +- SubqueryAlias sl : +- Project [cast(1 as int) AS a#9988, cast(2 as int) AS b#9989] : +- OneRowRelation +- Project [a#9990] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#9990] +- OneRowRelation"
+   },
+   "error|column-count|INTERSECT ALL": {
+    "bracket": "NUM_COLUMNS_MISMATCH",
+    "class": "AnalysisException",
+    "condition": "NUM_COLUMNS_MISMATCH",
+    "kind": "error",
+    "sqlstate": "42826",
+    "state": "42826",
+    "text": "[NUM_COLUMNS_MISMATCH] INTERSECT ALL can only be performed on inputs with the same number of columns, but the first input has 2 columns and the second input has 1 columns. SQLSTATE: 42826; line 1 pos 0; 'Intersect All true :- Project [a#9985, b#9986] : +- SubqueryAlias sl : +- Project [cast(1 as int) AS a#9985, cast(2 as int) AS b#9986] : +- OneRowRelation +- Project [a#9987] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#9987] +- OneRowRelation"
+   },
+   "error|column-count|MINUS ALL": {
+    "bracket": "NUM_COLUMNS_MISMATCH",
+    "class": "AnalysisException",
+    "condition": "NUM_COLUMNS_MISMATCH",
+    "kind": "error",
+    "sqlstate": "42826",
+    "state": "42826",
+    "text": "[NUM_COLUMNS_MISMATCH] EXCEPT ALL can only be performed on inputs with the same number of columns, but the first input has 2 columns and the second input has 1 columns. SQLSTATE: 42826; line 1 pos 0; 'Except All true :- Project [a#9991, b#9992] : +- SubqueryAlias sl : +- Project [cast(1 as int) AS a#9991, cast(2 as int) AS b#9992] : +- OneRowRelation +- Project [a#9993] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#9993] +- OneRowRelation"
+   },
+   "error|column-type|EXCEPT ALL": {
+    "bracket": "INCOMPATIBLE_COLUMN_TYPE",
+    "class": "AnalysisException",
+    "condition": "INCOMPATIBLE_COLUMN_TYPE",
+    "kind": "error",
+    "sqlstate": "42825",
+    "state": "42825",
+    "text": "[INCOMPATIBLE_COLUMN_TYPE] EXCEPT ALL can only be performed on tables with compatible column types. The first column of the second table is \"INT\" type which is not compatible with \"ARRAY<INT>\" at the same column of the first table.. SQLSTATE: 42825; line 1 pos 0; 'Except All true :- Project [a#9996] : +- SubqueryAlias sl : +- Project [array(cast(1 as int)) AS a#9996] : +- OneRowRelation +- Project [a#9997] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#9997] +- OneRowRelation"
+   },
+   "error|column-type|INTERSECT ALL": {
+    "bracket": "INCOMPATIBLE_COLUMN_TYPE",
+    "class": "AnalysisException",
+    "condition": "INCOMPATIBLE_COLUMN_TYPE",
+    "kind": "error",
+    "sqlstate": "42825",
+    "state": "42825",
+    "text": "[INCOMPATIBLE_COLUMN_TYPE] INTERSECT ALL can only be performed on tables with compatible column types. The first column of the second table is \"INT\" type which is not compatible with \"ARRAY<INT>\" at the same column of the first table.. SQLSTATE: 42825; line 1 pos 0; 'Intersect All true :- Project [a#9994] : +- SubqueryAlias sl : +- Project [array(cast(1 as int)) AS a#9994] : +- OneRowRelation +- Project [a#9995] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#9995] +- OneRowRelation"
+   },
+   "error|column-type|MINUS ALL": {
+    "bracket": "INCOMPATIBLE_COLUMN_TYPE",
+    "class": "AnalysisException",
+    "condition": "INCOMPATIBLE_COLUMN_TYPE",
+    "kind": "error",
+    "sqlstate": "42825",
+    "state": "42825",
+    "text": "[INCOMPATIBLE_COLUMN_TYPE] EXCEPT ALL can only be performed on tables with compatible column types. The first column of the second table is \"INT\" type which is not compatible with \"ARRAY<INT>\" at the same column of the first table.. SQLSTATE: 42825; line 1 pos 0; 'Except All true :- Project [a#9998] : +- SubqueryAlias sl : +- Project [array(cast(1 as int)) AS a#9998] : +- OneRowRelation +- Project [a#9999] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#9999] +- OneRowRelation"
+   },
+   "fragment|fexpr-filter-col|EXCEPT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ]
+    ]
+   },
+   "fragment|fexpr-filter-col|INTERSECT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ]
+    ]
+   },
+   "fragment|fexpr-filter-col|MINUS ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ]
+    ]
+   },
+   "fragment|fexpr-filter-in|EXCEPT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ]
+    ]
+   },
+   "fragment|fexpr-filter-in|INTERSECT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ]
+    ]
+   },
+   "fragment|fexpr-filter-in|MINUS ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ]
+    ]
+   },
+   "fragment|fexpr-scalar|EXCEPT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ]
+    ]
+   },
+   "fragment|fexpr-scalar|INTERSECT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ]
+    ]
+   },
+   "fragment|fexpr-scalar|MINUS ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ]
+    ]
+   },
+   "fragment|selectexpr-scalar|EXCEPT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ],
+     [
+      3
+     ],
+     [
+      3
+     ],
+     [
+      3
+     ]
+    ]
+   },
+   "fragment|selectexpr-scalar|INTERSECT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ],
+     [
+      3
+     ],
+     [
+      3
+     ],
+     [
+      3
+     ]
+    ]
+   },
+   "fragment|selectexpr-scalar|MINUS ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ],
+     [
+      3
+     ],
+     [
+      3
+     ],
+     [
+      3
+     ]
+    ]
+   },
+   "guard|df|decimal|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d2"
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "guard|df|decimal|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d1.1"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "guard|df|one|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "guard|df|one|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "guard|df|two|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      2,
+      "y"
+     ]
+    ],
+    "type": "struct<a:int,b:string>"
+   },
+   "guard|df|two|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "x"
+     ],
+     [
+      1,
+      "x"
+     ],
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string>"
+   },
+   "guard|sql|decimal|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d2"
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "guard|sql|decimal|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d1.1"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "guard|sql|one|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "guard|sql|one|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "guard|sql|two|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      2,
+      "y"
+     ]
+    ],
+    "type": "struct<a:int,b:string>"
+   },
+   "guard|sql|two|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "x"
+     ],
+     [
+      1,
+      "x"
+     ],
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string>"
+   },
+   "shape|ctas|EXCEPT ALL": {
+    "cold": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ]
+    },
+    "hot": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ],
+     "type": "struct<a:int>"
+    },
+    "kind": "ok",
+    "statement": {
+     "kind": "ok",
+     "run": null
+    },
+    "table": "w_b20"
+   },
+   "shape|ctas|INTERSECT ALL": {
+    "cold": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       2
+      ],
+      [
+       2
+      ]
+     ]
+    },
+    "hot": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       2
+      ],
+      [
+       2
+      ]
+     ],
+     "type": "struct<a:int>"
+    },
+    "kind": "ok",
+    "statement": {
+     "kind": "ok",
+     "run": null
+    },
+    "table": "w_b8"
+   },
+   "shape|ctas|MINUS ALL": {
+    "cold": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ]
+    },
+    "hot": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ],
+     "type": "struct<a:int>"
+    },
+    "kind": "ok",
+    "statement": {
+     "kind": "ok",
+     "run": null
+    },
+    "table": "w_b32"
+   },
+   "shape|cte|EXCEPT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|cte|INTERSECT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|cte|MINUS ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|explain|EXCEPT ALL": {
+    "kind": "rows"
+   },
+   "shape|explain|INTERSECT ALL": {
+    "kind": "rows"
+   },
+   "shape|explain|MINUS ALL": {
+    "kind": "rows"
+   },
+   "shape|iceberg-source|EXCEPT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|iceberg-source|INTERSECT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|iceberg-source|MINUS ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|insert|EXCEPT ALL": {
+    "cold": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ]
+    },
+    "hot": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ],
+     "type": "struct<a:int>"
+    },
+    "kind": "ok",
+    "statement": {
+     "kind": "ok",
+     "run": null
+    },
+    "table": "w_b19"
+   },
+   "shape|insert|INTERSECT ALL": {
+    "cold": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       2
+      ],
+      [
+       2
+      ]
+     ]
+    },
+    "hot": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       2
+      ],
+      [
+       2
+      ]
+     ],
+     "type": "struct<a:int>"
+    },
+    "kind": "ok",
+    "statement": {
+     "kind": "ok",
+     "run": null
+    },
+    "table": "w_b7"
+   },
+   "shape|insert|MINUS ALL": {
+    "cold": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ]
+    },
+    "hot": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ],
+     "type": "struct<a:int>"
+    },
+    "kind": "ok",
+    "statement": {
+     "kind": "ok",
+     "run": null
+    },
+    "table": "w_b31"
+   },
+   "shape|in|EXCEPT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|in|INTERSECT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|in|MINUS ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|merge|EXCEPT ALL": {
+    "cold": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ]
+    },
+    "hot": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ],
+     "type": "struct<a:int>"
+    },
+    "kind": "ok",
+    "statement": {
+     "kind": "ok",
+     "run": null
+    },
+    "table": "w_b21"
+   },
+   "shape|merge|INTERSECT ALL": {
+    "cold": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       2
+      ],
+      [
+       2
+      ]
+     ]
+    },
+    "hot": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       2
+      ],
+      [
+       2
+      ]
+     ],
+     "type": "struct<a:int>"
+    },
+    "kind": "ok",
+    "statement": {
+     "kind": "ok",
+     "run": null
+    },
+    "table": "w_b9"
+   },
+   "shape|merge|MINUS ALL": {
+    "cold": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ]
+    },
+    "hot": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ],
+     "type": "struct<a:int>"
+    },
+    "kind": "ok",
+    "statement": {
+     "kind": "ok",
+     "run": null
+    },
+    "table": "w_b33"
+   },
+   "shape|persistent-view|EXCEPT ALL": {
+    "create": "ok",
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|persistent-view|INTERSECT ALL": {
+    "create": "ok",
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|persistent-view|MINUS ALL": {
+    "create": "ok",
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|scalar|EXCEPT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ]
+    ],
+    "type": "struct<c:bigint>"
+   },
+   "shape|scalar|INTERSECT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ]
+    ],
+    "type": "struct<c:bigint>"
+   },
+   "shape|scalar|MINUS ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ]
+    ],
+    "type": "struct<c:bigint>"
+   },
+   "shape|temp-view|EXCEPT ALL": {
+    "create": "ok",
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|temp-view|INTERSECT ALL": {
+    "create": "ok",
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|temp-view|MINUS ALL": {
+    "create": "ok",
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|top|EXCEPT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|top|INTERSECT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|top|MINUS ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|union-nested|EXCEPT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ],
+     [
+      9
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|union-nested|INTERSECT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ],
+     [
+      9
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|union-nested|MINUS ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ],
+     [
+      9
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "spelling|0": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "spelling|1": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "spelling|2": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "spelling|3": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "spelling|4": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "spelling|5": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "spelling|6": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "spelling|7": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "spelling|8": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "type|bigint|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      4
+     ],
+     [
+      9000000000
+     ],
+     [
+      9000000000
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:bigint>"
+   },
+   "type|bigint|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ]
+    ],
+    "type": "struct<a:bigint>"
+   },
+   "type|bigint|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      -7
+     ],
+     [
+      -7
+     ],
+     [
+      9000000000
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:bigint>"
+   },
+   "type|bigint|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      -7
+     ],
+     [
+      -7
+     ],
+     [
+      9000000000
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:bigint>"
+   },
+   "type|bigint|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      4
+     ],
+     [
+      9000000000
+     ],
+     [
+      9000000000
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:bigint>"
+   },
+   "type|bigint|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ]
+    ],
+    "type": "struct<a:bigint>"
+   },
+   "type|columns|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      1,
+      "b",
+      "f0000000000000000"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string,d:double>"
+   },
+   "type|columns|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      null,
+      "f0000000000000000"
+     ],
+     [
+      2,
+      "a",
+      "f7ff8000000000000"
+     ]
+    ],
+    "type": "struct<a:int,b:string,d:double>"
+   },
+   "type|columns|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      2,
+      "a",
+      "f7ff8000000000000"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string,d:double>"
+   },
+   "type|columns|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      2,
+      "a",
+      "f7ff8000000000000"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string,d:double>"
+   },
+   "type|columns|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      1,
+      "b",
+      "f0000000000000000"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string,d:double>"
+   },
+   "type|columns|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      null,
+      "f0000000000000000"
+     ],
+     [
+      2,
+      "a",
+      "f7ff8000000000000"
+     ]
+    ],
+    "type": "struct<a:int,b:string,d:double>"
+   },
+   "type|date|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t2024-01-01"
+     ],
+     [
+      "t2024-01-01"
+     ],
+     [
+      "t2024-02-29"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:date>"
+   },
+   "type|date|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t2000-01-01"
+     ]
+    ],
+    "type": "struct<a:date>"
+   },
+   "type|date|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t1970-01-01"
+     ],
+     [
+      "t1970-01-01"
+     ],
+     [
+      "t2024-01-01"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:date>"
+   },
+   "type|date|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t1970-01-01"
+     ],
+     [
+      "t1970-01-01"
+     ],
+     [
+      "t2024-01-01"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:date>"
+   },
+   "type|date|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t2024-01-01"
+     ],
+     [
+      "t2024-01-01"
+     ],
+     [
+      "t2024-02-29"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:date>"
+   },
+   "type|date|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t2000-01-01"
+     ]
+    ],
+    "type": "struct<a:date>"
+   },
+   "type|decimal|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d1.1"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      "d4"
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "type|decimal|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d3"
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "type|decimal|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d-2.2"
+     ],
+     [
+      "d-2.2"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "type|decimal|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d-2.2"
+     ],
+     [
+      "d-2.2"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "type|decimal|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d1.1"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      "d4"
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "type|decimal|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d3"
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "type|double-signs|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "type|double-signs|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:double>"
+   },
+   "type|double-signs|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "type|double-signs|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "type|double-signs|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "type|double-signs|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:double>"
+   },
+   "type|double|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "type|double|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f4004000000000000"
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "type|double|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "type|double|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "type|double|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "type|double|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f4004000000000000"
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "type|float-signs|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "type|float-signs|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:float>"
+   },
+   "type|float-signs|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "type|float-signs|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "type|float-signs|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "type|float-signs|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:float>"
+   },
+   "type|float|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "type|float|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f4004000000000000"
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "type|float|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "type|float|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "type|float|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "type|float|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f4004000000000000"
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "type|int|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "type|int|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "type|int|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "type|int|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "type|int|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "type|int|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "type|null|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:void>"
+   },
+   "type|null|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:void>"
+   },
+   "type|null|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:void>"
+   },
+   "type|null|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:void>"
+   },
+   "type|null|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:void>"
+   },
+   "type|null|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:void>"
+   },
+   "type|string|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      ""
+     ],
+     [
+      "A"
+     ],
+     [
+      "a"
+     ],
+     [
+      "a"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:string>"
+   },
+   "type|string|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      " a"
+     ],
+     [
+      "c"
+     ]
+    ],
+    "type": "struct<a:string>"
+   },
+   "type|string|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ],
+     [
+      "b"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:string>"
+   },
+   "type|string|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ],
+     [
+      "b"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:string>"
+   },
+   "type|string|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      ""
+     ],
+     [
+      "A"
+     ],
+     [
+      "a"
+     ],
+     [
+      "a"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:string>"
+   },
+   "type|string|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      " a"
+     ],
+     [
+      "c"
+     ]
+    ],
+    "type": "struct<a:string>"
+   },
+   "type|struct|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        null
+       ],
+       [
+        "y",
+        "b"
+       ]
+      ]
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:struct<x:int,y:string>>"
+   },
+   "type|struct|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      [
+       [
+        "x",
+        3
+       ],
+       [
+        "y",
+        "c"
+       ]
+      ]
+     ]
+    ],
+    "type": "struct<a:struct<x:int,y:string>>"
+   },
+   "type|struct|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        2
+       ],
+       [
+        "y",
+        null
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        2
+       ],
+       [
+        "y",
+        null
+       ]
+      ]
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:struct<x:int,y:string>>"
+   },
+   "type|struct|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        2
+       ],
+       [
+        "y",
+        null
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        2
+       ],
+       [
+        "y",
+        null
+       ]
+      ]
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:struct<x:int,y:string>>"
+   },
+   "type|struct|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        null
+       ],
+       [
+        "y",
+        "b"
+       ]
+      ]
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:struct<x:int,y:string>>"
+   },
+   "type|struct|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      [
+       [
+        "x",
+        3
+       ],
+       [
+        "y",
+        "c"
+       ]
+      ]
+     ]
+    ],
+    "type": "struct<a:struct<x:int,y:string>>"
+   },
+   "type|timestamp|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      "t2024-02-29T23:59:59.123456"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:timestamp>"
+   },
+   "type|timestamp|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:timestamp>"
+   },
+   "type|timestamp|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t1970-01-01T00:00:00"
+     ],
+     [
+      "t1970-01-01T00:00:00"
+     ],
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:timestamp>"
+   },
+   "type|timestamp|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t1970-01-01T00:00:00"
+     ],
+     [
+      "t1970-01-01T00:00:00"
+     ],
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:timestamp>"
+   },
+   "type|timestamp|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      "t2024-02-29T23:59:59.123456"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:timestamp>"
+   },
+   "type|timestamp|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:timestamp>"
+   }
+  },
+  "true": {
+   "control|EXCEPT": {
+    "kind": "rows",
+    "rows": [
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "control|EXCEPT DISTINCT": {
+    "kind": "rows",
+    "rows": [
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "control|INTERSECT": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "control|INTERSECT DISTINCT": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "control|UNION": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      3
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "control|UNION ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ],
+     [
+      3
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "dataframe|bigint|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      4
+     ],
+     [
+      9000000000
+     ],
+     [
+      9000000000
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:bigint>"
+   },
+   "dataframe|bigint|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      4
+     ],
+     [
+      9000000000
+     ],
+     [
+      9000000000
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:bigint>"
+   },
+   "dataframe|bigint|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      -7
+     ],
+     [
+      -7
+     ],
+     [
+      9000000000
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:bigint>"
+   },
+   "dataframe|bigint|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      -7
+     ],
+     [
+      -7
+     ],
+     [
+      9000000000
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:bigint>"
+   },
+   "dataframe|columns|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      1,
+      "b",
+      "f0000000000000000"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string,d:double>"
+   },
+   "dataframe|columns|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      1,
+      "b",
+      "f0000000000000000"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string,d:double>"
+   },
+   "dataframe|columns|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      2,
+      "a",
+      "f7ff8000000000000"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string,d:double>"
+   },
+   "dataframe|columns|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      2,
+      "a",
+      "f7ff8000000000000"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string,d:double>"
+   },
+   "dataframe|date|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t2024-01-01"
+     ],
+     [
+      "t2024-01-01"
+     ],
+     [
+      "t2024-02-29"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:date>"
+   },
+   "dataframe|date|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t2024-01-01"
+     ],
+     [
+      "t2024-01-01"
+     ],
+     [
+      "t2024-02-29"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:date>"
+   },
+   "dataframe|date|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t1970-01-01"
+     ],
+     [
+      "t1970-01-01"
+     ],
+     [
+      "t2024-01-01"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:date>"
+   },
+   "dataframe|date|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t1970-01-01"
+     ],
+     [
+      "t1970-01-01"
+     ],
+     [
+      "t2024-01-01"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:date>"
+   },
+   "dataframe|decimal|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d1.1"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      "d4"
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "dataframe|decimal|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d1.1"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      "d4"
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "dataframe|decimal|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d-2.2"
+     ],
+     [
+      "d-2.2"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "dataframe|decimal|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d-2.2"
+     ],
+     [
+      "d-2.2"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "dataframe|double-signs|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "dataframe|double-signs|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "dataframe|double-signs|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "dataframe|double-signs|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "dataframe|double|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "dataframe|double|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "dataframe|double|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "dataframe|double|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "dataframe|float-signs|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "dataframe|float-signs|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "dataframe|float-signs|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "dataframe|float-signs|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "dataframe|float|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "dataframe|float|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "dataframe|float|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "dataframe|float|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "dataframe|int|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "dataframe|int|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "dataframe|int|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "dataframe|int|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "dataframe|null|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:void>"
+   },
+   "dataframe|null|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:void>"
+   },
+   "dataframe|null|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:void>"
+   },
+   "dataframe|null|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:void>"
+   },
+   "dataframe|string|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      ""
+     ],
+     [
+      "A"
+     ],
+     [
+      "a"
+     ],
+     [
+      "a"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:string>"
+   },
+   "dataframe|string|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      ""
+     ],
+     [
+      "A"
+     ],
+     [
+      "a"
+     ],
+     [
+      "a"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:string>"
+   },
+   "dataframe|string|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ],
+     [
+      "b"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:string>"
+   },
+   "dataframe|string|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ],
+     [
+      "b"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:string>"
+   },
+   "dataframe|struct|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        null
+       ],
+       [
+        "y",
+        "b"
+       ]
+      ]
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:struct<x:int,y:string>>"
+   },
+   "dataframe|struct|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        null
+       ],
+       [
+        "y",
+        "b"
+       ]
+      ]
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:struct<x:int,y:string>>"
+   },
+   "dataframe|struct|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        2
+       ],
+       [
+        "y",
+        null
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        2
+       ],
+       [
+        "y",
+        null
+       ]
+      ]
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:struct<x:int,y:string>>"
+   },
+   "dataframe|struct|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        2
+       ],
+       [
+        "y",
+        null
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        2
+       ],
+       [
+        "y",
+        null
+       ]
+      ]
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:struct<x:int,y:string>>"
+   },
+   "dataframe|timestamp|exceptAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      "t2024-02-29T23:59:59.123456"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:timestamp>"
+   },
+   "dataframe|timestamp|except_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      "t2024-02-29T23:59:59.123456"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:timestamp>"
+   },
+   "dataframe|timestamp|intersectAll": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t1970-01-01T00:00:00"
+     ],
+     [
+      "t1970-01-01T00:00:00"
+     ],
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:timestamp>"
+   },
+   "dataframe|timestamp|intersect_all": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t1970-01-01T00:00:00"
+     ],
+     [
+      "t1970-01-01T00:00:00"
+     ],
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:timestamp>"
+   },
+   "edge|both-empty|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:int>"
+   },
+   "edge|both-empty|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:int>"
+   },
+   "edge|both-empty|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:int>"
+   },
+   "edge|empty-left|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:int>"
+   },
+   "edge|empty-left|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:int>"
+   },
+   "edge|empty-left|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:int>"
+   },
+   "edge|empty-right|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "edge|empty-right|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:int>"
+   },
+   "edge|empty-right|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "edge|only-duplicates-right-more|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:int>"
+   },
+   "edge|only-duplicates-right-more|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      7
+     ],
+     [
+      7
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "edge|only-duplicates-right-more|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:int>"
+   },
+   "edge|only-duplicates|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      7
+     ],
+     [
+      7
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "edge|only-duplicates|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      7
+     ],
+     [
+      7
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "edge|only-duplicates|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      7
+     ],
+     [
+      7
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "error|column-count|EXCEPT ALL": {
+    "bracket": "NUM_COLUMNS_MISMATCH",
+    "class": "AnalysisException",
+    "condition": "NUM_COLUMNS_MISMATCH",
+    "kind": "error",
+    "sqlstate": "42826",
+    "state": "42826",
+    "text": "[NUM_COLUMNS_MISMATCH] EXCEPT ALL can only be performed on inputs with the same number of columns, but the first input has 2 columns and the second input has 1 columns. SQLSTATE: 42826; line 1 pos 0; 'Except All true :- Project [a#3182, b#3183] : +- SubqueryAlias sl : +- Project [cast(1 as int) AS a#3182, cast(2 as int) AS b#3183] : +- OneRowRelation +- Project [a#3184] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#3184] +- OneRowRelation"
+   },
+   "error|column-count|INTERSECT ALL": {
+    "bracket": "NUM_COLUMNS_MISMATCH",
+    "class": "AnalysisException",
+    "condition": "NUM_COLUMNS_MISMATCH",
+    "kind": "error",
+    "sqlstate": "42826",
+    "state": "42826",
+    "text": "[NUM_COLUMNS_MISMATCH] INTERSECT ALL can only be performed on inputs with the same number of columns, but the first input has 2 columns and the second input has 1 columns. SQLSTATE: 42826; line 1 pos 0; 'Intersect All true :- Project [a#3179, b#3180] : +- SubqueryAlias sl : +- Project [cast(1 as int) AS a#3179, cast(2 as int) AS b#3180] : +- OneRowRelation +- Project [a#3181] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#3181] +- OneRowRelation"
+   },
+   "error|column-count|MINUS ALL": {
+    "bracket": "NUM_COLUMNS_MISMATCH",
+    "class": "AnalysisException",
+    "condition": "NUM_COLUMNS_MISMATCH",
+    "kind": "error",
+    "sqlstate": "42826",
+    "state": "42826",
+    "text": "[NUM_COLUMNS_MISMATCH] EXCEPT ALL can only be performed on inputs with the same number of columns, but the first input has 2 columns and the second input has 1 columns. SQLSTATE: 42826; line 1 pos 0; 'Except All true :- Project [a#3185, b#3186] : +- SubqueryAlias sl : +- Project [cast(1 as int) AS a#3185, cast(2 as int) AS b#3186] : +- OneRowRelation +- Project [a#3187] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#3187] +- OneRowRelation"
+   },
+   "error|column-type|EXCEPT ALL": {
+    "bracket": "INCOMPATIBLE_COLUMN_TYPE",
+    "class": "AnalysisException",
+    "condition": "INCOMPATIBLE_COLUMN_TYPE",
+    "kind": "error",
+    "sqlstate": "42825",
+    "state": "42825",
+    "text": "[INCOMPATIBLE_COLUMN_TYPE] EXCEPT ALL can only be performed on tables with compatible column types. The first column of the second table is \"INT\" type which is not compatible with \"ARRAY<INT>\" at the same column of the first table.. SQLSTATE: 42825; line 1 pos 0; 'Except All true :- Project [a#3190] : +- SubqueryAlias sl : +- Project [array(cast(1 as int)) AS a#3190] : +- OneRowRelation +- Project [a#3191] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#3191] +- OneRowRelation"
+   },
+   "error|column-type|INTERSECT ALL": {
+    "bracket": "INCOMPATIBLE_COLUMN_TYPE",
+    "class": "AnalysisException",
+    "condition": "INCOMPATIBLE_COLUMN_TYPE",
+    "kind": "error",
+    "sqlstate": "42825",
+    "state": "42825",
+    "text": "[INCOMPATIBLE_COLUMN_TYPE] INTERSECT ALL can only be performed on tables with compatible column types. The first column of the second table is \"INT\" type which is not compatible with \"ARRAY<INT>\" at the same column of the first table.. SQLSTATE: 42825; line 1 pos 0; 'Intersect All true :- Project [a#3188] : +- SubqueryAlias sl : +- Project [array(cast(1 as int)) AS a#3188] : +- OneRowRelation +- Project [a#3189] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#3189] +- OneRowRelation"
+   },
+   "error|column-type|MINUS ALL": {
+    "bracket": "INCOMPATIBLE_COLUMN_TYPE",
+    "class": "AnalysisException",
+    "condition": "INCOMPATIBLE_COLUMN_TYPE",
+    "kind": "error",
+    "sqlstate": "42825",
+    "state": "42825",
+    "text": "[INCOMPATIBLE_COLUMN_TYPE] EXCEPT ALL can only be performed on tables with compatible column types. The first column of the second table is \"INT\" type which is not compatible with \"ARRAY<INT>\" at the same column of the first table.. SQLSTATE: 42825; line 1 pos 0; 'Except All true :- Project [a#3192] : +- SubqueryAlias sl : +- Project [array(cast(1 as int)) AS a#3192] : +- OneRowRelation +- Project [a#3193] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#3193] +- OneRowRelation"
+   },
+   "fragment|fexpr-filter-col|EXCEPT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ]
+    ]
+   },
+   "fragment|fexpr-filter-col|INTERSECT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ]
+    ]
+   },
+   "fragment|fexpr-filter-col|MINUS ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ]
+    ]
+   },
+   "fragment|fexpr-filter-in|EXCEPT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ]
+    ]
+   },
+   "fragment|fexpr-filter-in|INTERSECT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ]
+    ]
+   },
+   "fragment|fexpr-filter-in|MINUS ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ]
+    ]
+   },
+   "fragment|fexpr-scalar|EXCEPT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ]
+    ]
+   },
+   "fragment|fexpr-scalar|INTERSECT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ]
+    ]
+   },
+   "fragment|fexpr-scalar|MINUS ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ]
+    ]
+   },
+   "fragment|selectexpr-scalar|EXCEPT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ],
+     [
+      3
+     ],
+     [
+      3
+     ],
+     [
+      3
+     ]
+    ]
+   },
+   "fragment|selectexpr-scalar|INTERSECT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ],
+     [
+      3
+     ],
+     [
+      3
+     ],
+     [
+      3
+     ]
+    ]
+   },
+   "fragment|selectexpr-scalar|MINUS ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ],
+     [
+      3
+     ],
+     [
+      3
+     ],
+     [
+      3
+     ]
+    ]
+   },
+   "guard|df|decimal|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d2"
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "guard|df|decimal|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d1.1"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "guard|df|one|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "guard|df|one|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "guard|df|two|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      2,
+      "y"
+     ]
+    ],
+    "type": "struct<a:int,b:string>"
+   },
+   "guard|df|two|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "x"
+     ],
+     [
+      1,
+      "x"
+     ],
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string>"
+   },
+   "guard|sql|decimal|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d2"
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "guard|sql|decimal|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d1.1"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "guard|sql|one|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "guard|sql|one|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "guard|sql|two|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      2,
+      "y"
+     ]
+    ],
+    "type": "struct<a:int,b:string>"
+   },
+   "guard|sql|two|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "x"
+     ],
+     [
+      1,
+      "x"
+     ],
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string>"
+   },
+   "shape|ctas|EXCEPT ALL": {
+    "cold": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ]
+    },
+    "hot": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ],
+     "type": "struct<a:int>"
+    },
+    "kind": "ok",
+    "statement": {
+     "kind": "ok",
+     "run": null
+    },
+    "table": "w_a20"
+   },
+   "shape|ctas|INTERSECT ALL": {
+    "cold": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       2
+      ],
+      [
+       2
+      ]
+     ]
+    },
+    "hot": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       2
+      ],
+      [
+       2
+      ]
+     ],
+     "type": "struct<a:int>"
+    },
+    "kind": "ok",
+    "statement": {
+     "kind": "ok",
+     "run": null
+    },
+    "table": "w_a8"
+   },
+   "shape|ctas|MINUS ALL": {
+    "cold": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ]
+    },
+    "hot": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ],
+     "type": "struct<a:int>"
+    },
+    "kind": "ok",
+    "statement": {
+     "kind": "ok",
+     "run": null
+    },
+    "table": "w_a32"
+   },
+   "shape|cte|EXCEPT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|cte|INTERSECT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|cte|MINUS ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|explain|EXCEPT ALL": {
+    "kind": "rows"
+   },
+   "shape|explain|INTERSECT ALL": {
+    "kind": "rows"
+   },
+   "shape|explain|MINUS ALL": {
+    "kind": "rows"
+   },
+   "shape|iceberg-source|EXCEPT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|iceberg-source|INTERSECT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|iceberg-source|MINUS ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|insert|EXCEPT ALL": {
+    "cold": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ]
+    },
+    "hot": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ],
+     "type": "struct<a:int>"
+    },
+    "kind": "ok",
+    "statement": {
+     "kind": "ok",
+     "run": null
+    },
+    "table": "w_a19"
+   },
+   "shape|insert|INTERSECT ALL": {
+    "cold": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       2
+      ],
+      [
+       2
+      ]
+     ]
+    },
+    "hot": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       2
+      ],
+      [
+       2
+      ]
+     ],
+     "type": "struct<a:int>"
+    },
+    "kind": "ok",
+    "statement": {
+     "kind": "ok",
+     "run": null
+    },
+    "table": "w_a7"
+   },
+   "shape|insert|MINUS ALL": {
+    "cold": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ]
+    },
+    "hot": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ],
+     "type": "struct<a:int>"
+    },
+    "kind": "ok",
+    "statement": {
+     "kind": "ok",
+     "run": null
+    },
+    "table": "w_a31"
+   },
+   "shape|in|EXCEPT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|in|INTERSECT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|in|MINUS ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|merge|EXCEPT ALL": {
+    "cold": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ]
+    },
+    "hot": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ],
+     "type": "struct<a:int>"
+    },
+    "kind": "ok",
+    "statement": {
+     "kind": "ok",
+     "run": null
+    },
+    "table": "w_a21"
+   },
+   "shape|merge|INTERSECT ALL": {
+    "cold": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       2
+      ],
+      [
+       2
+      ]
+     ]
+    },
+    "hot": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       2
+      ],
+      [
+       2
+      ]
+     ],
+     "type": "struct<a:int>"
+    },
+    "kind": "ok",
+    "statement": {
+     "kind": "ok",
+     "run": null
+    },
+    "table": "w_a9"
+   },
+   "shape|merge|MINUS ALL": {
+    "cold": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ]
+    },
+    "hot": {
+     "kind": "rows",
+     "rows": [
+      [
+       1
+      ],
+      [
+       1
+      ],
+      [
+       4
+      ]
+     ],
+     "type": "struct<a:int>"
+    },
+    "kind": "ok",
+    "statement": {
+     "kind": "ok",
+     "run": null
+    },
+    "table": "w_a33"
+   },
+   "shape|persistent-view|EXCEPT ALL": {
+    "create": "ok",
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|persistent-view|INTERSECT ALL": {
+    "create": "ok",
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|persistent-view|MINUS ALL": {
+    "create": "ok",
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|scalar|EXCEPT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ]
+    ],
+    "type": "struct<c:bigint>"
+   },
+   "shape|scalar|INTERSECT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ]
+    ],
+    "type": "struct<c:bigint>"
+   },
+   "shape|scalar|MINUS ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ]
+    ],
+    "type": "struct<c:bigint>"
+   },
+   "shape|temp-view|EXCEPT ALL": {
+    "create": "ok",
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|temp-view|INTERSECT ALL": {
+    "create": "ok",
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|temp-view|MINUS ALL": {
+    "create": "ok",
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|top|EXCEPT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|top|INTERSECT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|top|MINUS ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|union-nested|EXCEPT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ],
+     [
+      9
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|union-nested|INTERSECT ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ],
+     [
+      9
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "shape|union-nested|MINUS ALL": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ],
+     [
+      9
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "spelling|0": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "spelling|1": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "spelling|2": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "spelling|3": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "spelling|4": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "spelling|5": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "spelling|6": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "spelling|7": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "spelling|8": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "type|bigint|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      4
+     ],
+     [
+      9000000000
+     ],
+     [
+      9000000000
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:bigint>"
+   },
+   "type|bigint|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ]
+    ],
+    "type": "struct<a:bigint>"
+   },
+   "type|bigint|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      -7
+     ],
+     [
+      -7
+     ],
+     [
+      9000000000
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:bigint>"
+   },
+   "type|bigint|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      -7
+     ],
+     [
+      -7
+     ],
+     [
+      9000000000
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:bigint>"
+   },
+   "type|bigint|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      4
+     ],
+     [
+      9000000000
+     ],
+     [
+      9000000000
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:bigint>"
+   },
+   "type|bigint|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ]
+    ],
+    "type": "struct<a:bigint>"
+   },
+   "type|columns|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      1,
+      "b",
+      "f0000000000000000"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string,d:double>"
+   },
+   "type|columns|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      null,
+      "f0000000000000000"
+     ],
+     [
+      2,
+      "a",
+      "f7ff8000000000000"
+     ]
+    ],
+    "type": "struct<a:int,b:string,d:double>"
+   },
+   "type|columns|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      2,
+      "a",
+      "f7ff8000000000000"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string,d:double>"
+   },
+   "type|columns|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      2,
+      "a",
+      "f7ff8000000000000"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string,d:double>"
+   },
+   "type|columns|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "a",
+      "f0000000000000000"
+     ],
+     [
+      1,
+      "b",
+      "f0000000000000000"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string,d:double>"
+   },
+   "type|columns|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      null,
+      "f0000000000000000"
+     ],
+     [
+      2,
+      "a",
+      "f7ff8000000000000"
+     ]
+    ],
+    "type": "struct<a:int,b:string,d:double>"
+   },
+   "type|date|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t2024-01-01"
+     ],
+     [
+      "t2024-01-01"
+     ],
+     [
+      "t2024-02-29"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:date>"
+   },
+   "type|date|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t2000-01-01"
+     ]
+    ],
+    "type": "struct<a:date>"
+   },
+   "type|date|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t1970-01-01"
+     ],
+     [
+      "t1970-01-01"
+     ],
+     [
+      "t2024-01-01"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:date>"
+   },
+   "type|date|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t1970-01-01"
+     ],
+     [
+      "t1970-01-01"
+     ],
+     [
+      "t2024-01-01"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:date>"
+   },
+   "type|date|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t2024-01-01"
+     ],
+     [
+      "t2024-01-01"
+     ],
+     [
+      "t2024-02-29"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:date>"
+   },
+   "type|date|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t2000-01-01"
+     ]
+    ],
+    "type": "struct<a:date>"
+   },
+   "type|decimal|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d1.1"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      "d4"
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "type|decimal|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d3"
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "type|decimal|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d-2.2"
+     ],
+     [
+      "d-2.2"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "type|decimal|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d-2.2"
+     ],
+     [
+      "d-2.2"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "type|decimal|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d1.1"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      "d4"
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "type|decimal|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d3"
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "type|double-signs|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "type|double-signs|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:double>"
+   },
+   "type|double-signs|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "type|double-signs|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "type|double-signs|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "type|double-signs|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:double>"
+   },
+   "type|double|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "type|double|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f4004000000000000"
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "type|double|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "type|double|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "type|double|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "type|double|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f4004000000000000"
+     ]
+    ],
+    "type": "struct<a:double>"
+   },
+   "type|float-signs|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "type|float-signs|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:float>"
+   },
+   "type|float-signs|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "type|float-signs|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "type|float-signs|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "type|float-signs|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:float>"
+   },
+   "type|float|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "type|float|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f4004000000000000"
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "type|float|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "type|float|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "type|float|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f0000000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f3ff8000000000000"
+     ],
+     [
+      "f7ff8000000000000"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "type|float|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "f4004000000000000"
+     ]
+    ],
+    "type": "struct<a:float>"
+   },
+   "type|int|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "type|int|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "type|int|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "type|int|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "type|int|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      4
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "type|int|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      3
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "type|null|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:void>"
+   },
+   "type|null|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:void>"
+   },
+   "type|null|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:void>"
+   },
+   "type|null|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:void>"
+   },
+   "type|null|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:void>"
+   },
+   "type|null|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:void>"
+   },
+   "type|string|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      ""
+     ],
+     [
+      "A"
+     ],
+     [
+      "a"
+     ],
+     [
+      "a"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:string>"
+   },
+   "type|string|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      " a"
+     ],
+     [
+      "c"
+     ]
+    ],
+    "type": "struct<a:string>"
+   },
+   "type|string|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ],
+     [
+      "b"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:string>"
+   },
+   "type|string|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ],
+     [
+      "b"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:string>"
+   },
+   "type|string|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      ""
+     ],
+     [
+      "A"
+     ],
+     [
+      "a"
+     ],
+     [
+      "a"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:string>"
+   },
+   "type|string|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      " a"
+     ],
+     [
+      "c"
+     ]
+    ],
+    "type": "struct<a:string>"
+   },
+   "type|struct|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        null
+       ],
+       [
+        "y",
+        "b"
+       ]
+      ]
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:struct<x:int,y:string>>"
+   },
+   "type|struct|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      [
+       [
+        "x",
+        3
+       ],
+       [
+        "y",
+        "c"
+       ]
+      ]
+     ]
+    ],
+    "type": "struct<a:struct<x:int,y:string>>"
+   },
+   "type|struct|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        2
+       ],
+       [
+        "y",
+        null
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        2
+       ],
+       [
+        "y",
+        null
+       ]
+      ]
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:struct<x:int,y:string>>"
+   },
+   "type|struct|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        2
+       ],
+       [
+        "y",
+        null
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        2
+       ],
+       [
+        "y",
+        null
+       ]
+      ]
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:struct<x:int,y:string>>"
+   },
+   "type|struct|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        1
+       ],
+       [
+        "y",
+        "a"
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "x",
+        null
+       ],
+       [
+        "y",
+        "b"
+       ]
+      ]
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:struct<x:int,y:string>>"
+   },
+   "type|struct|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      [
+       [
+        "x",
+        3
+       ],
+       [
+        "y",
+        "c"
+       ]
+      ]
+     ]
+    ],
+    "type": "struct<a:struct<x:int,y:string>>"
+   },
+   "type|timestamp|EXCEPT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      "t2024-02-29T23:59:59.123456"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:timestamp>"
+   },
+   "type|timestamp|EXCEPT ALL|rl": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:timestamp>"
+   },
+   "type|timestamp|INTERSECT ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t1970-01-01T00:00:00"
+     ],
+     [
+      "t1970-01-01T00:00:00"
+     ],
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:timestamp>"
+   },
+   "type|timestamp|INTERSECT ALL|rl": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t1970-01-01T00:00:00"
+     ],
+     [
+      "t1970-01-01T00:00:00"
+     ],
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:timestamp>"
+   },
+   "type|timestamp|MINUS ALL|lr": {
+    "kind": "rows",
+    "rows": [
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      "t2024-01-01T10:00:00"
+     ],
+     [
+      "t2024-02-29T23:59:59.123456"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:timestamp>"
+   },
+   "type|timestamp|MINUS ALL|rl": {
+    "kind": "rows",
+    "rows": [],
+    "type": "struct<a:timestamp>"
+   }
+  }
+ },
+ "spark": "4.1.2"
+}

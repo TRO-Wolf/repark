@@ -2589,40 +2589,70 @@ Unit ICE-RESOURCE-BOUND-1 (U-11), dated 2026-10-26, owner rulings Q1 to Q5 of th
 
 ### 2.8 Multiset set operations
 
-#### SQL-SETOP-ALL-REFUSE-1 — SQL `INTERSECT ALL`, `EXCEPT ALL` and `MINUS ALL` refuse on both SQL doors (declared refusal, owner ruling 2026-11-12)
+#### SQL-SETOP-ALL-MULTISET-1 — SQL and DataFrame `INTERSECT ALL`, `EXCEPT ALL` and `MINUS ALL` answer Spark's multiset — **FIXED 2026-11-23 (branch `fix/sql-setop-all-multiset-1`, merge pending; it retires SQL-SETOP-ALL-REFUSE-1, [EX-DF-3](#ex-df-3--fixed-2026-11-23-sql-setop-all-multiset-1-exceptall--except_all-answer-the-multiset-difference) and [EX-DF-7](#ex-df-7--fixed-2026-11-23-sql-setop-all-multiset-1-intersectall--intersect_all-answer-the-multiset-intersect))**
 
-- **repark** — a statement that names `INTERSECT ALL`, `EXCEPT ALL` or `MINUS ALL` anywhere (top
-  level, a CTE, a scalar or `IN` subquery, a temporary or persistent view body, the source of
-  `INSERT`, CTAS or `MERGE USING`, nested in `UNION ALL`, under `EXPLAIN`, in any letter case,
-  with whitespace or a comment between the words) refuses on `spark.sql` and on `repark.sql()`
-  with `UnsupportedOperationException`: `SQL INTERSECT ALL multiset semantics are not
-  Spark-correct on this engine yet; use INTERSECT for distinct bags, or number each side's
-  duplicates with row_number() and INTERSECT the numbered rows (SQL-SETOP-ALL-MULTISET-1)` (the
-  `EXCEPT ALL` and `MINUS ALL` texts name `EXCEPT`). It refuses before either door plans, so a
-  refused `INSERT`, CTAS or `MERGE` writes nothing: no snapshot, no rows, no CTAS table. The
-  `F.expr`, `selectExpr` and `filter` fragments and a stored Iceberg view body that name the
-  operator refuse the same way; the DataFrame `intersectAll` / `exceptAll` refusals
-  ([EX-DF-7](#ex-df-7--intersectall--intersect_all-refuse-spark-answers-the-multiset-intersect))
-  are unchanged. Before this refusal both doors answered the wrong multiset for every column
-  type: on `l = {1, 1, 1, 2, 2, 4}`, `r = {1, 2, 2, 3}`, `INTERSECT ALL` answered
-  `1, 1, 1, 2, 2` and `EXCEPT ALL` answered `4`, and the writes stored those rows; `MINUS ALL`
-  was refused by DataFusion (`MINUS ALL not implemented`).
+- **repark** — Before (main `e80e6bc8`): SQL-SETOP-ALL-REFUSE-1 refused every SQL spelling of the
+  three operators on `spark.sql` and `repark.sql()`, in the `F.expr`, `filter` and `selectExpr`
+  fragments and in stored view bodies, with `UnsupportedOperationException` naming this card, and
+  the DataFrame `intersectAll` / `exceptAll` refused (`octo C1-L-005`, `-006`). Underneath,
+  DataFusion plans `INTERSECT ALL` as a left-semi join and `EXCEPT ALL` as a left-anti join with
+  no left `DISTINCT`, so every left duplicate survived or every copy went (`1, 1, 1, 2, 2` and `4`
+  on `l = {1, 1, 1, 2, 2, 4}`, `r = {1, 2, 2, 3}`), and DataFusion plans no `MINUS`. After: an
+  analyzer rule right after `struct_setop_names` replaces that join with Spark's own rewrite
+  (`RewriteIntersectAll` / `RewriteExceptAll`): both sides tagged and joined by `UNION ALL`, the
+  per-side counts aggregated by every column, and each kept row replicated by `range(0, copies)`
+  under `Unnest` with no filter.
+  The keys group as set-operation keys do: NULLs equal, both zeros and every NaN one key, and the
+  output carries the normalised key (`0.0`, the canonical NaN), as Spark's does. `MINUS ALL` is
+  spelled `EXCEPT ALL` on the Spark door only, using `sqlparser`'s Databricks parse after Spark
+  pre-parse normalizers (`canonicalize_verbatim`, `time_travel`, `rewrite_sql_for_execute`,
+  `strip_schema_evolution`) so only true set operators (including comments, odd spacing, `VALUES`
+  CTAS, `BY NAME (...)`, raw strings, scientific decimals, and `FOR VERSION AS OF`) respell while
+  identifiers, aliases, table names, literals and unparsable SQL stay untouched: at the statement
+  seat, in `filter` strings and stored/temp view bodies of a Spark-door session, and in `F.expr`
+  (which belongs to `pyspark.sql.functions`, built before any frame or door, so it uses Spark grammar
+  even on native frames); the distinct
+  `MINUS` still refuses (SQL-MINUS-REFUSE-1). On the native door `MINUS ALL` refuses as `MINUS` does
+  there (`UnsupportedOperationException: This feature is not implemented: MINUS ALL not
+  implemented`, nothing written), under the owner ruling that the native door follows Trino, then
+  DuckDB, then refuses, and neither accepts `MINUS`. A null-safe `LEFT SEMI` / `LEFT ANTI JOIN`
+  written as a join, in SQL or as a DataFrame `eqNullSafe` join over every column, keeps its left
+  multiplicity and types (guard pins, equal to Spark on main and head alike). On the Spark door a
+  DECIMAL beside a DOUBLE widens to `double` in the ALL forms as in the distinct ones. An untyped
+  `NULL` left column against a typed right column answers with the distinct twin's `void` (`Null`)
+  schema (Spark widens to the right side's type). Every cell of the domain table answers Spark's
+  rows on the Spark door in both ANSI modes (all nine spellings, fragments, stored view bodies, and
+  DataFrame `intersectAll`, `exceptAll`, `intersect_all`, `except_all`), and every `INTERSECT ALL`
+  and `EXCEPT ALL` cell answers on the native door while native `MINUS ALL` refuses: INT, BIGINT,
+  DECIMAL, DOUBLE and FLOAT (both zeros, NaN), STRING, DATE, TIMESTAMP, NULL, struct and
+  three-column cells both ways round; empty and duplicate-only sides; top level, CTE, scalar and
+  `IN` subqueries, temporary and persistent views, Iceberg sources, `INSERT`, CTAS and `MERGE USING`
+  (read back cold), nested in `UNION ALL`, `EXPLAIN`. The distinct and `UNION` forms keep their
+  answers. Evidence: `task/wo/sql-setop-all-multiset-1/`.
+- **Residue** — a column count or type mismatch raises `AnalysisException`, Spark's class, with
+  DataFusion's planner text and no condition or SQLSTATE, as the distinct `INTERSECT` / `EXCEPT`
+  and `UNION` already do; Spark raises `[NUM_COLUMNS_MISMATCH]` (`42826`) and
+  `[INCOMPATIBLE_COLUMN_TYPE]` (`42825`). On the Spark door an ALL set operation over a MAP column
+  (either side, top-level or nested inside a struct or list) refuses with Spark's
+  `[UNSUPPORTED_FEATURE.SET_OPERATION_ON_MAP_TYPE]` (`SQLSTATE: 0A000`), while distinct forms keep
+  main's top-level left refusal. When a multiset key's cast back from DataFusion's coerced key type
+  to the left output type is not lossless (such as `STRING` left against numeric, `DATE` or
+  `TIMESTAMP`, lossy `INT`/`BIGINT` against `FLOAT`/`DOUBLE`, `DATE`/`TIMESTAMP` narrowing, or
+  nested containers), `setop_all_multiset` refuses during analysis before any write with
+  `AnalysisException` naming `SETOP-MIXED-TYPE-COERCION-1` (lossless widenings such as `INT`/`BIGINT`,
+  `FLOAT`/`DOUBLE` and Spark-door `DECIMAL`/`DOUBLE` keep answering). The native door's persistent
+  view, CTAS into Iceberg (`NATIVE-CTAS-ICEBERG-REFUSE-1`) and `MERGE` shapes keep their own
+  refusals.
 - **Apache Spark** — `INTERSECT ALL` keeps each row at the smaller of the two sides'
   multiplicities (`1, 2, 2`); `EXCEPT ALL` and its synonym `MINUS ALL` subtract the right side's
-  count (`1, 1, 4`); every shape above answers, and the writes store those rows. *(oracle:
-  recorded from PySpark 4.1.2 with Iceberg 1.11.0, 2026-11-12,
-  `task/wo/sql-setop-all-refuse-1/evidence/step0/`.)*
-- **Pin** — `python/repark/tests/sql/test_sql_setop_all_refuse_1.py::test_every_shape_refuses_before_any_write`
-  (with `test_every_spelling_refuses`, `test_sql_fragments_refuse_the_same_way`,
-  `test_a_stored_view_body_naming_the_operator_refuses_at_read` and the controls
-  `test_controls_keep_answering`), and the seat tests in
-  `crates/repark-core/src/pre_execute/setop_all/tests.rs`.
-- **Rationale** — DECLARED refusal, owner ruling 2026-11-12, verbatim "Go with the defaults"
-  (signed-zero part B, Q2): a refusal is honest where the answer is silently wrong. It blocks
-  the scoped label ICE-V2-FLAT-AWS-LABEL-1 and ships in v1.5.7. The fix is card
-  SQL-SETOP-ALL-MULTISET-1
-  ([card](../task/roadmap/mid-term/sql-setop-all-multiset-1-card-2026-11-12.md)); the row
-  retires when it lands.
+  count (`1, 1, 4`). *(oracle: recorded PySpark 4.1.2 with Iceberg 1.11.0, 2026-11-23,
+  `python/repark/tests/sql/setop_all_multiset_1_spark_oracle.json`.)*
+- **Pin** — `python/repark/tests/sql/test_sql_setop_all_multiset_1.py` (every cell above against
+  the oracle), `python/repark/tests/sql/test_decimal_double_coercion_2.py::test_the_all_set_operations_over_a_mixed_values_leg_answer_as_spark`,
+  and the seat tests in `crates/repark-core/src/pre_execute/setop_all/tests.rs`.
+- **Rationale** — FIXED under the owner ruling of 2026-11-22: replace the declared refusal with
+  Spark's multiset answer
+  ([card](../task/roadmap/mid-term/sql-setop-all-multiset-1-card-2026-11-12.md)).
 
 ## 3. Identifier resolution (DECLARED)
 
@@ -5685,7 +5715,6 @@ still open is `isModifiable`.
   Pins: `python/repark/tests/sql/test_decimal_double_coercion_2.py` and `test_decimal_double_in_ranges_2.py`, both
   ANSI modes; Rust `repark-spark` `values_marker/tests.rs` and `extension/decimal_float_widen/tests.rs` (`in_ranges`).
 - **Still unlike Spark** — also:
-  - `INTERSECT ALL` / `EXCEPT ALL` over a mixed `VALUES` leg still refuse (SQL-SETOP-ALL-REFUSE-1);
   - a `DELETE` / `UPDATE` whose `WHERE` holds a subquery the identity path declines (every `VALUES` source among
     them) still refuses (repark-sql-update-subquery-where-1, UPDATE-SUBQUERY-STORE-1);
   - `<lit> IS DISTINCT FROM <col>` with the literal on the left refuses on the Spark door
@@ -17115,17 +17144,15 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   Spark answers and keeps all three spellings on the example backlog until the global_temp
   catalog exists.
 
-### EX-DF-3 — `exceptAll` / `except_all` refuse; Spark answers the multiset difference
+### EX-DF-3 — FIXED 2026-11-23 (SQL-SETOP-ALL-MULTISET-1): `exceptAll` / `except_all` answer the multiset difference
 
-- **repark** — both spellings raise
-  `UnsupportedOperationException: DataFrame.exceptAll multiset semantics are not Spark-correct
-  on this engine yet; use subtract() for distinct bags (octo C1-L-006)`.
-- **Apache Spark** — `[(1,), (1,), (2,)].exceptAll([(1,)])` answers `[(1,), (2,)]`: the
-  multiset difference keeps duplicate multiplicities. *(oracle: live PySpark 4.1.2, ANSI on,
-  2026-09-04, EX-15 DataFrame-a batch.)*
-- **Pin** — `python/repark/tests/parity/test_examples_dataframe_a.py::test_except_all_divergence`
-- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 measurement. Both spellings stay on
-  the example backlog until the multiset semantics are Spark-correct.
+- **repark** — before the fix both spellings raised `UnsupportedOperationException` (`octo
+  C1-L-006`). Since SQL-SETOP-ALL-MULTISET-1 they plan `EXCEPT ALL` and answer Spark's rows:
+  `[(1,), (1,), (2,)].exceptAll([(1,)])` is `[(1,), (2,)]`.
+- **Apache Spark** — `[(1,), (2,)]`: the multiset difference keeps duplicate multiplicities.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-15 DataFrame-a batch.)*
+- **Pin** — `python/repark/tests/parity/test_examples_dataframe_a.py::test_except_all_answers_the_spark_multiset_difference`
+- **Rationale** — FIXED; the row stays as the record of the example's former refusal.
 
 ### EX-DF-4 — FIXED 2026-09-11 (DF-DESCRIBE-STR-1): `describe` collected unordered rows and refused string columns
 
@@ -17194,18 +17221,16 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   where the engines agree; this row records the replace-on-existing arm until repark refuses an
   existing name the way Spark does.
 
-### EX-DF-7 — `intersectAll` / `intersect_all` refuse; Spark answers the multiset intersect
+### EX-DF-7 — FIXED 2026-11-23 (SQL-SETOP-ALL-MULTISET-1): `intersectAll` / `intersect_all` answer the multiset intersect
 
-- **repark** — both spellings raise
-  `UnsupportedOperationException: DataFrame.intersectAll multiset semantics are not Spark-correct
-  on this engine yet; use intersect() for distinct bags (octo C1-L-005)`.
-- **Apache Spark** — `[(1,), (1,), (2,)].intersectAll([(1,), (1,), (3,)])` answers `[(1,), (1,)]`:
-  the multiset intersect keeps each row at the minimum of the two sides' multiplicities.
-  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-16 DataFrame-b batch.)*
-- **Pin** — `python/repark/tests/parity/test_examples_dataframe_b.py::test_intersect_all_divergence`
-- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-16 measurement. Both spellings stay on
-  the example backlog until the multiset intersect is Spark-correct; the distinct-bag
-  `intersect` is covered and Spark-equal.
+- **repark** — before the fix both spellings raised `UnsupportedOperationException` (`octo
+  C1-L-005`). Since SQL-SETOP-ALL-MULTISET-1 they plan `INTERSECT ALL` and answer Spark's rows:
+  `[(1,), (1,), (2,)].intersectAll([(1,), (1,), (3,)])` is `[(1,), (1,)]`.
+- **Apache Spark** — `[(1,), (1,)]`: the multiset intersect keeps each row at the minimum of the
+  two sides' multiplicities. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-16 DataFrame-b
+  batch.)*
+- **Pin** — `python/repark/tests/parity/test_examples_dataframe_b.py::test_intersect_all_answers_the_spark_multiset_intersect`
+- **Rationale** — FIXED; the row stays as the record of the example's former refusal.
 
 ### EX-DF-8 — `groupingSets` takes one column each in repark; Spark takes a list of sets
 

@@ -2,8 +2,24 @@
 
 **Date:** 2026-11-12 · **Filed by:** Claude Opus 5.5 (`claude-opus-5-5`), the second builder of
 SQL-SETOP-ALL-REFUSE-1 · **Severity:** S2 · **Source:** owner ruling of the same day, verbatim "Go
-with the defaults" (signed-zero part B, Q2): refuse now, fix under this card. **Status:** filed, not
-dispatched.
+with the defaults" (signed-zero part B, Q2): refuse now, fix under this card. **Status:** FIXED
+2026-11-23 on branch `fix/sql-setop-all-multiset-1` (merge pending), under the owner ruling of 2026-11-22
+(replace the refusal with Spark's multiset answer): candidate B, Spark's own rewrite, as an analyzer rule;
+evidence in [`task/wo/sql-setop-all-multiset-1/`](../../wo/sql-setop-all-multiset-1/). Delta 1 (owner
+ruling 2026-11-23): `MINUS ALL` answers on the Spark door only; the native door refuses it as it refuses
+`MINUS`, and guard pins hold a null-safe semi or anti join written as a join to its left multiplicity.
+Delta 2 (2026-11-23): `MINUS ALL` respelling uses `sqlparser`'s Databricks parse so identifiers, aliases,
+table names and unparsable queries stay untouched; `F.expr` belongs to `pyspark.sql.functions` and uses
+Spark grammar even on native frames (declared boundary); untyped `NULL` left operands answer with the
+distinct twin's `Null` (`void`) schema; ALL forms check both sides and nested struct/list fields for MAP
+columns (`[UNSUPPORTED_FEATURE.SET_OPERATION_ON_MAP_TYPE]`, distinct forms unchanged); non-lossless
+mixed-type cast-backs refuse during analysis (`AnalysisException`) naming
+[`SETOP-MIXED-TYPE-COERCION-1`](cards-2026-11-23/setop-mixed-type-coercion-1-card-2026-11-23.md).
+Delta 3 (2026-11-23): Spark-door `MINUS ALL` respelling runs after Spark pre-parse normalizers
+(`canonicalize_verbatim`, `time_travel`, `rewrite_sql_for_execute`, `strip_schema_evolution`) across
+statements, view bodies, `filter` strings, and `F.expr`, and `resolve_ddl_dml_fallback` also accepts
+`VALUES`, `TABLE`, and depth-0 parenthesized trailing queries (`INSERT ... BY NAME (SELECT ...) MINUS
+ALL (SELECT ...)`).
 
 ## Why
 

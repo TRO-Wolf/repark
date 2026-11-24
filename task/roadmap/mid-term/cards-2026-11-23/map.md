@@ -12,6 +12,7 @@ of PRs #1411 and #1413 and the review of 2026-11-23. The owner rated each on 202
 - [VALUES-EXPLICIT-CAST-1](values-explicit-cast-1-card-2026-11-23.md) (S2 proposed) — **card:** explicit user `CAST`
   inside SQL `VALUES` and `INSERT ... VALUES` refuses with Arrow's error for both string-to-integer and narrowing numeric
   casts where Spark returns rows (ANSI off) or raises `INVALID_INLINE_TABLE.FAILED_SQL_EXPRESSION_EVALUATION` (ANSI on).
+- [SETOP-MIXED-TYPE-COERCION-1](setop-mixed-type-coercion-1-card-2026-11-23.md) (S3 proposed) — **card:** mixed-type set operations keep left schemas and refuse lossy multiset round-trips (`STRING` vs numeric/`DATE`/`TIMESTAMP`, lossy int/float, nested containers).
 - [SCALAR-SUBQUERY-EMPTY-NULL-1](scalar-subquery-empty-null-1-card-2026-11-23.md) (S1) — **card:** an empty scalar
   subquery over a NOT NULL column folds `IS NULL` to false, so a filter on it drops every row.
 

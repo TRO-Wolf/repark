@@ -11,10 +11,12 @@ links its files. The pre-condensation record is
 | area | files | charter |
 |---|---|---|
 | manifest | [lib.rs](lib.rs), [matrix.rs](matrix.rs) | crate manifest; the shipped-vs-absent surface matrix |
-| router | [router/map.md](router/map.md), [router.rs](router.rs), [spark_ast.rs](spark_ast.rs), [view_dispatch.rs](view_dispatch.rs), [write_door.rs](write_door.rs) | statement routing, AST execution, write-door tags |
+| router | [router/map.md](router/map.md), [router.rs](router.rs), [spark_ast.rs](spark_ast.rs), [view_dispatch.rs](view_dispatch.rs), [write_door.rs](write_door.rs) | statement routing (runs `minus_all_as_except_all` post-normalizers), AST execution, write-door tags |
 | normalize | [normalize/map.md](normalize/map.md), [normalize.rs](normalize.rs) | parse normalization, DML valves |
 | dialect | [dialect/map.md](dialect/map.md), [dialect.rs](dialect.rs) | session and executing-parse dialects |
 | dml | [dml_target.rs](dml_target.rs), [update_cast.rs](update_cast.rs), [truncate.rs](truncate.rs), [ctas.rs](ctas.rs), [create_table.rs](create_table.rs), [append_with_options.rs](append_with_options.rs), [write_options.rs](write_options.rs) | DML targets, CTAS/CREATE, write options (`update_cast.rs` wraps user-written top-level `SET c = CAST(... AS int/decimal)` in `__repark_arrow_cast_operand__` only when the session installs `__repark_arrow_cast_operand__`, `spark_string_integral_cast`, and `spark_coercion_cast_mark`, leaving bare sessions untouched and uncast `update_to_plan` store casts on `StoreOverflowCast`) |
+| dialect | [dialect/map.md](dialect/map.md), [dialect.rs](dialect.rs) | session and executing-parse dialects (`owns_minus_all_rewrite = true`) |
+| dml | [dml_target.rs](dml_target.rs), [update_cast.rs](update_cast.rs), [truncate.rs](truncate.rs), [ctas.rs](ctas.rs), [create_table.rs](create_table.rs), [append_with_options.rs](append_with_options.rs), [write_options.rs](write_options.rs) | DML targets, CTAS/CREATE, write options |
 | insert | [insert_by_name/map.md](insert_by_name/map.md), [insert_overwrite/map.md](insert_overwrite/map.md), [insert_by_name.rs](insert_by_name.rs), [insert_overwrite.rs](insert_overwrite.rs), [insert_arity.rs](insert_arity.rs), [insert_timestamp_ns.rs](insert_timestamp_ns.rs) | BY NAME, OVERWRITE, arity, timestamp-ns inserts |
 | merge | [merge/map.md](merge/map.md), [merge_fragments/map.md](merge_fragments/map.md), [merge.rs](merge.rs), [merge_fragments.rs](merge_fragments.rs) | MERGE lowering, fragments, star sentinel |
 | call | [call/map.md](call/map.md), [call.rs](call.rs), [call_args.rs](call_args.rs) | maintenance CALL procedures |
