@@ -496,3 +496,78 @@ async fn s3_in_memory_partitioned_parquet_shares_discovery_and_introspection() {
         .sum();
     assert_eq!(rows, 1);
 }
+
+#[tokio::test]
+async fn spark_numeric_and_uri_edge_rules() {
+    let dir = tempfile::tempdir().unwrap();
+    write_parquet_file(
+        &dir.path().join("nan_inf/p=NaN/part-0.parquet"),
+        &id_s_batch(1, "a"),
+    );
+    write_parquet_file(
+        &dir.path().join("nan_inf/p=-Infinity/part-0.parquet"),
+        &id_s_batch(2, "b"),
+    );
+    write_parquet_file(
+        &dir.path().join("nan_lower/p=nan/part-0.parquet"),
+        &id_s_batch(1, "a"),
+    );
+    write_parquet_file(
+        &dir.path().join("sci_dec/p=1e5/part-0.parquet"),
+        &id_s_batch(1, "a"),
+    );
+    write_parquet_file(
+        &dir.path().join("sci_mix/p=1e5/part-0.parquet"),
+        &id_s_batch(1, "a"),
+    );
+    write_parquet_file(
+        &dir.path().join("sci_mix/p=2.5e-2/part-0.parquet"),
+        &id_s_batch(2, "b"),
+    );
+    write_parquet_file(
+        &dir.path().join("empty_key/=1/part-0.parquet"),
+        &id_s_batch(1, "a"),
+    );
+
+    let session = ReparkSession::new().unwrap();
+    let nan_df = session
+        .read_parquet(dir.path().join("nan_inf").to_str().unwrap())
+        .await
+        .unwrap();
+    assert_eq!(nan_df.schema().field(2).data_type(), &DataType::Float64);
+
+    let nan_lower = session
+        .read_parquet(dir.path().join("nan_lower").to_str().unwrap())
+        .await
+        .unwrap();
+    assert_eq!(nan_lower.schema().field(2).data_type(), &DataType::Utf8);
+
+    let sci_dec = session
+        .read_parquet(dir.path().join("sci_dec").to_str().unwrap())
+        .await
+        .unwrap();
+    assert_eq!(
+        sci_dec.schema().field(2).data_type(),
+        &DataType::Decimal128(6, 0)
+    );
+
+    let sci_mix = session
+        .read_parquet(dir.path().join("sci_mix").to_str().unwrap())
+        .await
+        .unwrap();
+    assert_eq!(sci_mix.schema().field(2).data_type(), &DataType::Utf8);
+
+    assert!(
+        session
+            .read_parquet(dir.path().join("empty_key").to_str().unwrap())
+            .await
+            .is_err()
+    );
+
+    let uri_no_slash = format!("file://{}", dir.path().join("sci_dec").to_str().unwrap());
+    let uri_df = session.read_parquet(&uri_no_slash).await.unwrap();
+    assert_eq!(
+        uri_df.schema().field(2).data_type(),
+        &DataType::Decimal128(6, 0)
+    );
+}

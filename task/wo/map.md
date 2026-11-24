@@ -70,5 +70,6 @@ The full rows as of 2026-11-20 are in [docs/history/task-wo/wo-map-2026-11-20.md
 - [temp-view-cache-lazy-parse-1/](temp-view-cache-lazy-parse-1/map.md) — **TEMP-VIEW-CACHE-LAZY-PARSE-1 step 0 (S1, 2026-11-20):** a cache's and a UDF frame's parse vs Spark 4.1.2, 2,402 cells.
 - [asof-join-1/](asof-join-1/map.md) — **ASOF-JOIN-1 step 0 (S3 proposed, 2026-11-20):** `DataFrame._joinAsOf` and `merge_asof` vs Spark 4.1.2, 3,523 main cells.
 - [filter-string-escaped-quote-1/](filter-string-escaped-quote-1/) — **FILTER-STRING-ESCAPED-QUOTE-1 (S1, 2026-11-24):** Spark 4.1.2 lexer measurements, complete Python/Rust seat inventory, 734-cell domain and edge-case tables across Spark, main, and head in both ANSI modes, and clean probe scripts ([evidence/](filter-string-escaped-quote-1/evidence/)).
+- [parquet-partition-discovery-1/](parquet-partition-discovery-1/) — **PARQUET-PARTITION-DISCOVERY-1 (S1, 2026-11-24):** 719-cell Step 0 domain table across Spark 4.1.2, main, and head (Parquet, Parquet load, CSV, JSON, ORC/text/Iceberg controls), seat inventory, partition pruning measurements, and clean probe scripts ([evidence/](parquet-partition-discovery-1/evidence/)).
 
 Up: [../map.md](../map.md).

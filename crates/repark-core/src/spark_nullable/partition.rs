@@ -29,6 +29,7 @@ use futures::TryStreamExt;
 use object_store::ObjectMeta;
 use repark_common::java_case::string_lower_equal;
 use repark_common::{Error, Result};
+use url::Url;
 
 use crate::engine_err;
 use crate::object_store_s3;
@@ -215,20 +216,101 @@ enum InferredPartType {
     Utf8,
 }
 
-fn infer_integer_decimal_precision(text: &str) -> Option<u8> {
-    let digits = text
-        .strip_prefix('+')
-        .or_else(|| text.strip_prefix('-'))
-        .unwrap_or(text);
-    if digits.is_empty() || !digits.bytes().all(|byte| byte.is_ascii_digit()) {
+fn parse_java_integral_decimal(text: &str) -> Option<(i128, u8)> {
+    if text.is_empty() || text.bytes().any(|byte| byte <= b' ') {
         return None;
     }
-    let significant = digits.trim_start_matches('0');
-    let precision = significant.len().max(1);
+    let (neg, rest) = if let Some(tail) = text.strip_prefix('-') {
+        (true, tail)
+    } else if let Some(tail) = text.strip_prefix('+') {
+        (false, tail)
+    } else {
+        (false, text)
+    };
+    let (mantissa, exp) = if let Some(pos) = rest.find(['e', 'E']) {
+        let exp_str = &rest[pos + 1..];
+        if exp_str.is_empty()
+            || !exp_str
+                .strip_prefix(['+', '-'])
+                .unwrap_or(exp_str)
+                .bytes()
+                .all(|byte| byte.is_ascii_digit())
+        {
+            return None;
+        }
+        let exp_val = exp_str.parse::<i64>().ok()?;
+        (&rest[..pos], exp_val)
+    } else {
+        (rest, 0_i64)
+    };
+    let (int_part, frac_part) = match mantissa.split_once('.') {
+        Some((left, right)) => (left, right),
+        None => (mantissa, ""),
+    };
+    if (int_part.is_empty() && frac_part.is_empty())
+        || !int_part.bytes().all(|byte| byte.is_ascii_digit())
+        || !frac_part.bytes().all(|byte| byte.is_ascii_digit())
+    {
+        return None;
+    }
+    let frac_len = i64::try_from(frac_part.len()).ok()?;
+    let raw_scale = frac_len.checked_sub(exp)?;
+    if raw_scale > 0 {
+        return None;
+    }
+    let zeros = usize::try_from(raw_scale.checked_neg()?).ok()?;
+    let mut digits = String::with_capacity(int_part.len() + frac_part.len() + zeros.min(40));
+    digits.push_str(int_part);
+    digits.push_str(frac_part);
+    let trimmed = digits.trim_start_matches('0');
+    if trimmed.is_empty() {
+        return Some((0, 1));
+    }
+    let precision = trimmed.len().checked_add(zeros)?;
     if precision > 38 {
         return None;
     }
-    u8::try_from(precision).ok()
+    let mut scaled = String::with_capacity(precision + usize::from(neg));
+    if neg {
+        scaled.push('-');
+    }
+    scaled.push_str(trimmed);
+    for _ in 0..zeros {
+        scaled.push('0');
+    }
+    let value = scaled.parse::<i128>().ok()?;
+    let prec_u8 = u8::try_from(precision).ok()?;
+    Some((value, prec_u8))
+}
+
+fn parse_java_double(text: &str) -> Option<f64> {
+    let trimmed = text.trim_matches(|ch: char| (ch as u32) <= 0x20);
+    if trimmed.is_empty() {
+        return None;
+    }
+    match trimmed {
+        "NaN" => return Some(f64::NAN),
+        "Infinity" | "+Infinity" => return Some(f64::INFINITY),
+        "-Infinity" => return Some(f64::NEG_INFINITY),
+        _ => {}
+    }
+    let lower_unsigned = trimmed
+        .strip_prefix(['+', '-'])
+        .unwrap_or(trimmed)
+        .to_ascii_lowercase();
+    if matches!(lower_unsigned.as_str(), "nan" | "inf" | "infinity") {
+        return None;
+    }
+    let body = trimmed
+        .strip_suffix(['d', 'D', 'f', 'F'])
+        .unwrap_or(trimmed);
+    if body.is_empty()
+        || !body.bytes().any(|byte| byte.is_ascii_digit())
+        || body.bytes().any(|byte| byte == b'_' || byte <= b' ')
+    {
+        return None;
+    }
+    body.parse::<f64>().ok()
 }
 
 fn looks_like_spark_partition_date(text: &str) -> bool {
@@ -253,9 +335,9 @@ fn infer_single_part_value(text: &str) -> InferredPartType {
         InferredPartType::Int32
     } else if text.parse::<i64>().is_ok() {
         InferredPartType::Int64
-    } else if let Some(precision) = infer_integer_decimal_precision(text) {
+    } else if let Some((_, precision)) = parse_java_integral_decimal(text) {
         InferredPartType::Decimal(precision)
-    } else if text.parse::<f64>().is_ok_and(f64::is_finite) {
+    } else if parse_java_double(text).is_some() {
         InferredPartType::Float64
     } else if looks_like_spark_partition_date(text) {
         InferredPartType::Date32
@@ -346,12 +428,17 @@ fn scalar_from_partition_text(raw: Option<&str>, data_type: &DataType, zone: Tz)
         DataType::Null => ScalarValue::Null,
         DataType::Int32 => ScalarValue::Int32(text.parse::<i32>().ok()),
         DataType::Int64 => ScalarValue::Int64(text.parse::<i64>().ok()),
-        DataType::Decimal128(precision, scale) => ScalarValue::Decimal128(
-            parse_decimal_scaled(text, *precision, *scale),
-            *precision,
-            *scale,
-        ),
-        DataType::Float64 => ScalarValue::Float64(text.parse::<f64>().ok()),
+        DataType::Decimal128(precision, scale) => {
+            let value = if *scale == 0 {
+                parse_java_integral_decimal(text)
+                    .map(|(val, _)| val)
+                    .or_else(|| parse_decimal_scaled(text, *precision, *scale))
+            } else {
+                parse_decimal_scaled(text, *precision, *scale)
+            };
+            ScalarValue::Decimal128(value, *precision, *scale)
+        }
+        DataType::Float64 => ScalarValue::Float64(parse_java_double(text)),
         DataType::Date32 => ScalarValue::Date32(parse_date32(text)),
         DataType::Timestamp(TimeUnit::Microsecond, tz) => {
             ScalarValue::TimestampMicrosecond(parse_timestamp_micros_zone(text, zone), tz.clone())
@@ -387,9 +474,13 @@ fn parse_relative_specs(
     let dirs = &relative[..relative.len().saturating_sub(1)];
     let mut specs = Vec::new();
     for segment in dirs {
-        if let Some((key, raw)) = segment.split_once('=')
-            && !key.is_empty()
-        {
+        if let Some((key, raw)) = segment.split_once('=') {
+            if key.is_empty() {
+                return Err(Error::Iceberg(format!(
+                    "[INTERNAL_ERROR] Empty partition column name in segment `{segment}` in path \
+                     '{location}'"
+                )));
+            }
             if raw.is_empty() {
                 return Err(Error::Iceberg(format!(
                     "[INTERNAL_ERROR] Empty partition value for partition column `{key}` in path \
@@ -612,6 +703,17 @@ async fn read_parquet_listing_fallback(
 type RawPartitionPairs = Vec<(String, Option<String>)>;
 type DiscoveredEntry = (ObjectMeta, RawPartitionPairs);
 
+fn normalize_file_dir_url(path: String) -> String {
+    if path.starts_with("file://")
+        && !path.ends_with('/')
+        && let Ok(parsed) = Url::parse(&path)
+        && parsed.to_file_path().is_ok_and(|local| local.is_dir())
+    {
+        return format!("{path}/");
+    }
+    path
+}
+
 #[allow(clippy::too_many_lines)]
 pub(crate) async fn read_parquet_discovered(
     context: &SessionContext,
@@ -620,7 +722,8 @@ pub(crate) async fn read_parquet_discovered(
     case_sensitive: bool,
     type_inference: bool,
 ) -> Result<DataFrame> {
-    let resolved = object_store_s3::resolve_s3_prefix_for_read(context, path).await?;
+    let resolved =
+        normalize_file_dir_url(object_store_s3::resolve_s3_prefix_for_read(context, path).await?);
     let table_url = ListingTableUrl::parse(&resolved).map_err(engine_err)?;
     if !table_url.is_collection() || table_url.get_glob().is_some() {
         return read_parquet_listing_fallback(context, &resolved).await;

@@ -53,11 +53,13 @@ Spark 4.1.2:
   `.crc`, `.hidden`, `p=1/.dot`, `p=1/_under`) and 0-byte files are skipped before discovery.
 - Root-level files alongside `k=v` subdirectories are ignored (`keep_partitioned_only`). Leaf reads (`root/p=1`) and
   root directory names holding `=` have no relative `k=v` segments, so they yield no partition columns.
-- Empty partition values (`p=`) refuse. Mixed depths or conflicting partition column names refuse with
-  `CONFLICTING_PARTITION_COLUMN_NAMES` (`KD009`); mixed-case names unify under `caseSensitive=false` and refuse under
-  `caseSensitive=true`.
-- Type inference follows Spark 4.1.2 order: `Int32` -> `Int64` -> `Decimal128(p, 0)` (integers outside `i64`, up to
-  38 digits) -> `Float64` (decimal+float widens to `Utf8`) -> `Date32` -> `Timestamp(Microsecond, session_tz)`
+- Empty partition values (`p=`) and empty partition keys (`=1`) refuse. Mixed depths or conflicting partition column
+  names refuse with `CONFLICTING_PARTITION_COLUMN_NAMES` (`KD009`); mixed-case names unify under `caseSensitive=false`
+  and refuse under `caseSensitive=true`. `file://` directory URIs without a trailing slash normalize to a collection.
+- Type inference follows Spark 4.1.2 order: `Int32` -> `Int64` -> `Decimal128(p, 0)` (Java integral `BigDecimal` with
+  `scale <= 0` and precision up to 38, including `1e5`, `1.5e2`, `5.`, and integers outside `i64`) -> `Float64`
+  (Java `Double.parseDouble`, including case-sensitive `NaN`/`Infinity`/`-Infinity`/`+Infinity`, trailing `d`/`f`,
+  and whitespace-padded numbers; decimal+float widens to `Utf8`) -> `Date32` -> `Timestamp(Microsecond, session_tz)`
   (`yyyy-MM-dd HH:mm:ss` and single fractional digit `.S`; `.SS` and `T` stay `Utf8`) -> `Utf8`, with all-null
   `__HIVE_DEFAULT_PARTITION__` inferring `DataType::Null` (`void`) even when
   `spark.sql.sources.partitionColumnTypeInference.enabled=false` (`PartitionColumnTypeInferenceConfig`).
@@ -95,9 +97,10 @@ Spark 4.1.2:
 - `partition.rs` — `PARTITION_COLUMN_TYPE_INFERENCE_KEY`, `PartitionColumnTypeInferenceConfig`,
   `PartitionedParquetProvider`, `read_parquet_with_case_sensitivity`, and `set_partition_column_type_inference`.
 - `partition_tests.rs` — Rust pins for 1-level and 2-level discovery, partition-only file pruning (`p=2` scans 1 file)
-  and `EmptyExec`, leaf read, all inferred types (`Decimal128(30,0)`, decimal+float -> `Utf8`, `1.50`, `01`, `.5` vs
-  `.12` timestamps in NY, all-null `Null`, empty value refusal), `partitionColumnTypeInference.enabled=false`,
-  file/directory overlap (both `caseSensitive` modes and all-columns-shadowed), hidden-file skipping, mixed-case
-  directory names, and in-memory S3 + `plan_reads_s3_prefix`.
+  and `EmptyExec`, leaf read, all inferred types (`Decimal128(30,0)`, `1e5` -> `Decimal128(6,0)`, decimal+float ->
+  `Utf8`, `NaN`/`-Infinity` -> `Float64`, `nan` -> `Utf8`, `1.50`, `01`, `.5` vs `.12` timestamps in NY, all-null
+  `Null`, empty value and empty key refusals, `file://` directory URI without trailing slash),
+  `partitionColumnTypeInference.enabled=false`, file/directory overlap (both `caseSensitive` modes and
+  all-columns-shadowed), hidden-file skipping, mixed-case directory names, and in-memory S3 + `plan_reads_s3_prefix`.
 
 Up: [../map.md](../map.md).
