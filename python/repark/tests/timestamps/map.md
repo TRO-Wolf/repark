@@ -31,7 +31,7 @@ Part of FACADE-TESTS-LAYOUT-1 (2026-10-19); rules live in [../map.md](../map.md)
 - [test_runtime_zone_spellings_1.py](test_runtime_zone_spellings_1.py) — Zone spellings against the batch-17 oracle — SET-ANSI-RUNTIME-1 review follow-up.
 - [test_session_timezone_parity.py](test_session_timezone_parity.py) — Session-timezone differential rows (gap G1) + temporal edges (gap G16) — H-1a split A.
 - [test_sql_epoch_constructors_1.py](test_sql_epoch_constructors_1.py) — SQL-EPOCH-CONSTRUCTORS-1 — ``timestamp_seconds``/``millis``/``micros`` equal Spark 4.1.2.
-- [test_string_hour_minute_second_1.py](test_string_hour_minute_second_1.py) — STRING-HOUR-MINUTE-SECOND-1: `hour`, `minute`, `second` of a `STRING` read the instant, as in Spark 4.1.2 (3,480 cells).
+- [test_string_hour_minute_second_1.py](test_string_hour_minute_second_1.py) — STRING-HOUR-MINUTE-SECOND-1: `hour`/`minute`/`second` of `STRING` (3,480 cells; DATE-PART-SESSION-ZONE-1 retired all 11 `N8` cells).
 - [test_store_ts_doors_2.py](test_store_ts_doors_2.py) — STORE-TS-DOORS-2: timestamp store-assignment cells replay Spark on every door.
 - [test_store_ts_doors_2_fold6.py](test_store_ts_doors_2_fold6.py) — STORE-TS-DOORS-2 fold 6: nullary timestamp columns refuse on every door.
 - [test_store_ts_to_numeric_1.py](test_store_ts_to_numeric_1.py) — STORE-TS-TO-NUMERIC-1: storing a timestamp into a numeric column replays Spark.
