@@ -522,3 +522,202 @@ SWEEP_TRY_CAST_CELLS: tuple[tuple[str, str, list[list[Any]], list[str], list[boo
         [False, True],
     ),
 )
+
+DOOR_SQL_CASES: tuple[tuple[str, str, list[list[Any]], list[str], list[bool]], ...] = (
+    (
+        "inline_union_abs",
+        "SELECT abs(TRY_CAST(s AS INT)) AS r FROM (SELECT 'x' AS s UNION ALL SELECT '7')",
+        [[None], [7]],
+        ["int"],
+        [True],
+    ),
+    (
+        "inline_union_add1",
+        "SELECT TRY_CAST(s AS INT) + 1 AS r FROM (SELECT 'x' AS s UNION ALL SELECT '7')",
+        [[None], [8]],
+        ["int"],
+        [True],
+    ),
+    (
+        "cast_shield_eq",
+        "SELECT id, TRY_CAST(b AS INT) = 1 AS r FROM ice.sw.nn ORDER BY id",
+        [[1, None], [2, True]],
+        ["int", "boolean"],
+        [False, True],
+    ),
+    (
+        "hof_transform_abs",
+        (
+            "SELECT id, transform(array(1, 2), e -> abs(TRY_CAST(s AS INT)) + e) AS r "
+            "FROM ice.sw.nn ORDER BY id"
+        ),
+        [[1, [None, None]], [2, [8, 9]]],
+        ["int", "array<int>"],
+        [False, False],
+    ),
+    (
+        "join_on_abs_try",
+        (
+            "SELECT a.id, a.r FROM (SELECT id, abs(TRY_CAST(s AS INT)) AS r FROM ice.sw.nn) a "
+            "LEFT JOIN (SELECT 7 AS k) b ON a.r = b.k ORDER BY a.id"
+        ),
+        [[1, None], [2, 7]],
+        ["int", "int"],
+        [False, True],
+    ),
+    (
+        "union_abs_try",
+        (
+            "SELECT id, abs(TRY_CAST(s AS INT)) AS r FROM ice.sw.nn "
+            "UNION ALL SELECT 3 AS id, 9 AS r ORDER BY id"
+        ),
+        [[1, None], [2, 7], [3, 9]],
+        ["int", "int"],
+        [False, True],
+    ),
+    (
+        "merged_proj_map_limit",
+        (
+            "SELECT id, map('k', x)['k'] AS r "
+            "FROM (SELECT id, TRY_CAST(s AS INT) AS x FROM ice.sw.nn LIMIT 10) q ORDER BY id"
+        ),
+        [[1, None], [2, 7]],
+        ["int", "int"],
+        [False, True],
+    ),
+    (
+        "merged_proj_map_where",
+        (
+            "SELECT id, map('k', x)['k'] AS r "
+            "FROM (SELECT id, TRY_CAST(s AS INT) AS x FROM ice.sw.nn) q WHERE id > 0 ORDER BY id"
+        ),
+        [[1, None], [2, 7]],
+        ["int", "int"],
+        [False, True],
+    ),
+    (
+        "parquet_coalesce_abs",
+        "SELECT id, abs(TRY_CAST(coalesce(s, 'x') AS INT)) AS r FROM pq_nn ORDER BY id",
+        [[1, None], [2, 7]],
+        ["int", "int"],
+        [True, True],
+    ),
+    (
+        "mem_coalesce_abs",
+        "SELECT id, abs(TRY_CAST(coalesce(s, 'x') AS INT)) AS r FROM mem_nn ORDER BY id",
+        [[1, None], [2, 7]],
+        ["int", "int"],
+        [True, True],
+    ),
+)
+
+PARQUET_PUSHDOWN_A1_CASES: tuple[tuple[str, str, list[list[Any]], list[str], list[bool]], ...] = (
+    (
+        "cse_map_abs",
+        (
+            "SELECT id FROM pq_a1 "
+            "WHERE map('k', TRY_CAST(coalesce(s, 'x') AS INT))['k'] > 0 "
+            "AND abs(TRY_CAST(coalesce(s, 'x') AS INT)) > 5 ORDER BY id"
+        ),
+        [[2]],
+        ["int"],
+        [True],
+    ),
+    (
+        "cse_two_maps",
+        (
+            "SELECT id FROM pq_a1 "
+            "WHERE map('k', TRY_CAST(coalesce(s, 'x') AS INT))['k'] > 0 "
+            "AND map('m', TRY_CAST(coalesce(s, 'x') AS INT))['m'] < 10 ORDER BY id"
+        ),
+        [[2]],
+        ["int"],
+        [True],
+    ),
+    (
+        "cse_map_or",
+        (
+            "SELECT id FROM pq_a1 "
+            "WHERE map('k', TRY_CAST(coalesce(s, 'x') AS INT))['k'] > 0 "
+            "OR abs(TRY_CAST(coalesce(s, 'x') AS INT)) = 5 ORDER BY id"
+        ),
+        [[2], [3]],
+        ["int"],
+        [True],
+    ),
+    (
+        "cse_map_and_proj",
+        (
+            "SELECT id, abs(TRY_CAST(coalesce(s, 'x') AS INT)) AS a FROM pq_a1 "
+            "WHERE map('k', TRY_CAST(coalesce(s, 'x') AS INT))['k'] > 0 "
+            "AND abs(TRY_CAST(coalesce(s, 'x') AS INT)) > 5 ORDER BY id"
+        ),
+        [[2, 7]],
+        ["int", "int"],
+        [True, True],
+    ),
+)
+
+NATIVE_CASES: tuple[tuple[str, str, list[list[Any]], list[bool]], ...] = (
+    (
+        "mem_round_try_dbl",
+        "SELECT id, round(TRY_CAST(s AS DOUBLE), 1) AS r FROM nn_mem ORDER BY id",
+        [[1, None], [2, 7.0]],
+        [False, True],
+    ),
+    (
+        "mem_round_neg_try_dbl",
+        "SELECT id, round(-TRY_CAST(s AS DOUBLE), 1) AS r FROM nn_mem ORDER BY id",
+        [[1, None], [2, -7.0]],
+        [False, True],
+    ),
+    (
+        "mem_date_part_try_dt",
+        "SELECT id, date_part('year', TRY_CAST(s_dt AS DATE)) AS r FROM nn_mem ORDER BY id",
+        [[1, None], [2, 2024]],
+        [False, True],
+    ),
+    (
+        "mem_strpos_try_str",
+        (
+            "SELECT id, strpos(TRY_CAST(TRY_CAST(s AS INT) AS VARCHAR), '7') AS r "
+            "FROM nn_mem ORDER BY id"
+        ),
+        [[1, None], [2, 1]],
+        [False, True],
+    ),
+    (
+        "mem_cast_shield_eq",
+        "SELECT id, TRY_CAST(b AS INT) = 1 AS r FROM nn_mem ORDER BY id",
+        [[1, None], [2, True]],
+        [False, True],
+    ),
+    (
+        "pq_coalesce_round",
+        "SELECT id, round(TRY_CAST(coalesce(s, 'x') AS DOUBLE), 1) AS r FROM pq_nat ORDER BY id",
+        [[1, None], [2, 7.0]],
+        [True, True],
+    ),
+    (
+        "pq_coalesce_date_part",
+        (
+            "SELECT id, date_part('year', TRY_CAST(coalesce(s_dt, 'x') AS DATE)) AS r "
+            "FROM pq_nat ORDER BY id"
+        ),
+        [[1, None], [2, 2024]],
+        [True, True],
+    ),
+)
+
+NATIVE_PARQUET_PUSHDOWN_A1_CASES: tuple[tuple[str, str, list[list[Any]], list[bool]], ...] = (
+    (
+        "pq_a1_cse_map_abs",
+        (
+            "SELECT id FROM pq_a1_nat "
+            "WHERE map('k', TRY_CAST(coalesce(s, 'x') AS INT))['k'] > 0 "
+            "AND abs(TRY_CAST(coalesce(s, 'x') AS INT)) > 5 ORDER BY id"
+        ),
+        [[2]],
+        [True],
+    ),
+)

@@ -6,6 +6,11 @@ use arrow::array::{Array, Int32Array, Int64Array, RecordBatch, StringArray};
 use arrow::datatypes::{DataType, Field, Schema};
 use datafusion::common::ScalarValue;
 use datafusion::datasource::MemTable;
+use datafusion::datasource::object_store::ObjectStoreUrl;
+use datafusion::datasource::physical_plan::{
+    FileScanConfig, FileScanConfigBuilder, FileSource, ParquetSource,
+};
+use datafusion::datasource::source::DataSourceExec;
 use datafusion::logical_expr::{
     Cast, Expr, LogicalPlanBuilder, Operator, TryCast, binary_expr, col, lit,
 };
@@ -348,5 +353,125 @@ async fn native_session_executes_functions_over_try_cast_and_preserves_bare_plan
     assert!(
         !plain_rendered.contains(NULLABLE_FIELD_NAME),
         "plain plan must stay untouched: {plain_rendered}"
+    );
+}
+
+#[test]
+fn repair_inlined_try_cast_preserves_bare_parquet_data_source_predicate() {
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("k", DataType::Int32, false),
+        Field::new("s", DataType::Utf8, false),
+    ]));
+    let bare_try: Arc<dyn PhysicalExpr> = Arc::new(TryCastExpr::new(
+        Arc::new(Column::new("k", 0)),
+        DataType::Int64,
+    ));
+    let bare_pred = datafusion::physical_expr::expressions::binary(
+        bare_try,
+        Operator::Gt,
+        datafusion::physical_expr::expressions::lit(ScalarValue::Int64(Some(500))),
+        &schema,
+    )
+    .expect("bare parquet pred");
+    let source = ParquetSource::new(Arc::clone(&schema))
+        .with_predicate(bare_pred)
+        .with_pushdown_filters(true);
+    let config =
+        FileScanConfigBuilder::new(ObjectStoreUrl::local_filesystem(), Arc::new(source)).build();
+    let scan: Arc<dyn ExecutionPlan> = DataSourceExec::from_data_source(config);
+
+    let repaired = repair_inlined_try_cast_plan(Arc::clone(&scan)).expect("bare scan ok");
+    assert!(Arc::ptr_eq(&repaired, &scan));
+}
+
+#[test]
+fn repair_inlined_try_cast_wraps_parquet_data_source_consumer_predicate() {
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("k", DataType::Int32, false),
+        Field::new("s", DataType::Utf8, false),
+    ]));
+    let bare_try: Arc<dyn PhysicalExpr> = Arc::new(TryCastExpr::new(
+        Arc::new(Column::new("k", 0)),
+        DataType::Int64,
+    ));
+    let bare_arm = datafusion::physical_expr::expressions::binary(
+        bare_try,
+        Operator::Gt,
+        datafusion::physical_expr::expressions::lit(ScalarValue::Int64(Some(500))),
+        &schema,
+    )
+    .expect("bare arm");
+
+    let consumer_try: Arc<dyn PhysicalExpr> = Arc::new(TryCastExpr::new(
+        Arc::new(Column::new("s", 1)),
+        DataType::Int32,
+    ));
+    let abs_call: Arc<dyn PhysicalExpr> = Arc::new(ScalarFunctionExpr::new(
+        "abs",
+        datafusion::functions::math::abs(),
+        vec![consumer_try],
+        Arc::new(Field::new("r", DataType::Int32, true)),
+        Arc::new(datafusion::config::ConfigOptions::default()),
+    ));
+    let consumer_arm = datafusion::physical_expr::expressions::binary(
+        abs_call,
+        Operator::Gt,
+        datafusion::physical_expr::expressions::lit(ScalarValue::Int32(Some(0))),
+        &schema,
+    )
+    .expect("consumer arm");
+
+    let compound = datafusion::physical_expr::expressions::binary(
+        bare_arm,
+        Operator::And,
+        consumer_arm,
+        &schema,
+    )
+    .expect("compound pred");
+
+    let source = ParquetSource::new(Arc::clone(&schema))
+        .with_predicate(compound)
+        .with_pushdown_filters(true);
+    let config =
+        FileScanConfigBuilder::new(ObjectStoreUrl::local_filesystem(), Arc::new(source)).build();
+    let scan: Arc<dyn ExecutionPlan> = DataSourceExec::from_data_source(config);
+    let before_display = displayable(scan.as_ref()).indent(true).to_string();
+
+    let repaired = repair_inlined_try_cast_plan(Arc::clone(&scan)).expect("repaired scan");
+    assert!(!Arc::ptr_eq(&repaired, &scan));
+    let after_display = displayable(repaired.as_ref()).indent(true).to_string();
+    assert_eq!(after_display, before_display);
+
+    let predicate = repaired
+        .downcast_ref::<DataSourceExec>()
+        .expect("DataSourceExec")
+        .data_source()
+        .downcast_ref::<FileScanConfig>()
+        .expect("FileScanConfig")
+        .file_source
+        .downcast_ref::<ParquetSource>()
+        .expect("ParquetSource")
+        .filter()
+        .expect("predicate");
+    let arms = predicate.children();
+    assert!(
+        arms[0].children()[0]
+            .downcast_ref::<TryCastExpr>()
+            .is_some()
+    );
+    let wrapped_arg = &arms[1].children()[0]
+        .downcast_ref::<ScalarFunctionExpr>()
+        .expect("ScalarFunctionExpr")
+        .args()[0];
+    assert!(
+        wrapped_arg
+            .downcast_ref::<NullableFieldPhysicalExpr>()
+            .is_some()
+    );
+    assert!(
+        wrapped_arg
+            .return_field(&schema)
+            .expect("return_field")
+            .is_nullable()
     );
 }

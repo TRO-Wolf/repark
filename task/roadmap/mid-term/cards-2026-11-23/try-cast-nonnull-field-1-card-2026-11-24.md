@@ -58,13 +58,18 @@ Re-measured on main `514281bd4` and head, over `(SELECT 'x' AS s UNION ALL SELEC
 2. **Post-pushdown physical repair (`crates/repark-core/src/session/df_guards/skipping_limit.rs`):**
    `TryCastSafeSanityCheck` wraps DataFusion's `"SanityCheckPlan"` (keeping the rule name and exact stock rule count)
    and runs `repair_inlined_try_cast_plan` to wrap any raw `TryCastExpr` inlined into a consumer expression by
-   DataFusion's physical `ProjectionPushdown` inside `ProjectionExec` or `FilterExec` with `NullableFieldPhysicalExpr`.
+   DataFusion's physical `ProjectionPushdown` or `FilterPushdown` inside `ProjectionExec`, `FilterExec`, or
+   `DataSourceExec` (`FileScanConfig` → `ParquetSource::filter`, Delta 1 A-1 under
+   `datafusion.execution.parquet.pushdown_filters = true`) with `NullableFieldPhysicalExpr`, leaving bare
+   `ParquetSource` pruning predicates untouched.
 3. **Cross-ANSI temp-view predicate (`crates/repark-spark/src/view_ddl/temp_settings.rs`):**
    Applies `repark_core::shield_try_cast_expr` before `SessionState::create_physical_expr` compiles a rewritten temp-view
    filter predicate.
 
-Pins: `python/repark/tests/sql/test_try_cast_nonnull_field_1.py` (183 tests: 181 red on main + 2 pruning controls; 183
-green on head) and unit tests in `crates/repark-core/src/stack/try_cast_nullable/tests.rs`.
+Pins: `python/repark/tests/sql/test_try_cast_nonnull_field_1.py` (192 tests: 181 red on main + 9 Delta 1 A-1 pins red on
+`47631b255` + 2 pruning controls; 192 green on Delta 1 head) and 8 unit tests in
+`crates/repark-core/src/stack/try_cast_nullable/tests.rs` (including `DataSourceExec` `ParquetSource` consumer repair
+and bare predicate preservation).
 
 ## Still unlike Spark (separate shapes, out of scope for the `TryCast` seat)
 
@@ -73,13 +78,13 @@ identical in both ANSI modes (`false` and `true`):
 
 | Cell | Spark 4.1.2 | Main `514281bd4` & Head | Cause |
 |---|---|---|---|
-| `case_no_else\|coll/array_remove` (`sep/*/case_no_else_array_remove`) | `[[1, None], [2, None]]`, nulls `[False, True]` | crash (`Column 'r' is declared as non-nullable`), nulls `[False, False]` | `array_remove` `return_field_from_args` ignores arg 1 nullability |
-| `dfbug/array_remove_null_elem` (`sep/*/array_remove_null_elem`) | `[[1, None], [2, [2]]]`, nulls `[False, True]` | crash (`Column 'r' is declared as non-nullable`), nulls `[False, False]` | `array_remove` `return_field_from_args` ignores arg 1 nullability |
-| `left_join\|coll/array_remove` | `[[1, None], [2, [1]]]`, nulls `[False, True]` | crash (`Column 'r' is declared as non-nullable`), nulls `[False, False]` | `array_remove` `return_field_from_args` ignores arg 1 nullability |
-| `nullif_self\|coll/array_remove` | `[[1, None], [2, None]]`, nulls `[False, True]` | crash (`Column 'r' is declared as non-nullable`), nulls `[False, False]` | `array_remove` `return_field_from_args` ignores arg 1 nullability |
-| `subq_empty\|coll/array_remove` | `[[1, None], [2, None]]`, nulls `[False, True]` | crash (`Column 'r' is declared as non-nullable`), nulls `[False, False]` | `array_remove` `return_field_from_args` ignores arg 1 nullability |
-| `try_int\|coll/array_remove` (`sep/*/array_remove_try_int`, native `sep/array_remove_try_int`) | `[[1, None], [2, [1]]]`, nulls `[False, True]` | crash (`Column 'r' is declared as non-nullable`), nulls `[False, False]` | `array_remove` `return_field_from_args` ignores arg 1 nullability (even with nullable arg 1) |
-| `neg_try_int\|coll/array_remove` | `[[1, None], [2, [1, 7]]]`, nulls `[False, True]` | crash (`Column 'r' is declared as non-nullable`), nulls `[False, False]` | `array_remove` `return_field_from_args` ignores arg 1 nullability (even with nullable arg 1) |
+| `case_no_else\|coll/array_remove` (`sep/*/case_no_else_array_remove`) | `[[1, None], [2, None]]`, nulls `[False, True]` | crash (`Column 'r' is declared as non-nullable`), nulls `[False, False]` | `array_remove` `return_field_from_args` ignores its second argument (`arg_fields[1]`) nullability |
+| `dfbug/array_remove_null_elem` (`sep/*/array_remove_null_elem`) | `[[1, None], [2, [2]]]`, nulls `[False, True]` | crash (`Column 'r' is declared as non-nullable`), nulls `[False, False]` | `array_remove` `return_field_from_args` ignores its second argument (`arg_fields[1]`) nullability |
+| `left_join\|coll/array_remove` | `[[1, None], [2, [1]]]`, nulls `[False, True]` | crash (`Column 'r' is declared as non-nullable`), nulls `[False, False]` | `array_remove` `return_field_from_args` ignores its second argument (`arg_fields[1]`) nullability |
+| `nullif_self\|coll/array_remove` | `[[1, None], [2, None]]`, nulls `[False, True]` | crash (`Column 'r' is declared as non-nullable`), nulls `[False, False]` | `array_remove` `return_field_from_args` ignores its second argument (`arg_fields[1]`) nullability |
+| `subq_empty\|coll/array_remove` | `[[1, None], [2, None]]`, nulls `[False, True]` | crash (`Column 'r' is declared as non-nullable`), nulls `[False, False]` | `array_remove` `return_field_from_args` ignores its second argument (`arg_fields[1]`) nullability |
+| `try_int\|coll/array_remove` (`sep/*/array_remove_try_int`, native `sep/array_remove_try_int`) | `[[1, None], [2, [1]]]`, nulls `[False, True]` | crash (`Column 'r' is declared as non-nullable`), nulls `[False, False]` | `array_remove` `return_field_from_args` ignores its second argument (`arg_fields[1]`) nullability (even when nullable) |
+| `neg_try_int\|coll/array_remove` | `[[1, None], [2, [1, 7]]]`, nulls `[False, True]` | crash (`Column 'r' is declared as non-nullable`), nulls `[False, False]` | `array_remove` `return_field_from_args` ignores its second argument (`arg_fields[1]`) nullability (even when nullable) |
 | `dfbug/make_dt_interval_nan_col` (`sep/ice/make_dt_interval_nan_col`) | `[[1, None], [2, '7 days, 0:00:01.500000']]`, `intervaldaytosecond`, nulls `[False, True]` | crash (`Column 'r' is declared as non-nullable`), `string`, nulls `[False, False]` | `make_dt_interval` UDF declares non-null output despite NaN producing NULL (and returns `string` on nullable inputs: `sep/pq/`, `sep/mem/`) |
 | `dfbug/make_dt_interval_ovf_col` (`sep/*/make_dt_interval_ovf_col`) | `INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION` | Iceberg: crash (`Column 'r' is declared as non-nullable`); Parquet/mem: returns `NULL` instead of raising | `make_dt_interval` UDF emits NULL on overflow instead of raising |
 

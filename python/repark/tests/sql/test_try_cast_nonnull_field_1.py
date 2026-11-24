@@ -10,7 +10,14 @@ from typing import Any
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
-from _try_cast_nonnull_field_1_cells import ANSI_MODES, SWEEP_TRY_CAST_CELLS
+from _try_cast_nonnull_field_1_cells import (
+    ANSI_MODES,
+    DOOR_SQL_CASES,
+    NATIVE_CASES,
+    NATIVE_PARQUET_PUSHDOWN_A1_CASES,
+    PARQUET_PUSHDOWN_A1_CASES,
+    SWEEP_TRY_CAST_CELLS,
+)
 
 from repark._native import PyReparkSession
 from repark.spark import SparkSession
@@ -165,7 +172,7 @@ def build_session(warehouse: Path, ansi: str) -> SparkSession:
     )
 
 
-def write_parquet_fixtures(root: Path) -> tuple[Path, Path]:
+def write_parquet_fixtures(root: Path) -> tuple[Path, Path, Path, Path]:
     root.mkdir(parents=True, exist_ok=True)
     single_schema = pa.schema(
         [
@@ -206,10 +213,29 @@ def write_parquet_fixtures(root: Path) -> tuple[Path, Path]:
     for filename, ids, keys, strings in parts:
         table = pa.table({"id": ids, "k_int": keys, "s": strings}, schema=prune_schema)
         pq.write_table(table, str(prune_dir / filename))
-    return single_path, prune_dir
+
+    a1_path = root / "pq_a1.parquet"
+    a1_schema = pa.schema(
+        [
+            pa.field("id", pa.int32(), nullable=False),
+            pa.field("s", pa.string(), nullable=False),
+        ]
+    )
+    pq.write_table(pa.table({"id": [1, 2, 3], "s": ["abc", "7", "-5"]}, schema=a1_schema), a1_path)
+
+    rg_path = root / "pq_rg.parquet"
+    with pq.ParquetWriter(rg_path, prune_schema) as writer:
+        for _, ids, keys, strings in parts:
+            writer.write_table(
+                pa.table({"id": ids, "k_int": keys, "s": strings}, schema=prune_schema)
+            )
+
+    return single_path, prune_dir, a1_path, rg_path
 
 
-def seed_tables(spark: SparkSession, pq_single: Path, pq_prune: Path) -> None:
+def seed_tables(
+    spark: SparkSession, pq_single: Path, pq_prune: Path, pq_a1: Path, pq_rg: Path
+) -> None:
     spark.sql("CREATE NAMESPACE IF NOT EXISTS ice.sw").collect()
     spark.sql(
         """
@@ -251,6 +277,8 @@ def seed_tables(spark: SparkSession, pq_single: Path, pq_prune: Path) -> None:
     spark.sql("INSERT INTO ice.sw.prune VALUES (5, 1000, '1000'), (6, 1001, '1001')").collect()
     spark.read.parquet(str(pq_single)).createOrReplaceTempView("pq_nn")
     spark.read.parquet(str(pq_prune)).createOrReplaceTempView("pq_prune")
+    spark.read.parquet(str(pq_a1)).createOrReplaceTempView("pq_a1")
+    spark.read.parquet(str(pq_rg)).createOrReplaceTempView("pq_rg")
     mem_schema = st.StructType(
         [
             st.StructField("id", st.IntegerType(), False),
@@ -261,85 +289,6 @@ def seed_tables(spark: SparkSession, pq_single: Path, pq_prune: Path) -> None:
         "mem_nn"
     )
     spark.sql("CREATE OR REPLACE TEMP VIEW tv_nn AS SELECT id, s FROM ice.sw.nn").collect()
-
-
-DOOR_SQL_CASES: tuple[tuple[str, str, list[list[Any]], list[str], list[bool]], ...] = (
-    (
-        "inline_union_abs",
-        "SELECT abs(TRY_CAST(s AS INT)) AS r FROM (SELECT 'x' AS s UNION ALL SELECT '7')",
-        [[None], [7]],
-        ["int"],
-        [True],
-    ),
-    (
-        "inline_union_add1",
-        "SELECT TRY_CAST(s AS INT) + 1 AS r FROM (SELECT 'x' AS s UNION ALL SELECT '7')",
-        [[None], [8]],
-        ["int"],
-        [True],
-    ),
-    (
-        "cast_shield_eq",
-        "SELECT id, TRY_CAST(b AS INT) = 1 AS r FROM ice.sw.nn ORDER BY id",
-        [[1, None], [2, True]],
-        ["int", "boolean"],
-        [False, True],
-    ),
-    (
-        "hof_transform_abs",
-        "SELECT id, transform(array(1, 2), e -> abs(TRY_CAST(s AS INT)) + e) AS r "
-        "FROM ice.sw.nn ORDER BY id",
-        [[1, [None, None]], [2, [8, 9]]],
-        ["int", "array<int>"],
-        [False, False],
-    ),
-    (
-        "join_on_abs_try",
-        "SELECT a.id, a.r FROM (SELECT id, abs(TRY_CAST(s AS INT)) AS r FROM ice.sw.nn) a "
-        "LEFT JOIN (SELECT 7 AS k) b ON a.r = b.k ORDER BY a.id",
-        [[1, None], [2, 7]],
-        ["int", "int"],
-        [False, True],
-    ),
-    (
-        "union_abs_try",
-        "SELECT id, abs(TRY_CAST(s AS INT)) AS r FROM ice.sw.nn "
-        "UNION ALL SELECT 3 AS id, 9 AS r ORDER BY id",
-        [[1, None], [2, 7], [3, 9]],
-        ["int", "int"],
-        [False, True],
-    ),
-    (
-        "merged_proj_map_limit",
-        "SELECT id, map('k', x)['k'] AS r "
-        "FROM (SELECT id, TRY_CAST(s AS INT) AS x FROM ice.sw.nn LIMIT 10) q ORDER BY id",
-        [[1, None], [2, 7]],
-        ["int", "int"],
-        [False, True],
-    ),
-    (
-        "merged_proj_map_where",
-        "SELECT id, map('k', x)['k'] AS r "
-        "FROM (SELECT id, TRY_CAST(s AS INT) AS x FROM ice.sw.nn) q WHERE id > 0 ORDER BY id",
-        [[1, None], [2, 7]],
-        ["int", "int"],
-        [False, True],
-    ),
-    (
-        "parquet_coalesce_abs",
-        "SELECT id, abs(TRY_CAST(coalesce(s, 'x') AS INT)) AS r FROM pq_nn ORDER BY id",
-        [[1, None], [2, 7]],
-        ["int", "int"],
-        [True, True],
-    ),
-    (
-        "mem_coalesce_abs",
-        "SELECT id, abs(TRY_CAST(coalesce(s, 'x') AS INT)) AS r FROM mem_nn ORDER BY id",
-        [[1, None], [2, 7]],
-        ["int", "int"],
-        [True, True],
-    ),
-)
 
 
 def build_select_expr_abs(spark: SparkSession) -> Any:
@@ -490,53 +439,6 @@ DF_DOOR_CASES: tuple[
     ),
 )
 
-NATIVE_CASES: tuple[tuple[str, str, list[list[Any]], list[bool]], ...] = (
-    (
-        "mem_round_try_dbl",
-        "SELECT id, round(TRY_CAST(s AS DOUBLE), 1) AS r FROM nn_mem ORDER BY id",
-        [[1, None], [2, 7.0]],
-        [False, True],
-    ),
-    (
-        "mem_round_neg_try_dbl",
-        "SELECT id, round(-TRY_CAST(s AS DOUBLE), 1) AS r FROM nn_mem ORDER BY id",
-        [[1, None], [2, -7.0]],
-        [False, True],
-    ),
-    (
-        "mem_date_part_try_dt",
-        "SELECT id, date_part('year', TRY_CAST(s_dt AS DATE)) AS r FROM nn_mem ORDER BY id",
-        [[1, None], [2, 2024]],
-        [False, True],
-    ),
-    (
-        "mem_strpos_try_str",
-        "SELECT id, strpos(TRY_CAST(TRY_CAST(s AS INT) AS VARCHAR), '7') AS r "
-        "FROM nn_mem ORDER BY id",
-        [[1, None], [2, 1]],
-        [False, True],
-    ),
-    (
-        "mem_cast_shield_eq",
-        "SELECT id, TRY_CAST(b AS INT) = 1 AS r FROM nn_mem ORDER BY id",
-        [[1, None], [2, True]],
-        [False, True],
-    ),
-    (
-        "pq_coalesce_round",
-        "SELECT id, round(TRY_CAST(coalesce(s, 'x') AS DOUBLE), 1) AS r FROM pq_nat ORDER BY id",
-        [[1, None], [2, 7.0]],
-        [True, True],
-    ),
-    (
-        "pq_coalesce_date_part",
-        "SELECT id, date_part('year', TRY_CAST(coalesce(s_dt, 'x') AS DATE)) AS r "
-        "FROM pq_nat ORDER BY id",
-        [[1, None], [2, 2024]],
-        [True, True],
-    ),
-)
-
 
 def measure_writes(spark: SparkSession, ansi: str) -> dict[str, Any]:
     out: dict[str, Any] = {}
@@ -676,14 +578,26 @@ def measure_pushdown(spark: SparkSession) -> dict[str, Any]:
             ),
             "unwrapped": unwrapped,
         }
+
+    rg_sql = "SELECT id FROM pq_rg WHERE TRY_CAST(k_int AS BIGINT) > 500 ORDER BY id"
+    for setting in ("false", "true"):
+        spark.sql(f"SET datafusion.execution.parquet.pushdown_filters = {setting}").collect()
+        out[f"pq_rg_pf_{setting}"] = {
+            "cell": capture_frame(lambda q=rg_sql: spark.sql(q)),
+            "explain": "\n".join(str(row[1]) for row in spark.sql(f"EXPLAIN {rg_sql}").collect()),
+            "analyze": "\n".join(
+                str(row[1]) for row in spark.sql(f"EXPLAIN ANALYZE {rg_sql}").collect()
+            ),
+        }
+    spark.sql("SET datafusion.execution.parquet.pushdown_filters = false").collect()
     return out
 
 
 def measure_mode(root: Path, ansi: str) -> dict[str, Any]:
-    pq_single, pq_prune = write_parquet_fixtures(root / f"pq_{ansi}")
+    pq_single, pq_prune, pq_a1, pq_rg = write_parquet_fixtures(root / f"pq_{ansi}")
     spark = build_session(root / f"wh_{ansi}", ansi)
     try:
-        seed_tables(spark, pq_single, pq_prune)
+        seed_tables(spark, pq_single, pq_prune, pq_a1, pq_rg)
         sweep = {
             cell_id: capture_frame(lambda q=sql: spark.sql(q))
             for cell_id, sql, _, _, _ in SWEEP_TRY_CAST_CELLS
@@ -716,6 +630,13 @@ def measure_mode(root: Path, ansi: str) -> dict[str, Any]:
 
         writes = measure_writes(spark, ansi)
         pushdown = measure_pushdown(spark)
+
+        spark.sql("SET datafusion.execution.parquet.pushdown_filters = true").collect()
+        a1_pushdown = {
+            case_id: capture_frame(lambda q=sql: spark.sql(q))
+            for case_id, sql, _, _, _ in PARQUET_PUSHDOWN_A1_CASES
+        }
+        spark.sql("SET datafusion.execution.parquet.pushdown_filters = false").collect()
         return {
             "sweep": sweep,
             "sql_edges": sql_edges,
@@ -724,6 +645,7 @@ def measure_mode(root: Path, ansi: str) -> dict[str, Any]:
             "explain_analyze": explain_analyze,
             "writes": writes,
             "pushdown": pushdown,
+            "a1_pushdown": a1_pushdown,
         }
     finally:
         spark.stop()
@@ -731,11 +653,12 @@ def measure_mode(root: Path, ansi: str) -> dict[str, Any]:
 
 
 def measure_native(root: Path) -> dict[str, Any]:
-    pq_single, pq_prune = write_parquet_fixtures(root / "nat_pq")
+    pq_single, pq_prune, pq_a1, _ = write_parquet_fixtures(root / "nat_pq")
     session = PyReparkSession.native()
     session.register_arrow_stream_as_temp_view("nn_mem", pq.read_table(str(pq_single)))
     session.create_or_replace_temp_view("pq_nat", session.read_parquet(str(pq_single)))
     session.create_or_replace_temp_view("pq_prune_nat", session.read_parquet(str(pq_prune)))
+    session.create_or_replace_temp_view("pq_a1_nat", session.read_parquet(str(pq_a1)))
     cells = {case_id: capture_native(session, sql) for case_id, sql, _, _ in NATIVE_CASES}
     explain_tbl = pa.table(
         session.sql(
@@ -745,7 +668,13 @@ def measure_native(root: Path) -> dict[str, Any]:
     explain_text = "\n".join(
         str(explain_tbl.column(1)[row].as_py()) for row in range(explain_tbl.num_rows)
     )
-    return {"cells": cells, "explain": explain_text}
+    pa.table(session.sql("SET datafusion.execution.parquet.pushdown_filters = true"))
+    a1_cells = {
+        case_id: capture_native(session, sql)
+        for case_id, sql, _, _ in NATIVE_PARQUET_PUSHDOWN_A1_CASES
+    }
+    pa.table(session.sql("SET datafusion.execution.parquet.pushdown_filters = false"))
+    return {"cells": cells, "a1_cells": a1_cells, "explain": explain_text}
 
 
 @pytest.fixture(scope="module")
@@ -900,6 +829,37 @@ def test_pushdown_pruning_and_explain_hygiene(
         )
         if entry["unwrapped"]:
             assert "__repark_nullable_field__" not in entry["explain"], entry["explain"]
+    for setting in ("false", "true"):
+        entry = pushdown[f"pq_rg_pf_{setting}"]
+        assert_captured_matches(entry["cell"], [[5], [6]], ["int"], [True], f"pq_rg_pf_{setting}")
+        assert "row_groups_pruned_statistics=3 total → 1 matched" in entry["analyze"], (
+            f"Parquet row-group pruning lost for pushdown_filters={setting}:\n{entry['analyze']}"
+        )
+        assert "__repark_nullable_field__" not in entry["explain"], entry["explain"]
+
+
+@pytest.mark.parametrize("ansi", ANSI_MODES, ids=lambda mode: f"ansi={mode}")
+@pytest.mark.parametrize(
+    ("case_id", "_sql", "expected_rows", "expected_types", "expected_nulls"),
+    PARQUET_PUSHDOWN_A1_CASES,
+    ids=[row[0] for row in PARQUET_PUSHDOWN_A1_CASES],
+)
+def test_parquet_pushdown_filters_a1_cse_cells(
+    measured: dict[str, Any],
+    ansi: str,
+    case_id: str,
+    _sql: str,
+    expected_rows: list[list[Any]],
+    expected_types: list[str],
+    expected_nulls: list[bool],
+) -> None:
+    assert_captured_matches(
+        measured["modes"][ansi]["a1_pushdown"][case_id],
+        expected_rows,
+        expected_types,
+        expected_nulls,
+        f"ansi={ansi}:a1:{case_id}",
+    )
 
 
 @pytest.mark.parametrize(
@@ -919,3 +879,21 @@ def test_native_door_try_cast(
     assert cell["nulls"] == expected_nulls, f"{case_id}: {cell['nulls']} != {expected_nulls}"
     assert cell["rows"] == expected_rows, f"{case_id}: {cell['rows']} != {expected_rows}"
     assert "__repark_nullable_field__" not in measured["native"]["explain"]
+
+
+@pytest.mark.parametrize(
+    ("case_id", "_sql", "expected_rows", "expected_nulls"),
+    NATIVE_PARQUET_PUSHDOWN_A1_CASES,
+    ids=[row[0] for row in NATIVE_PARQUET_PUSHDOWN_A1_CASES],
+)
+def test_native_parquet_pushdown_filters_a1(
+    measured: dict[str, Any],
+    case_id: str,
+    _sql: str,
+    expected_rows: list[list[Any]],
+    expected_nulls: list[bool],
+) -> None:
+    cell = measured["native"]["a1_cells"][case_id]
+    assert cell["ok"], f"{case_id}: {cell.get('error')}"
+    assert cell["nulls"] == expected_nulls, f"{case_id}: {cell['nulls']} != {expected_nulls}"
+    assert cell["rows"] == expected_rows, f"{case_id}: {cell['rows']} != {expected_rows}"

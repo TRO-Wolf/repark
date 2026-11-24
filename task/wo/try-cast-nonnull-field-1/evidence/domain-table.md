@@ -725,3 +725,21 @@ Measured against live Spark 4.1.2 (Iceberg 1.11.0, local Hadoop catalog), RePark
 | `pq/prune_try_widening` | OK `[[5], [6]]` t=`['int32']` n=`[True]` | OK `[[5], [6]]` t=`['int32']` n=`[True]` |
 | `pq/round_try_coalesce_dbl` | CRASH(non-nullable col) | OK `[[1, None], [2, 7.0]]` t=`['int32', 'double']` n=`[True, True]` |
 | `sep/array_remove_try_int` | CRASH(non-nullable col) | CRASH(non-nullable col) |
+
+## 6. Delta 1 (A-1): Parquet `pushdown_filters = true` CSE & Row-Group Pruning
+
+Measured over 3-row Parquet `pq_a1` (`(1,'abc'), (2,'7'), (3,'-5')`) and 3-row-group Parquet `pq_rg` (`k_int` ranges `[1..2]`, `[100..101]`, `[1000..1001]`) in both ANSI modes (`false` and `true`) and under both `datafusion.execution.parquet.pushdown_filters` settings (`false` and `true`):
+
+| Cell | Setting | Spark 4.1.2 (both ANSI) | Main `514281bd4` (both ANSI) | Pre-Delta `47631b255` (both ANSI) | Delta 1 Head (both ANSI) |
+|---|---|---|---|---|---|
+| `cse_map_abs` | `pushdown_filters=false` | OK `[[2]]` t=`['int']` n=`[True]` | OK `[[2]]` t=`['int']` n=`[True]` | OK `[[2]]` t=`['int']` n=`[True]` | OK `[[2]]` t=`['int']` n=`[True]` |
+| `cse_map_abs` | `pushdown_filters=true` | OK `[[2]]` t=`['int']` n=`[True]` | CRASH(non-nullable StructArray) | CRASH(non-nullable StructArray) | OK `[[2]]` t=`['int']` n=`[True]` |
+| `cse_two_maps` | `pushdown_filters=false` | OK `[[2]]` t=`['int']` n=`[True]` | OK `[[2]]` t=`['int']` n=`[True]` | OK `[[2]]` t=`['int']` n=`[True]` | OK `[[2]]` t=`['int']` n=`[True]` |
+| `cse_two_maps` | `pushdown_filters=true` | OK `[[2]]` t=`['int']` n=`[True]` | CRASH(non-nullable StructArray) | CRASH(non-nullable StructArray) | OK `[[2]]` t=`['int']` n=`[True]` |
+| `cse_map_or` | `pushdown_filters=false` | OK `[[2], [3]]` t=`['int']` n=`[True]` | OK `[[2], [3]]` t=`['int']` n=`[True]` | OK `[[2], [3]]` t=`['int']` n=`[True]` | OK `[[2], [3]]` t=`['int']` n=`[True]` |
+| `cse_map_or` | `pushdown_filters=true` | OK `[[2], [3]]` t=`['int']` n=`[True]` | CRASH(non-nullable StructArray) | CRASH(non-nullable StructArray) | OK `[[2], [3]]` t=`['int']` n=`[True]` |
+| `cse_map_and_proj` | `pushdown_filters=false` | OK `[[2, 7]]` t=`['int', 'int']` n=`[True, True]` | OK `[[2, 7]]` t=`['int', 'int']` n=`[True, True]` | OK `[[2, 7]]` t=`['int', 'int']` n=`[True, True]` | OK `[[2, 7]]` t=`['int', 'int']` n=`[True, True]` |
+| `cse_map_and_proj` | `pushdown_filters=true` | OK `[[2, 7]]` t=`['int', 'int']` n=`[True, True]` | CRASH(non-nullable StructArray) | CRASH(non-nullable StructArray) | OK `[[2, 7]]` t=`['int', 'int']` n=`[True, True]` |
+| `native/pq_a1_cse_map_abs` | `pushdown_filters=true` | n/a (native door) | CRASH(non-nullable StructArray) | CRASH(non-nullable StructArray) | OK `[[2]]` t=`['int32']` n=`[True]` |
+| `pq_rg/control_k_gt_500` | `pushdown_filters=false` & `true` | OK `[[5], [6]]` | `row_groups_pruned_statistics=3 total → 1 matched -> 1 fully matched` | identical | identical (`EXPLAIN` & `EXPLAIN VERBOSE` byte-identical under `false`) |
+| `pq_rg/bare_try_widening` | `pushdown_filters=false` & `true` | OK `[[5], [6]]` | `row_groups_pruned_statistics=3 total → 1 matched -> 1 fully matched` | identical | identical (`EXPLAIN` & `EXPLAIN VERBOSE` byte-identical under `false`) |

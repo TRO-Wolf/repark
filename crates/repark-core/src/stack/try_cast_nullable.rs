@@ -8,6 +8,8 @@ use arrow::datatypes::{DataType, FieldRef, Schema};
 use arrow::record_batch::RecordBatch;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
 use datafusion::common::{Result, exec_err, internal_err, plan_err};
+use datafusion::datasource::physical_plan::{FileScanConfig, FileSource, ParquetSource};
+use datafusion::datasource::source::DataSourceExec;
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::interval_arithmetic::Interval;
@@ -248,6 +250,13 @@ fn node_needs_physical_repair(node: &Arc<dyn ExecutionPlan>) -> bool {
     if let Some(filter) = node.downcast_ref::<FilterExec>() {
         return physical_expr_needs_repair(filter.predicate(), false);
     }
+    if let Some(data_source) = node.downcast_ref::<DataSourceExec>()
+        && let Some(file_scan) = data_source.data_source().downcast_ref::<FileScanConfig>()
+        && let Some(parquet) = file_scan.file_source.downcast_ref::<ParquetSource>()
+        && let Some(predicate) = parquet.filter()
+    {
+        return physical_expr_needs_repair(&predicate, false);
+    }
     false
 }
 
@@ -307,6 +316,20 @@ fn repair_physical_node(
         let rebuilt = FilterExecBuilder::from(filter)
             .with_predicate(repaired.data)
             .build()?;
+        return Ok(Transformed::yes(Arc::new(rebuilt)));
+    }
+    if let Some(data_source) = node.downcast_ref::<DataSourceExec>()
+        && let Some(file_scan) = data_source.data_source().downcast_ref::<FileScanConfig>()
+        && let Some(parquet) = file_scan.file_source.downcast_ref::<ParquetSource>()
+        && let Some(predicate) = parquet.filter()
+    {
+        let repaired = repair_physical_expr(predicate, false)?;
+        if !repaired.transformed {
+            return Ok(Transformed::no(node));
+        }
+        let mut rebuilt_scan = file_scan.clone();
+        rebuilt_scan.file_source = Arc::new(parquet.with_predicate(repaired.data));
+        let rebuilt = data_source.clone().with_data_source(Arc::new(rebuilt_scan));
         return Ok(Transformed::yes(Arc::new(rebuilt)));
     }
     Ok(Transformed::no(node))
