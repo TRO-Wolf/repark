@@ -246,8 +246,14 @@ def test_a_shielded_range_plans_no_per_row_cast_and_an_overflow_capable_one_stay
     assert SHIELD not in plan_of(
         spark, f"SELECT id FROM {table} WHERE CAST(c AS INT) IN (1, 2, 3, 4, 5)"
     )
-    assert SHIELD in plan_of(spark, f"SELECT id FROM {wide} WHERE CAST(c AS INT) = 1")
-    assert SHIELD in plan_of(spark, f"SELECT id FROM {table} WHERE CAST(c AS TINYINT) = 1")
+    assert "__repark_narrow_to_int__" in plan_of(
+        spark, f"SELECT id FROM {wide} WHERE CAST(c AS INT) = 1"
+    )
+    assert "__repark_narrow_to_tinyint__" in plan_of(
+        spark, f"SELECT id FROM {table} WHERE CAST(c AS TINYINT) = 1"
+    )
+    assert SHIELD in plan_of(spark, f"SELECT id FROM {wide} WHERE TRY_CAST(c AS INT) = 1")
+    assert SHIELD in plan_of(spark, f"SELECT id FROM {table} WHERE TRY_CAST(c AS TINYINT) = 1")
 
 
 def test_an_in_list_past_the_cap_stays_per_row_and_answers_as_spark(spark: Any) -> None:
@@ -297,17 +303,26 @@ def test_dml_through_an_overflowing_cast_raises_or_refuses(
     spark: Any, kind: str, mode: str
 ) -> None:
     table = make_table(spark, BIGINT, "BIGINT", mode)
-    with pytest.raises(Exception, match=CAST_OVERFLOW):
+    if ansi_on(spark):
+        with pytest.raises(Exception, match=CAST_OVERFLOW):
+            spark.sql(dml(kind, table, "INT", "1", len(BIGINT))).collect()
+        assert changed(spark, table, len(BIGINT)) == []
+    else:
         spark.sql(dml(kind, table, "INT", "1", len(BIGINT))).collect()
-    assert changed(spark, table, len(BIGINT)) == []
+        want = [2, 5, 8] if kind == "delete_gt" else [1, 7]
+        assert changed(spark, table, len(BIGINT)) == want
 
 
 def test_an_overflow_capable_cast_refuses_per_row_with_ansi_off(spark: Any) -> None:
     wide = view(spark, BIGINT, "BIGINT")
     in_range = view(spark, BIGINT[:5], "BIGINT")
-    for constant in ("1", "5"):
-        with pytest.raises(Exception, match=CAST_OVERFLOW):
-            spark.sql(f"SELECT id FROM {wide} WHERE CAST(c AS INT) = {constant}").collect()
+    if ansi_on(spark):
+        for constant in ("1", "5"):
+            with pytest.raises(Exception, match=CAST_OVERFLOW):
+                spark.sql(f"SELECT id FROM {wide} WHERE CAST(c AS INT) = {constant}").collect()
+    else:
+        assert ids(spark.sql(f"SELECT id FROM {wide} WHERE CAST(c AS INT) = 1")) == [1, 7]
+        assert ids(spark.sql(f"SELECT id FROM {wide} WHERE CAST(c AS INT) = 5")) == []
     assert ids(spark.sql(f"SELECT id FROM {in_range} WHERE CAST(c AS INT) = 1")) == [1]
     assert ids(spark.sql(f"SELECT id FROM {wide} WHERE TRY_CAST(c AS INT) = 1")) == [1]
 
@@ -319,8 +334,11 @@ def test_the_top_of_type_comparison_refuses_per_row(spark: Any) -> None:
         "127 < CAST(c AS TINYINT)",
         "CAST(c AS TINYINT) < -128",
     ):
-        with pytest.raises(Exception, match=CAST_OVERFLOW):
-            spark.sql(f"SELECT id FROM {table} WHERE {predicate}").collect()
+        if ansi_on(spark):
+            with pytest.raises(Exception, match=CAST_OVERFLOW):
+                spark.sql(f"SELECT id FROM {table} WHERE {predicate}").collect()
+        else:
+            assert ids(spark.sql(f"SELECT id FROM {table} WHERE {predicate}")) == []
 
 
 def scan_metrics(spark: Any, sql: str) -> list[str]:

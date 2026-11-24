@@ -25,7 +25,7 @@ mod string_integral;
 pub use rewrite::{map_cast_target, map_cast_token, rewrite_map_casts};
 pub use string_integral::{
     ARROW_CAST_OPERAND_NAME, SparkCoercionCastMark, SparkStringIntegralCast,
-    insert_string_integral_before_coercion, string_integral_cast_parts,
+    insert_string_integral_before_coercion, narrow_cast_parts, string_integral_cast_parts,
 };
 
 pub use repark_common::udf_names::CAST_MAP_NAME;
@@ -453,5 +453,7 @@ impl ScalarUDFImpl for SparkCastMap {
     }
 }
 
+#[cfg(test)]
+mod narrow_tests;
 #[cfg(test)]
 mod tests;

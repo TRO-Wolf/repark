@@ -18,17 +18,26 @@ const RULE_NAME: &str = "repark_stats_barrier";
 
 static STATS_BARRIER: LazyLock<Arc<ScalarUDF>> = LazyLock::new(|| {
     Arc::new(ScalarUDF::from(StatsBarrier {
+        force_nullable: false,
+        signature: Signature::any(1, Volatility::Immutable),
+    }))
+});
+
+static STATS_BARRIER_NULLABLE: LazyLock<Arc<ScalarUDF>> = LazyLock::new(|| {
+    Arc::new(ScalarUDF::from(StatsBarrier {
+        force_nullable: true,
         signature: Signature::any(1, Volatility::Immutable),
     }))
 });
 
 #[must_use]
 pub(crate) fn stats_barrier_udf() -> Arc<ScalarUDF> {
-    Arc::clone(&STATS_BARRIER)
+    Arc::clone(&STATS_BARRIER_NULLABLE)
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 struct StatsBarrier {
+    force_nullable: bool,
     signature: Signature,
 }
 
@@ -52,7 +61,14 @@ impl ScalarUDFImpl for StatsBarrier {
         let [field] = args.arg_fields else {
             return plan_err!("{STATS_BARRIER_NAME} takes one argument");
         };
-        Ok(Arc::new(field.as_ref().clone().with_name(self.name())))
+        let nullable = self.force_nullable || field.is_nullable();
+        Ok(Arc::new(
+            field
+                .as_ref()
+                .clone()
+                .with_name(self.name())
+                .with_nullable(nullable),
+        ))
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
@@ -144,15 +160,36 @@ fn barrier_node(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     }
 }
 
+fn logical_operand_nullable(operand: &Expr, schema: &DFSchema) -> bool {
+    match operand {
+        Expr::ScalarSubquery(_) => true,
+        Expr::Alias(alias) => logical_operand_nullable(&alias.expr, schema),
+        Expr::Negative(inner) => logical_operand_nullable(inner, schema),
+        Expr::Cast(cast) => logical_operand_nullable(&cast.expr, schema),
+        Expr::BinaryExpr(binary) => {
+            logical_operand_nullable(&binary.left, schema)
+                || logical_operand_nullable(&binary.right, schema)
+        }
+        _ => operand.nullable(schema).unwrap_or(true),
+    }
+}
+
 fn barrier_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     match expr {
         Expr::Cast(Cast {
             expr: operand,
             field,
-        }) if needs_barrier(&operand, &field, schema) => Transformed::yes(Expr::Cast(Cast {
-            expr: Box::new(stats_barrier_udf().call(vec![*operand])),
-            field,
-        })),
+        }) if needs_barrier(&operand, &field, schema) => {
+            let barrier = if logical_operand_nullable(&operand, schema) {
+                Arc::clone(&STATS_BARRIER_NULLABLE)
+            } else {
+                Arc::clone(&STATS_BARRIER)
+            };
+            Transformed::yes(Expr::Cast(Cast {
+                expr: Box::new(barrier.call(vec![*operand])),
+                field,
+            }))
+        }
         other => Transformed::no(other),
     }
 }
@@ -174,18 +211,102 @@ pub(crate) fn keeps_order(source: &DataType, target: &DataType) -> bool {
     source == target
         || (source.is_numeric() || *source == DataType::Boolean)
             && target.is_numeric()
-            && float_keeps_order(source, target)
+            && numeric_keeps_order(source, target)
         || is_text(source) && is_text(target)
         || is_binary(source) && is_binary(target)
         || temporal_keeps_order(source, target)
 }
 
-fn float_keeps_order(source: &DataType, target: &DataType) -> bool {
-    match (float_width(source), float_width(target)) {
-        (None, _) => true,
-        (Some(from), Some(to)) => from <= to,
-        (Some(_), None) => false,
+fn numeric_keeps_order(source: &DataType, target: &DataType) -> bool {
+    if let Some(from) = float_width(source) {
+        return float_width(target).is_some_and(|to| from <= to);
     }
+    if let Some(to) = float_width(target) {
+        return non_float_fits_float(source, to);
+    }
+    if let (Some((from_low, from_high)), Some((to_low, to_high))) =
+        (int_bounds(source), int_bounds(target))
+    {
+        return from_low >= to_low && from_high <= to_high;
+    }
+    if let (Some((precision, scale)), Some((to_low, to_high))) =
+        (decimal_shape(source), int_bounds(target))
+    {
+        return to_low < 0
+            && decimal_max_integer(precision, scale)
+                .is_some_and(|top| to_low <= -top && top <= to_high);
+    }
+    if let (Some((from_precision, from_scale)), Some((to_precision, to_scale))) =
+        (decimal_shape(source), decimal_shape(target))
+    {
+        let from_int = i32::from(from_precision) - i32::from(from_scale);
+        let to_int = i32::from(to_precision) - i32::from(to_scale);
+        return if to_scale < from_scale {
+            to_int > from_int
+        } else {
+            to_int >= from_int
+        };
+    }
+    if let (Some((from_low, from_high)), Some((to_precision, to_scale))) =
+        (int_bounds(source), decimal_shape(target))
+    {
+        if to_scale < 0 {
+            return false;
+        }
+        let integer_digits = i32::from(to_precision) - i32::from(to_scale);
+        if integer_digits >= 20 {
+            return true;
+        }
+        let max_abs = from_low.unsigned_abs().max(from_high.unsigned_abs());
+        return decimal_max_integer(to_precision, to_scale)
+            .and_then(|top| u128::try_from(top).ok())
+            .is_some_and(|top| max_abs <= top);
+    }
+    false
+}
+
+fn non_float_fits_float(source: &DataType, target_bits: u8) -> bool {
+    match target_bits {
+        64 => true,
+        32 => decimal_shape(source)
+            .is_none_or(|(precision, scale)| i32::from(precision) - i32::from(scale) <= 38),
+        16 => matches!(source, DataType::Boolean | DataType::Int8 | DataType::UInt8),
+        _ => false,
+    }
+}
+
+fn int_bounds(data_type: &DataType) -> Option<(i128, i128)> {
+    match data_type {
+        DataType::Boolean => Some((0, 1)),
+        DataType::Int8 => Some((i128::from(i8::MIN), i128::from(i8::MAX))),
+        DataType::Int16 => Some((i128::from(i16::MIN), i128::from(i16::MAX))),
+        DataType::Int32 => Some((i128::from(i32::MIN), i128::from(i32::MAX))),
+        DataType::Int64 => Some((i128::from(i64::MIN), i128::from(i64::MAX))),
+        DataType::UInt8 => Some((0, i128::from(u8::MAX))),
+        DataType::UInt16 => Some((0, i128::from(u16::MAX))),
+        DataType::UInt32 => Some((0, i128::from(u32::MAX))),
+        DataType::UInt64 => Some((0, i128::from(u64::MAX))),
+        _ => None,
+    }
+}
+
+fn decimal_shape(data_type: &DataType) -> Option<(u8, i8)> {
+    match data_type {
+        DataType::Decimal32(precision, scale)
+        | DataType::Decimal64(precision, scale)
+        | DataType::Decimal128(precision, scale)
+        | DataType::Decimal256(precision, scale) => Some((*precision, *scale)),
+        _ => None,
+    }
+}
+
+fn decimal_max_integer(precision: u8, scale: i8) -> Option<i128> {
+    let integer_digits = i32::from(precision) - i32::from(scale);
+    if integer_digits <= 0 {
+        return Some(0);
+    }
+    let exponent = u32::try_from(integer_digits).ok()?;
+    10i128.checked_pow(exponent)?.checked_sub(1)
 }
 
 fn float_width(data_type: &DataType) -> Option<u8> {

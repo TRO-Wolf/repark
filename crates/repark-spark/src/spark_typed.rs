@@ -557,7 +557,7 @@ impl ScalarUDFImpl for SuffixLiteral {
             .and_then(|scalar| scalar.as_ref())
             .copied();
         let name = suffix_literal_name(scalar);
-        Ok(Field::new(name, first.data_type().clone(), true).into())
+        Ok(Field::new(name, first.data_type().clone(), first.is_nullable()).into())
     }
 
     fn display_name(&self, args: &[Expr]) -> Result<String> {
