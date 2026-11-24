@@ -2,39 +2,62 @@
 
 **Date:** 2026-11-23. **Filed by:** the orchestrator (`claude-opus-5-5`), from an outside risk review that named the
 hazard, and a measurement here. **Severity:** S1 (owner, 2026-11-23): a silent wrong answer. A filter on the subquery
-drops every row, or keeps every row. **Status:** filed, queued after DATE-PART-SESSION-ZONE-1 (owner, 2026-11-23).
+drops every row, or keeps every row. **Status:** built on `fix/scalar-subquery-empty-null-1` (2026-11-23,
+`gemini-4-neon-xhigh`). Evidence: [task/wo/scalar-subquery-empty-null-1/evidence/summary.md](../../../wo/scalar-subquery-empty-null-1/evidence/summary.md).
 
-## Measured
+## Measured on main (`fa7d75e44`, unchanged from `e80e6bc8`)
 
-These were measured on RePark main `e80e6bc8` and Spark 4.1.2, in both ANSI modes, with the same answers in each mode.
-`t` is `(SELECT 1 AS id, 'abc' AS s UNION ALL SELECT 2, '7')`. `empty` is `(SELECT 1 AS b WHERE 1 = 0)`, so its one
-column is NOT NULL and it has no rows.
+- **Read matrix (121 cells per ANSI mode against live Spark 4.1.2):** 60 silent wrong answers in each ANSI mode (57
+  caused by this defect + 3 empty-table `GROUP BY ROLLUP`/`CUBE`/`GROUPING SETS (())` divergence), 3 pre-existing
+  unaggregated correlated non-LIMIT errors, 44 `NONNULL_WITH_NULLS` Arrow schema violations, plus runtime Arrow errors
+  on `inline_utf8view_subq` (`SELECT (SELECT 'hello' WHERE false)`) and `CAST((SELECT d FROM empty_nn) AS TIMESTAMP)`.
+  Native `repark.sql()` reproduced the same 60 wrong answers against DuckDB/Trino.
+- **DataFrame / expression / stored-plan doors:** `F.expr`, `filter(Column)` from `F.expr`, `filter(str)`,
+  `selectExpr`, `withColumn`, `.scalar()`, SQL and DataFrame temp views (including ANSI-flip), cached DataFrames,
+  `PREPARE`/`EXECUTE`, CTEs, `CREATE VIEW` (`DESCRIBE` reported `NO`), and
+  `enable_physical_uncorrelated_scalar_subquery=true` all reproduced the defect.
+- **DML / writes:** `INSERT ... WHERE (subquery) IS NULL` and `CTAS ... WHERE (subquery) IS NULL` silently wrote 0 rows
+  on both doors where Spark writes 2 rows.
 
-| Statement | Spark 4.1.2 | RePark `spark.sql` | RePark `repark.sql` | DuckDB 1.5.5 |
-|---|---|---|---|---|
-| `SELECT (SELECT b FROM empty) IS NULL` | true | **false** | **false** | — |
-| `SELECT id FROM t WHERE (SELECT b FROM empty) IS NULL` | 1, 2 | **no rows** | **no rows** | 1, 2 |
-| `SELECT id FROM t WHERE (SELECT b FROM empty) IS NOT NULL` | no rows | **1, 2** | — | — |
-| `SELECT id, coalesce((SELECT b FROM empty), 42) FROM t` | 42, 42 | **NULL, NULL** | **NULL, NULL** | 42, 42 |
-| `SELECT id, (CASE WHEN id = 1 THEN (SELECT b FROM empty) ELSE 1 END) IS NULL FROM t` | true, false | **false, false** | — | — |
+## Fix
 
-A scalar subquery with no rows is NULL in Spark, DuckDB and Trino. So both doors are wrong, each against its own
-oracle.
+Implemented refined Option A+ in `crates/repark-core/src/session/df_guards/scalar_nullable.rs`:
 
-## Cause (read in the pinned sources, not yet traced through a plan)
+- `ReparkScalarSubqueryNullability` (`AnalyzerRule` immediately before `type_coercion` on every session and in
+  `crates/repark-python/src/column/expr_build.rs` `build_expr_context`, `OptimizerRule` immediately before
+  `simplify_expressions`, and invoked in `PreExecute::execute` for `Statement::Prepare` and `DdlStatement::CreateView`)
+  wraps single-column non-null `Expr::ScalarSubquery` outputs lacking `guaranteed_at_least_one_row` in `Volatile` UDF
+  `__repark_scalar_nullable__` (`schema_name` passthrough, `nullable=true`), recomputing ancestor schemas (including
+  `Union` and `Values`).
+- `guaranteed_at_least_one_row` keeps provably-1-row subqueries (`COUNT(*)` without `GROUP BY`, global aggregates,
+  `(SELECT 1)`, non-empty `VALUES`) non-null so constant folding is preserved, while guarding `Sort { fetch: Some(0) }`,
+  `Limit`, `Projection` with `Unnest`/generator UDFs, and grouping sets.
+- `StripScalarNullable` runs immediately after `scalar_subquery_to_join` to remove markers outside surviving subqueries
+  and recompute ancestor schemas, preserving `EliminateOuterJoin`, filter pushdown, CSE, and
+  `enable_physical_uncorrelated_scalar_subquery=true`.
+- **Pins:** Rust unit tests in `crates/repark-core/src/session/df_guards/scalar_nullable.rs` and
+  `crates/repark-core/src/pre_execute/tests.rs`; table-driven facade pins across both doors and Iceberg Hadoop writes
+  in `python/repark/tests/sql/test_scalar_subquery_empty_null_1.py` (`_scalar_subquery_empty_null_1_cells.py`).
 
-- In `datafusion-expr` 54.1.0, `Expr::ScalarSubquery` reports the nullability of the subquery's column
-  (`expr_schema.rs`, `subquery.schema().field(0).is_nullable()`). It ignores that an empty subquery yields NULL.
-- The expression simplifier then folds `IS NULL` to false and `IS NOT NULL` to true for any expression it believes
-  cannot be NULL. `coalesce` drops its later arguments by the same belief.
+## Still unlike Spark (outside this unit)
 
-## Not yet known
-
-- Which seat fixes it without changing plans that answer Spark today. Candidates: a rule that marks scalar subqueries
-  nullable before the simplifier runs, or a change at the decorrelation that turns them into joins.
-- The reach: correlated subqueries, `IN` lists holding a scalar subquery, `CASE` branches, DML predicates (`DELETE` /
-  `UPDATE … WHERE`), `MERGE` conditions, and DataFrame filters built from SQL fragments.
-- Related, not the same: a `TRY_CAST` over a NOT NULL column can crash a function whose output nullability follows its
-  input (`abs(TRY_CAST(s AS INT))`). That is loud and is a separate family.
+1. **Empty-table `GROUP BY ROLLUP(b)` / `CUBE(b)` / `GROUPING SETS (())` (3 cells):** Spark 4.1.2 returns 0 rows over
+   an empty table (`IS NULL` = `true`), whereas DataFusion 54.1.0 (`init_empty_grouping_sets`), DuckDB, and Trino follow
+   standard SQL and return 1 row (`0`, so `0 IS NULL` = `false`). `GROUP BY b, ROLLUP(b)` has no empty grouping set and
+   matches Spark.
+2. **Unaggregated correlated scalar subqueries without `LIMIT` (3 cells):** `corr_nonagg_where_isnull`,
+   `corr_nonagg_select_val`, and `corr_nonagg_coalesce` fail with DataFusion's pre-existing `Invalid (non-executable)
+   plan after Analyzer` error.
+3. **Catalog-table references inside `F.expr` and `filter(str)` (5 cells):** `F.expr` parses against static
+   `EXPR_CONTEXT` and `filter(str)` uses DataFusion's empty-table expression provider, so catalog-table subqueries fail
+   with `table not found` (inline subqueries work on both; `selectExpr` and `.scalar()` work on catalog tables).
+4. **Bare `explode(...)` in `SELECT` without `LATERAL VIEW`:** fails with `[UNRESOLVED_ROUTINE]`.
+5. **Subqueries in `DELETE`, `UPDATE`, and `MERGE`:** `DELETE` and `UPDATE` keep their refusal; `MERGE` with a subquery
+   in `ON`/`WHEN` (which Spark refuses with `[UNSUPPORTED_MERGE_CONDITION.SUBQUERY]`) is unchanged and out of scope.
+6. **Output schema nullability on provably-1-row subqueries (`COUNT(*)`, `(SELECT 1)`):** Spark Catalyst marks all
+   `ScalarSubquery` outputs nullable even when provably non-null; RePark intentionally keeps provably-1-row subqueries
+   non-null to preserve constant folding (never producing `NONNULL_WITH_NULLS`).
+7. **Related, separate family:** `TRY_CAST` over a NOT NULL column crashing a function whose output nullability follows
+   its input (`abs(TRY_CAST(s AS INT))`).
 
 Up: [map.md](map.md).

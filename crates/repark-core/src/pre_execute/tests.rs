@@ -158,3 +158,80 @@ async fn guard_passes_an_update_whose_set_value_has_no_scalar_subquery() {
             .unwrap_or_else(|error| panic!("{sql}: {error}"));
     }
 }
+
+#[tokio::test]
+async fn execute_wraps_empty_scalar_subquery_in_prepare_and_create_view() {
+    let session = crate::ReparkSession::new().expect("session");
+    let empty_schema = Arc::new(Schema::new(vec![Field::new("b", DataType::Int64, false)]));
+    let empty_table = MemTable::try_new(empty_schema, vec![vec![]]).expect("empty table");
+    session
+        .context()
+        .register_table("empty_nn", Arc::new(empty_table))
+        .expect("register empty_nn");
+    let left_schema = Arc::new(Schema::new(vec![Field::new("id", DataType::Int64, false)]));
+    let left_batch = RecordBatch::try_new(
+        Arc::clone(&left_schema),
+        vec![Arc::new(Int64Array::from(vec![1, 2]))],
+    )
+    .expect("left batch");
+    let left_table = MemTable::try_new(left_schema, vec![vec![left_batch]]).expect("left table");
+    session
+        .context()
+        .register_table("l_nn", Arc::new(left_table))
+        .expect("register l_nn");
+
+    let catalogs = CatalogRegistry::new();
+    let belt = PreExecute::new(session.context(), &catalogs);
+
+    belt.run("CREATE VIEW v_subq AS SELECT id, (SELECT b FROM empty_nn) AS r FROM l_nn")
+        .await
+        .expect("create view")
+        .collect()
+        .await
+        .expect("collect create view");
+    let view_table = session
+        .context()
+        .table("v_subq")
+        .await
+        .expect("view registered");
+    assert!(
+        view_table.schema().field(1).is_nullable(),
+        "view schema must record empty scalar subquery column as nullable"
+    );
+    let view_rows = belt
+        .run("SELECT id FROM v_subq WHERE r IS NULL ORDER BY id")
+        .await
+        .expect("query view")
+        .collect()
+        .await
+        .expect("collect view");
+    assert_eq!(
+        view_rows.iter().map(RecordBatch::num_rows).sum::<usize>(),
+        2
+    );
+
+    belt.run("PREPARE p_subq(BIGINT) AS SELECT id, COALESCE((SELECT b FROM empty_nn), $1) AS c FROM l_nn WHERE (SELECT b FROM empty_nn) IS NULL ORDER BY id")
+        .await
+        .expect("prepare")
+        .collect()
+        .await
+        .expect("collect prepare");
+    let exec_rows = belt
+        .run("EXECUTE p_subq(42)")
+        .await
+        .expect("execute prepared")
+        .collect()
+        .await
+        .expect("collect prepared");
+    assert_eq!(
+        exec_rows.iter().map(RecordBatch::num_rows).sum::<usize>(),
+        2
+    );
+    let values = exec_rows[0]
+        .column(1)
+        .as_any()
+        .downcast_ref::<Int64Array>()
+        .expect("c column");
+    assert_eq!(values.value(0), 42);
+    assert_eq!(values.value(1), 42);
+}

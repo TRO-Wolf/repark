@@ -20,6 +20,8 @@ wire up (with `extension.rs` itself) when the session module wires.
   `struct_setop_names` immediately after `type_coercion`.
   **SQL-SETOP-ALL-MULTISET-1 (2026-11-23):** the pin seats `setop_all_multiset` immediately after
   `struct_setop_names`.
+  **SCALAR-SUBQUERY-EMPTY-NULL-1 (2026-11-23):** the pin seats `repark_scalar_subquery_nullability`
+  immediately before `type_coercion`.
 
 `SessionExtension::configure_analyzer_rules` returns a DataFusion error when a door cannot place
 its required analyzer rule in the core-owned vector. Session construction maps that error through

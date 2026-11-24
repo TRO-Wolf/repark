@@ -338,7 +338,8 @@ pub(super) fn build_expr_context() -> datafusion::error::Result<SessionContext> 
         repark_spark::struct_position::insert_expression_struct_position_rule_before_coercion(
             rules,
         )?;
-    let mut rules = repark_functions::cast_map::insert_string_integral_before_coercion(rules)?;
+    let rules = repark_functions::cast_map::insert_string_integral_before_coercion(rules)?;
+    let mut rules = repark_core::scalar_nullable::insert_before_coercion(rules)?;
     rules.push(std::sync::Arc::new(repark_spark::FoldSparkNumericCasts));
     rules.push(std::sync::Arc::new(repark_spark::SparkProjectionDisplay));
     rules.extend(repark_spark::spark_literal_typing::spark_door_post_coercion_rules());
@@ -351,6 +352,7 @@ pub(super) fn build_expr_context() -> datafusion::error::Result<SessionContext> 
         .build();
     let context = SessionContext::new_with_state(state);
     context.register_udf(repark_core::cast_shield_udf().as_ref().clone());
+    context.register_udf(repark_core::scalar_nullable::udf().as_ref().clone());
     context.register_udf(repark_spark::spark_as_udf().as_ref().clone());
     context.register_udf(repark_spark::suffix_literal_udf().as_ref().clone());
     context.register_udf(
@@ -960,8 +962,9 @@ mod tests {
             .iter()
             .position(|name| name == "type_coercion")
             .unwrap();
-        assert_eq!(seat + 2, coercion);
+        assert_eq!(seat + 3, coercion);
         assert_eq!(names[seat + 1], "spark_string_integral_cast");
+        assert_eq!(names[seat + 2], "repark_scalar_subquery_nullability");
         assert_eq!(names[seat - 1], "spark_map_subscript");
         let planners = context.state().expr_planners().len();
         let bare = SessionContext::new().state().expr_planners().len();

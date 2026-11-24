@@ -1,7 +1,10 @@
 //! Shared pre-execute sequencing for every SQL door: plan, guard, then execute.
 
+use std::sync::Arc;
+
+use datafusion::common::tree_node::TransformedResult;
 use datafusion::error::{DataFusionError, Result as DfResult};
-use datafusion::logical_expr::{Expr, LogicalPlan, Statement, WriteOp};
+use datafusion::logical_expr::{DdlStatement, Expr, LogicalPlan, Statement, WriteOp};
 use datafusion::prelude::{DataFrame, SessionContext};
 
 use crate::catalog_state::CatalogRegistry;
@@ -56,6 +59,7 @@ impl<'a> PreExecute<'a> {
     /// # Errors
     /// Any execution failure.
     pub async fn execute(&self, plan: LogicalPlan) -> DfResult<DataFrame> {
+        let plan = prepare_offlist_scalar_subqueries(plan)?;
         self.ctx.execute_logical_plan(plan).await
     }
 
@@ -104,6 +108,26 @@ fn refuse_unanalyzed_prepare(plan: &LogicalPlan, ctx: &SessionContext) -> DfResu
         |_, _| {},
     )?;
     Ok(())
+}
+
+fn prepare_offlist_scalar_subqueries(plan: LogicalPlan) -> DfResult<LogicalPlan> {
+    match plan {
+        LogicalPlan::Statement(Statement::Prepare(mut prepare)) => {
+            let wrapped =
+                crate::session::scalar_nullable::wrap_plan(Arc::unwrap_or_clone(prepare.input))
+                    .data()?;
+            prepare.input = Arc::new(wrapped);
+            Ok(LogicalPlan::Statement(Statement::Prepare(prepare)))
+        }
+        LogicalPlan::Ddl(DdlStatement::CreateView(mut view)) => {
+            let wrapped =
+                crate::session::scalar_nullable::wrap_plan(Arc::unwrap_or_clone(view.input))
+                    .data()?;
+            view.input = Arc::new(wrapped);
+            Ok(LogicalPlan::Ddl(DdlStatement::CreateView(view)))
+        }
+        other => Ok(other),
+    }
 }
 
 #[cfg(test)]

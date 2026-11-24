@@ -26,6 +26,7 @@ pub(crate) mod frame_lineage;
 pub(crate) mod join_exact;
 pub mod join_keys;
 mod predicate_names;
+pub mod scalar_nullable;
 pub(crate) mod self_join;
 mod signed_zero;
 pub(crate) mod skipping_limit;
@@ -170,7 +171,8 @@ pub(super) fn context_with_df_54_1_rule_guards(
     let config = crate::spark_nullable::with_int96_as_instants(config);
     let analyzer_rules =
         extension.configure_analyzer_rules(analyzer_rules_with_df_54_1_rule_guards()?)?;
-    let mut analyzer_rules = dialect.configure_analyzer_rules(analyzer_rules)?;
+    let analyzer_rules = dialect.configure_analyzer_rules(analyzer_rules)?;
+    let mut analyzer_rules = scalar_nullable::insert_before_coercion(analyzer_rules)?;
     let mut optimizer_rules = unnest_safe_optimizer_rules(extension.signed_zero_policy());
     let seat = config.get_extension::<crate::extension::FrameViewSeat>();
     if let Some(seat) = &seat {
@@ -204,6 +206,7 @@ pub(super) fn context_with_df_54_1_rule_guards(
     signed_zero::register_normalize_zero(&context);
     context.register_udf(cast_shield::cast_shield_udf().as_ref().clone());
     context.register_udf(cast_shield::stats_barrier_udf().as_ref().clone());
+    context.register_udf(scalar_nullable::udf().as_ref().clone());
     subquery::register_single_row_guard(&context);
     Ok(context)
 }
@@ -241,12 +244,14 @@ fn unnest_safe_optimizer_rules(
                 rules.push(Arc::new(subquery::ReparkProjectionExists));
                 rules.push(Arc::new(subquery::ReparkScalarSubqueryGuard));
                 rules.push(rule);
+                rules.push(Arc::new(scalar_nullable::StripScalarNullable));
             }
             "decorrelate_lateral_join" => {
                 rules.push(Arc::new(subquery::ReparkLateralProjectionHoist));
                 rules.push(rule);
             }
             "simplify_expressions" => {
+                rules.push(Arc::new(scalar_nullable::ReparkScalarSubqueryNullability));
                 rules.push(Arc::new(cast_shield::CastShieldRule));
                 rules.push(signed_zero::literal_optimizer_seat(policy));
                 rules.push(rule);

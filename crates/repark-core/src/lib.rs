@@ -58,6 +58,7 @@ mod update_fields;
 // --- The Session surface (v1 names, courtesy `Session` alias).
 pub use repark_common::java_case::{fold_b_equal, string_lower_equal};
 pub use session::read_postgres::{PostgresRead, PostgresTarget, READ_POSTGRES_SOURCE};
+pub use session::scalar_nullable;
 pub use session::temp_views::CacheLevel;
 pub use session::{
     DATAFUSION_CONFIG_PREFIX, ReparkSession, ReparkSession as Session, ReparkSessionBuilder,
@@ -74,11 +75,10 @@ pub use backend::{ExecutionBackend, SingleNodeBackend};
 pub use dialect::{DataFusionDialect, EngineContext, SqlDialect, TempViewSession};
 pub use extension::{SessionBuildConf, SessionExtension};
 pub use idents::{spark_numeric_literal, spark_target_grammar_message};
+pub use parallel_window::parallel_single_partition_active;
 pub use pre_execute::{
     PreExecute, insert_multiset_set_operations, is_multiset_set_operation, minus_all_as_except_all,
 };
-
-pub use parallel_window::parallel_single_partition_active;
 pub use runtime::{EngineRuntime, built_with_debug_assertions};
 
 // --- Catalog configuration + engine-side registry (hoisted).
