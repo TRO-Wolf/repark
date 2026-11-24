@@ -890,3 +890,51 @@ async fn a_naive_ntz_timestamp_is_not_shifted_by_the_session_zone() {
         "NTZ hour is the spelled wall, not the New York instant (8)"
     );
 }
+
+#[tokio::test]
+async fn date_part_datepart_and_extract_read_the_session_zone_on_the_spark_door() {
+    let new_york = session_at(NEW_YORK);
+    register_instants(&new_york, &["2024-01-01T02:00:00Z"]);
+    let (types, columns) = int_columns(
+        &new_york,
+        "SELECT date_part('year', ts), date_part('month', ts), date_part('day', ts), \
+         date_part('doy', ts), date_part('quarter', ts), date_part('week', ts), \
+         date_part('dayofweek', ts), date_part('hour', ts), datepart('hour', ts), \
+         extract(YEAR FROM ts), extract(HOUR FROM ts), extract(DOW FROM ts), \
+         extract(DAYOFWEEK FROM ts) FROM t",
+    )
+    .await;
+    assert_eq!(types, vec![DataType::Int32; 13]);
+    let actual: Vec<i32> = columns.into_iter().map(|col| col[0]).collect();
+    assert_eq!(
+        actual,
+        vec![2023, 12, 31, 365, 4, 52, 1, 21, 21, 2023, 21, 1, 1]
+    );
+    assert_eq!(
+        ints(
+            &new_york,
+            "SELECT date_part('hour', ts) FROM t WHERE date_part('year', ts) = 2023"
+        )
+        .await,
+        vec![21]
+    );
+    assert_eq!(
+        ints(
+            &new_york,
+            "SELECT extract(HOUR FROM ts) FROM t WHERE extract(YEAR FROM ts) = 2023"
+        )
+        .await,
+        vec![21]
+    );
+
+    let kolkata = session_at(KOLKATA);
+    register_instants(&kolkata, &["2024-01-01T18:45:00Z"]);
+    let (_, columns) = int_columns(
+        &kolkata,
+        "SELECT date_part('day', ts), date_part('hour', ts), date_part('minute', ts), \
+         extract(DAY FROM ts), extract(HOUR FROM ts), extract(MINUTE FROM ts) FROM t",
+    )
+    .await;
+    let actual: Vec<i32> = columns.into_iter().map(|col| col[0]).collect();
+    assert_eq!(actual, vec![2, 0, 15, 2, 0, 15]);
+}

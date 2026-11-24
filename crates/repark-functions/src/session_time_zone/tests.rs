@@ -6,7 +6,8 @@ use datafusion::common::config::{ConfigExtension, ConfigOptions, ExtensionOption
 use datafusion::prelude::{SessionConfig, SessionContext};
 
 use super::{
-    DEFAULT_EXTRACTION_TIME_ZONE, SessionTimeZoneConfig, session_time_zone_from_options,
+    DEFAULT_EXTRACTION_TIME_ZONE, DeferredSessionTimeZoneConfig, SessionTimeZoneConfig,
+    is_session_time_zone_deferred, session_time_zone_from_options, with_deferred_session_time_zone,
     with_session_time_zone,
 };
 
@@ -171,4 +172,31 @@ async fn current_timezone_defaults_to_utc_without_the_carrier() {
         .downcast_ref::<arrow::array::StringArray>()
         .expect("a utf8 column");
     assert_eq!(values.value(0), DEFAULT_EXTRACTION_TIME_ZONE);
+}
+
+#[tokio::test]
+async fn deferred_session_time_zone_marker_is_separate_and_not_settable() {
+    assert!(!is_session_time_zone_deferred(&ConfigOptions::default()));
+    let config = with_deferred_session_time_zone(SessionConfig::new());
+    assert!(is_session_time_zone_deferred(config.options()));
+    assert!(
+        config
+            .options()
+            .extensions
+            .get::<SessionTimeZoneConfig>()
+            .is_none()
+    );
+    let mut marker = DeferredSessionTimeZoneConfig;
+    assert!(marker.set("enabled", "true").is_err());
+    assert!(marker.entries().is_empty());
+    let ctx = SessionContext::new_with_config(config);
+    assert!(
+        ctx.sql("SET repark.deferred_session_tz.enabled = 'true'")
+            .await
+            .is_err()
+    );
+    assert_eq!(
+        DeferredSessionTimeZoneConfig::PREFIX,
+        "repark.deferred_session_tz"
+    );
 }

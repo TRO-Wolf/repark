@@ -48,9 +48,6 @@ _RESIDUE: dict[str, list[str]] = json.loads(
 )
 _CELLS: list[dict[str, Any]] = oracle_cells(_ORACLE)
 _CONTROL_YEAR = 2099
-_ZONE_BLIND = frozenset(
-    ("extract_hour", "extract_minute", "extract_doy", "date_part_hour", "date_part_day")
-)
 _UPSTREAM_SHIFT = frozenset(
     (
         "from_utc_timestamp",
@@ -120,9 +117,7 @@ def test_every_residue_cell_is_explained() -> None:
             cell["fn"] in _NANOSECOND_RANGE and cell["year"] > _NANOSECOND_LAST_YEAR
         )
         on_a_transition_day = cell["fn"] in _ELAPSED_IN_DAY and cell["probe"].endswith("_at")
-        named = (
-            cell["fn"] in _ZONE_BLIND | _UPSTREAM_SHIFT or beyond_nanoseconds or on_a_transition_day
-        )
+        named = cell["fn"] in _UPSTREAM_SHIFT or beyond_nanoseconds or on_a_transition_day
         if not named and control not in residue:
             unexplained.append(key)
     assert unexplained == []

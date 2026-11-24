@@ -117,7 +117,7 @@ fn ltz_literal_of_string(text: &str, session_zone: Tz) -> Option<ScalarValue> {
 }
 
 #[must_use]
-pub(crate) fn spark_string_literal(expr: &Expr, zone: &str) -> Option<Expr> {
+pub(crate) fn spark_string_literal(expr: &Expr, zone: Option<&str>) -> Option<Expr> {
     let Expr::Literal(scalar, _) = expr else {
         return None;
     };
@@ -127,12 +127,23 @@ pub(crate) fn spark_string_literal(expr: &Expr, zone: &str) -> Option<Expr> {
         | ScalarValue::Utf8View(Some(text)) => text.as_str(),
         _ => return None,
     };
-    let parsed_zone = zone.parse::<Tz>().ok()?;
+    let effective_zone = match zone {
+        Some(zone) => zone,
+        None if crate::instant_ts::string_carries_timezone(text) => {
+            crate::session_time_zone::DEFAULT_EXTRACTION_TIME_ZONE
+        }
+        None => return None,
+    };
+    let parsed_zone = effective_zone.parse::<Tz>().ok()?;
     ltz_literal_of_string(text, parsed_zone).map(|literal| Expr::Literal(literal, None))
 }
 
 #[must_use]
-pub(crate) fn rewrite_string_try_cast(expr: &Expr, schema: &DFSchema, zone: &str) -> Option<Expr> {
+pub(crate) fn rewrite_string_try_cast(
+    expr: &Expr,
+    schema: &DFSchema,
+    zone: Option<&str>,
+) -> Option<Expr> {
     let Expr::TryCast(try_cast) = expr else {
         return None;
     };

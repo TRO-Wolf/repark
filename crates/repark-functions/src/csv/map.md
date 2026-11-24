@@ -26,7 +26,9 @@ record per row; the `fold` analyzer rule validates the options literal and folds
   never `str::parse` alone); `csv_boolean` (`equalsIgnoreCase`, so `falſe` is `false`);
   `csv_decimal` (`new BigDecimal(text.replaceAll(",", ""))`, HALF_UP to the scale, NULL on a
   precision overflow, an exponent answered without work proportional to it); `csv_date`
-  (`stringToDate`, years of four to seven digits, then the `GMT`-stripped retry); `csv_timestamp`
+  (`stringToDate`, years of four to seven digits, then the `GMT`-stripped retry;
+  `spark_string_to_date` is `pub(crate)` and reused by `datetime::spark_date_part` for Spark
+  `STRING` → `DATE` coercion); `csv_timestamp`
   (`stringToTimestamp` in the session zone, the same retry); `csv_timestamp_ntz`
   (`parseWithoutTimeZone`: a zone or a time alone is a misfit, and no zone is ever read). The
   array kernel `csv_field_array` answers NULL for a NULL text and for a misfit, and

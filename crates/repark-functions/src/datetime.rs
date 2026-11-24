@@ -1,14 +1,13 @@
 //! Spark calendar functions and date-part shims.
 
 use std::hash::{Hash, Hasher};
-use std::str::FromStr;
 use std::sync::Arc;
 
 use arrow::array::timezone::Tz;
 use arrow::array::{
     Array, ArrayRef, AsArray, Date32Array, StringBuilder, TimestampMicrosecondArray,
 };
-use arrow::compute::{DatePart, cast, date_part};
+use arrow::compute::{DatePart, cast};
 use arrow::datatypes::{
     DataType, Date32Type, Int32Type, Int64Type, TimeUnit, TimestampMicrosecondType,
 };
@@ -19,15 +18,15 @@ use datafusion::logical_expr::{
     ColumnarValue, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Volatility,
 };
 
-use crate::session_time_zone::session_time_zone_from_options;
-
 mod session_wall;
+pub mod spark_date_part;
 
 pub(crate) use session_wall::{
     datetime_from_micros, local_datetime_from_micros, localize_wall_micros_in_zone,
     micros_from_local_datetime, offset_at_instant,
 };
-use session_wall::{instant_part, within_the_tables};
+use session_wall::{extract_calendar_part, extraction_time_zone, is_instant};
+pub use spark_date_part::{date_part_udf, extract_date_part_rule};
 
 /// `date_trunc` returns a microsecond timestamp with Spark's LTZ wire type.
 const TIMESTAMP_UNIT: TimeUnit = TimeUnit::Microsecond;
@@ -57,6 +56,7 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         date_format_udf(),
         trunc_udf(),
         date_trunc_udf(),
+        date_part_udf(),
     ]
 }
 
@@ -180,35 +180,6 @@ fn coerce_date_arg(arg: &DataType) -> Option<DataType> {
     }
 }
 
-/// Resolve the session zone once per invocation and retain a typed error for invalid carriers.
-fn extraction_time_zone(options: &ConfigOptions) -> Result<Tz> {
-    let zone = session_time_zone_from_options(options);
-    Tz::from_str(zone).map_err(|error| {
-        DataFusionError::Execution(format!(
-            "session timezone {zone:?} could not be resolved at query time ({error})"
-        ))
-    })
-}
-
-/// Return the zone annotation of an already-coerced argument.
-fn is_instant(arg: &DataType) -> bool {
-    matches!(arg, DataType::Timestamp(_, Some(_)))
-}
-
-/// Re-annotate an instant array without changing its epoch ticks.
-fn resolve_instant_in_zone(array: &ArrayRef, zone: &str) -> Result<ArrayRef> {
-    if !is_instant(array.data_type()) {
-        return Ok(Arc::clone(array));
-    }
-    let DataType::Timestamp(unit, _) = array.data_type() else {
-        return Ok(Arc::clone(array));
-    };
-    Ok(cast(
-        array.as_ref(),
-        &DataType::Timestamp(*unit, Some(zone.into())),
-    )?)
-}
-
 /// `DatePartUdf` — vectorized calendar-field extraction with a Spark indexing offset.
 #[derive(Debug)]
 struct DatePartUdf {
@@ -273,26 +244,14 @@ impl ScalarUDFImpl for DatePartUdf {
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        let zone = session_time_zone_from_options(args.config_options.as_ref());
         let arrays = ColumnarValue::values_to_arrays(&args.args)?;
-        if is_instant(arrays[0].data_type()) && !within_the_tables(&arrays[0]) {
-            let zone = extraction_time_zone(args.config_options.as_ref())?;
-            return instant_part(&arrays[0], zone, self.part, self.spark_offset)
-                .map(ColumnarValue::Array);
-        }
-        let resolved = resolve_instant_in_zone(&arrays[0], zone)?;
-        let extracted = date_part(resolved.as_ref(), self.part)?;
-        let extracted = cast(extracted.as_ref(), &DataType::Int32)?;
-        let result = if self.spark_offset == 0 {
-            extracted
-        } else {
-            let offset = self.spark_offset;
-            let shifted = extracted
-                .as_primitive::<Int32Type>()
-                .unary::<_, Int32Type>(|v| v + offset);
-            Arc::new(shifted) as ArrayRef
-        };
-        Ok(ColumnarValue::Array(result))
+        extract_calendar_part(
+            &arrays[0],
+            args.config_options.as_ref(),
+            self.part,
+            self.spark_offset,
+        )
+        .map(ColumnarValue::Array)
     }
 }
 
