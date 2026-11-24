@@ -288,8 +288,7 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   keeps it as a `sequence` alias on `SparkSequence` while the SQL door keeps DataFusion's
   native spelling for its table-function callers — C-003's reroute exposed the split,
   overwriting the door would break `FROM generate_series` users.
-  **ABS-EXPR-1 (2026-09-13):** `EXPECTED_DIVERGENCES` gains `abs` (`SparkAbs` wraps on integer-min), pinned by `test_abs_door_parity_integer_min`. Table 21 → 22.
-  **TYPES-1 (2026-09-05):** `from_unixtime` left EXPECTED_DIVERGENCES (ratchet 22 → 21).
+  **ABS-EXPR-1:** +`abs` (21→22). **TYPES-1:** −`from_unixtime` (22→21). **DATE-PART-SESSION-ZONE-1 (2026-11-23):** `facade_date_part_udf` (14); `expr_build.rs` seats `spark_extract_date_part`.
   **CASESENS-1 S3 (2026-09-27):** `column_keeps_the_written_spelling` pins
   `written_column` (`ID` bare, `t.ID` qualified, `` `a.b` `` dotted).
   **CASESENS-1 final fold (2026-09-28):** `exact_predicate_refuses_a_case_only_match` pins
@@ -316,10 +315,8 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   facade shares the SQL door's array-aware kernel instead of the string-only lowering.
 - `sequence` routes through `function_dispatch/dispatch_spark.rs` (DOOR-CONVERGE-2): the
   facade shares the SQL door's kernel with the literal-expansion ceiling kept.
-- `split` routes through `function_dispatch/dispatch_spark.rs` (DOOR-CONVERGE-2): the Rust
-  arm is ready, but Python `F.split` raises before reaching it (run 16a owns that half).
-- `split` answers through the same arm (FNP-MATH-1 step 6, run 18a, D-8): `F.split` binds the kernel
-  with Spark names, and the door-converge-2 guard pin flips to answer-compare.
+- `split` routes through `function_dispatch/dispatch_spark.rs` (DOOR-CONVERGE-2; FNP-MATH-1 step 6):
+  `F.split` binds the kernel with Spark names on both doors.
 - `bround` routes through `function_dispatch/dispatch_spark.rs` (FNP-MATH-1 run 18a): the
   name joins the door-converged list (one line — the parent file sits at its ceiling) and the
   arm builds `spark_math::call_bround` over 1–2 args.
@@ -362,6 +359,6 @@ sync after changes.
 
 - Up: [src map](../map.md)
 - Crate: [repark-python map](../../map.md)
-- **FNP-4B (2026-09-15):** `expr_build.rs` / `mod.rs` comments removed (2026-08-26); `mod.rs` ceiling 1038.
+- **FNP-4B (2026-09-15):** `expr_build.rs` / `mod.rs` comments removed (2026-08-26); `mod.rs` adds `is_bare_generator` (SQL-EXPLODE-1, 2026-11-23) so the facade keeps unaliased generator calls bare.
 - **FNP-AGG-1 (d) (2026-09-21):** `nary_aggregate_udaf`, `grouping_id`, `grouping_id_column`, `aggregate_binary` vec (`mod.rs` 1012).
-- **`build_expr_context` / `plan_expr_column`:** ICE-TSNS-TYPE-PLANNER-1 (10-13) registers `SparkTypePlanner`; STRUCT-SETOP-REORDER-REFUSAL-1 (11-09) + STRUCT-COMPARE-BY-POSITION-1 seat struct checks around `type_coercion`; FEXPR-WINDOW-NULL-ORDER-1 (11-12) + FILTER-STRING-NULL-ORDER-1 (11-13) set `nulls_min`; **FILTER-STRING-ESCAPED-QUOTE-1 (2026-11-24):** `plan_expr_column` wraps `SELECT ({canonical}\n) AS _repark_expr` so trailing `--` comments never comment out `)`. All pinned (`expr_tests.rs`, `expr_build.rs`).
+- **`build_expr_context` / `plan_expr_column`:** ICE-TSNS-TYPE-PLANNER-1 (10-13) registers `SparkTypePlanner`; STRUCT-SETOP-REORDER-REFUSAL-1 (11-09) + STRUCT-COMPARE-BY-POSITION-1 seat struct checks around `type_coercion`; FEXPR-WINDOW-NULL-ORDER-1 (11-12) + FILTER-STRING-NULL-ORDER-1 (11-13) set `nulls_min`; DATE-PART-SESSION-ZONE-1 (11-24) attaches `with_deferred_session_time_zone` so zoneless `TIMESTAMP` literals defer to runtime; **FILTER-STRING-ESCAPED-QUOTE-1 (2026-11-24):** `plan_expr_column` wraps `SELECT ({canonical}\n) AS _repark_expr` so trailing `--` comments never comment out `)`. All pinned (`expr_tests.rs`, `expr_build.rs`).

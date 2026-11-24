@@ -69,7 +69,6 @@ impl PyColumn {
     }
 }
 
-// The fence converts Rust panics into catchable PySpark exceptions at the Python boundary.
 #[allow(
     clippy::must_use_candidate,
     clippy::return_self_not_must_use,
@@ -867,6 +866,12 @@ impl PyColumn {
     pub fn display_name(&self) -> PyResult<String> {
         fenced!("Column.display_name", {
             Ok(self.grown_read(|expr| expr.schema_name().to_string()))
+        })
+    }
+
+    pub fn is_bare_generator(&self) -> PyResult<bool> {
+        fenced!("Column.is_bare_generator", {
+            Ok(self.grown_read(repark_functions::generator::is_bare_generator_expr))
         })
     }
 

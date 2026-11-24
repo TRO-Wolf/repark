@@ -10,19 +10,23 @@ path stay in `spark_literals.rs`.
 
 ## Contents
 
-- `mod.rs` — the shared span helpers (`line_starts`, `byte_offset`,
-  `skip_whitespace`, `matching_paren`, the last two `pub(crate)` since the
-  STRING-LITERAL-ESCAPE-1 DIFF-PROBE fold (2026-09-29) so `spark_literals`
-  DDL spans reuse them) and the pre-existing rewrite families:
-  numeric suffixes (**FNP-4B**), `0x` hex identifiers, FROM-less `DELETE`, DROP
-  TEMPORARY, wildcard `EXCEPT`, the INSERT `PARTITION (…) (cols)` order swap,
-  and call-base struct field access. **WO-A5 (2026-09-23):** the
-  `INVALID_NUMERIC_LITERAL_RANGE` producer has a direct `engine_err` pin for its complete
-  bracketed parse message.
-  **DECIMAL-DIVIDE-LITERAL-1 (2026-11-17):** a `3S` or `3L` that is an operand of `* / % + -`
-  or an argument of `mod(` / `pmod(` is spelled `__repark_suffix_literal__(CAST(3 AS BIGINT))`
-  (`spell_integer_suffix`, [decimal_precision/](../../../repark-functions/src/decimal_precision/map.md)),
-  so the literal step tells it from a written cast; elsewhere the plain cast stays.
+- `mod.rs` — the shared span and inner-region splicing helpers (`line_starts`,
+  `byte_offset`, `skip_whitespace`, `matching_paren`, `splice_inners`,
+  `collect_inners`, `retain_outside`) and the rewrite families: numeric suffixes
+  (**FNP-4B**), `0x` hex identifiers, FROM-less `DELETE`, DROP TEMPORARY, wildcard
+  `EXCEPT`, and the INSERT `PARTITION (…) (cols)` order swap (splicing inner
+  regions so rewrites inside `PARTITION (…)` survive without overlapping later
+  regions). **WO-A5 (2026-09-23):** the `INVALID_NUMERIC_LITERAL_RANGE` producer
+  has a direct `engine_err` pin for its complete bracketed parse message.
+  **DECIMAL-DIVIDE-LITERAL-1 (2026-11-17):** a `3S` or `3L` that is an operand of
+  `* / % + -` or an argument of `mod(` / `pmod(` is spelled
+  `__repark_suffix_literal__(CAST(3 AS BIGINT))` (`spell_integer_suffix`,
+  [decimal_precision/](../../../repark-functions/src/decimal_precision/map.md)), so
+  the literal step tells it from a written cast; elsewhere the plain cast stays.
+- `struct_field.rs` — call-base `named_struct(…).field` access (moved out of
+  `mod.rs` for the file-size ceiling): extracts literal field spans (including
+  nested `named_struct`) or falls back to subscript access while splicing inner
+  `LiteralRegion` rewrites (including `extract_field`) into the extracted value.
 - `timestamp_ltz_literal.rs` — **WO U9-TYPES-1 (2026-09-25):**
   `plan_timestamp_ltz_literal_regions` rewrites an unquoted `TIMESTAMP_LTZ` word that a
   single- or double-quoted string follows (whitespace allowed; the Spark door lexes `"…"` as a
@@ -36,6 +40,14 @@ path stay in `spark_literals.rs`.
   string refuses Spark's `INVALID_TYPED_LITERAL` with the `== SQL` window at plan time.
   A cast target, a quoted name and a bare identifier stay untouched (unit pins in the
   file).
+- `extract_field.rs` — **EXTRACT-FIELD-ALIASES-1 (2026-11-23):**
+  `plan_extract_field_regions` rewrites `extract(<field> FROM` into `date_part('<field>',`
+  for the Spark spellings (`DATE_PART_SPELLINGS`) the stock parser refuses or misreads,
+  so they plan through the session `date_part` (Spark's field mapping). `spark_literals.rs`
+  `canonicalize_verbatim` runs it on every Spark-door statement and `F.expr` fragment that
+  holds the word `extract`; region-splicing passes (`struct_field.rs`, `create_options.rs`,
+  and the `INSERT PARTITION` swap) preserve its regions. The other fields, unknown fields
+  and quoted words stay as written (unit pins in the file).
 - `create_options.rs` — **D-5 (2026-09-21):** the `OPTIONS` → `TBLPROPERTIES`
   seam. Recognizes `CREATE [OR REPLACE] TABLE [IF NOT EXISTS] name [(cols)]
   USING iceberg` and rewrites its single well-formed `OPTIONS (k=v, …)` clause

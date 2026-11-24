@@ -31,38 +31,23 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `from_xml` / `schema_of_xml` (FNP-GEN-1 D-6, dated 2026-09-15, message names
   `FNP-16-csv-xml-xpath`) likewise. `armed_names()` is 64.
   pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-013, fnp-gen-1/C-002, C-003
-- `generator.rs` — **FNP-GEN-1 step 2 (2026-09-16):** placeholder `ScalarUDF`s for
-  `posexplode` / `posexplode_outer` / `inline` / `inline_outer` plus the
-  `__repark_gen_alias` marker that carries multi-name aliases out of the facade, and
-  `GeneratorRewrite`, the analyzer rule that rewrites a `Projection` holding exactly one
-  generator call into inner-projection → one multi-column `Unnest` →
-  final-projection, splicing the generated columns at the call's select-list position.
-  `posexplode` gets `pos` from the internal `__repark_gen_ordinality` UDF (positions per
-  list element) unnested in parallel with the values; `inline` reads struct fields
-  through `__repark_gen_field`, which unions the parent struct's validity into the
-  child so a NULL element emits NULL fields rather than Arrow defaults; the outer
-  spellings normalize NULL/empty inputs to a one-NULL-element list so `preserve_nulls`
-  emits Spark's all-NULL row. Intended-non-nullable outputs wrap in the
-  `__repark_spark_nonnull__` schema marker (value-preserving). A single `AS name` or
-  `__repark_gen_alias` name list must match the output arity or the rewrite raises
-  `[COLUMN_ALIASES_MISMATCH]`; two generators, a `stack` call, an explode-path
-  `__repark_arr_*` temp alias, or a sibling column carrying a reserved
-  `__repark_gen_*` name all refuse `Only one generator allowed per select list`;
-  a generator argument that is or references an aggregate output refuses
-  `[MISSING_GROUP_BY]`; nested calls and non-container inputs refuse
-  `[UNSUPPORTED_GENERATOR]`-class. Registered from `lib.rs::register_all`; the rule
-  registers at the tail of `analyzer_rules()` in `registration.rs`, after the closing
-  `TypeCoercion`. The `#[cfg(test)]` suite lives in [`generator/tests.rs`](generator/tests.rs)
-  (moved out in remediation round 1 so this file keeps the size ceiling).
-  **Step 2 (run 18a):** `json_tuple` joins the rule — its site carries every argument
-  (the document plus the field expressions), non-string arguments refuse
-  `[DATATYPE_MISMATCH.NON_STRING_TYPE]` and fewer than two arguments refuse
-  `[WRONG_NUM_ARGS]`, both with Spark's message shape. The expansion computes one
-  `STRUCT<c0..cN>` per row through the internal `__repark_json_tuple` kernel (one
-  parse per row, no unnest) and reads the fields back through `__repark_gen_field`.
-  A lone alias on a single output is ignored and any other count mismatch raises
-  `[UDTF_ALIAS_NUMBER_MISMATCH]`, both per the s34 oracle; the other four names keep
-  `[COLUMN_ALIASES_MISMATCH]`.
+- `generator.rs` — **FNP-GEN-1 / SQL-EXPLODE-1:** placeholder `ScalarUDF`s for
+  `explode` / `explode_outer` / `posexplode` / `posexplode_outer` / `inline` /
+  `inline_outer` / `json_tuple` plus `__repark_gen_alias`, and `GeneratorRewrite`
+  (single-generator `Projection` → inner projection → `Unnest` → final projection).
+  `explode` / `explode_outer` placeholders expose `col` in the plan schema so outer
+  subqueries, `ORDER BY col`, and unaliased `INSERT` resolve; outer guards widen
+  non-nullable list elements to nullable (`ListArray::try_new`); `GeneratorAliasMark`
+  (first Spark-door rule) turns explicit aliases into `__repark_gen_alias`; a chained marker takes the outer
+  names. Helper UDFs (`__repark_gen_ordinality`,
+  `__repark_gen_field`) live in [`generator/udfs.rs`](generator/udfs.rs), `json_tuple`
+  in [`generator/json_tuple.rs`](generator/json_tuple.rs), tests in
+  [`generator/tests.rs`](generator/tests.rs) (details: [`generator/map.md`](generator/map.md)).
+  Arity mismatches raise `[COLUMN_ALIASES_MISMATCH]` (`[UDTF_ALIAS_NUMBER_MISMATCH]`
+  for `json_tuple`); duplicate generators, `stack`, `__repark_arr_*`, reserved
+  `__repark_gen_*`, aggregates (`[MISSING_GROUP_BY]`), and nested or non-container
+  calls refuse. Registered in `lib.rs::register_all` and `registration.rs` after
+  `TypeCoercion`.
 - `spark_length.rs` — **GT1-FIX G5 / A3 / R3-1:** Spark `bit_length` /
   `octet_length`. Stringifies non-binary; BINARY pass-through (including
   Dictionary(_, Binary)); refuses ARRAY/STRUCT/MAP; decimal scale-padded
@@ -683,6 +668,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **R-17c-4:** the carrier holds `display` (raw echo) + canonical `zone` (extractor reader).
   **R-17c-6:** the in-crate canonicaliser mirrors the core gate (exact-case prefixes,
   zero-seconds to `±HH:MM`) and asserts the same shared table.
+  **DATE-PART-SESSION-ZONE-1 (2026-11-24):** `DeferredSessionTimeZoneConfig` (`repark.deferred_session_tz`)
+  marks zone-free fragment contexts so `SparkLtzTimestampCast` and `rewrite_string_try_cast` fold only zoned text.
 - `current_date.rs` — **CURRENT-DATE-SESSION-ZONE-1 (2026-10-10):** the owned `current_date`
   (+ `today` alias) overwrite. DataFusion's builtin folds at plan time from
   `execution.time_zone`, which RePark never sets (parity doc SET-ANSI-RUNTIME note), so it
@@ -1361,16 +1348,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
   swaps in. **E1 octo C2:** `SparkGetItem` / `spark_get_item_udf` (`__repark_get_item__`) —
   polymorphic array 0-based or map-by-key for facade `Column.__getitem__` Column/other keys
   (never fail-open to parent container).
-- `datetime.rs` — Spark calendar date shim. `DatePartUdf` (generic `date_part`-backed extractor with
-  a Spark indexing offset) covers `year`/`month`/`dayofmonth`/`day`/`dayofyear`/`quarter`/`weekofyear`/
-  `yearofweek`/`dayofweek`/`weekday`; `MakeDate` builds `Date32` from three `Int64` columns. WG2 added
-  the calendar-math shims: `AddMonths` (Spark end-of-month-preserving `add_months`), `TruncDate`
-  (`trunc(date, fmt)` → `Date32`; invalid fmt → NULL, so `'Q'` is NULL not `QUARTER`), `DateTrunc`
-  (`date_trunc(fmt, ts)` → µs `Timestamp`, format-first arg order, overrides DataFusion's native
-  `date_trunc`), `DateFormat` (Java-pattern → `Utf8`; `format_java_pattern` handles quoted literals +
-  `y M L d D q Q E H m s` — unsupported letters raise). TYPES-1 round 4 (2026-09-05): `yyyy`
-  renders Java's leading `+` past 4 digits. Each exposed via a named
-  `*_udf()` constructor.
+- `datetime.rs` — Spark calendar date shim. `DatePartUdf` covers `year`…`weekday`; `date_part_udf`
+  and `extract_date_part_rule` live in `datetime/spark_date_part.rs` (DATE-PART-SESSION-ZONE-1,
+  2026-11-23) and share `session_wall::extract_calendar_part`. `MakeDate` builds `Date32` from three `Int64` columns. WG2 added calendar-math shims: `AddMonths`
+  (end-of-month-preserving), `TruncDate` (`trunc(date, fmt)` → `Date32`; invalid fmt → NULL),
+  `DateTrunc` (`date_trunc(fmt, ts)` → µs `Timestamp`, format-first), `DateFormat` (Java pattern →
+  `Utf8`, `y M L d D q Q E H m s`). TYPES-1 (2026-09-05): `yyyy` adds `+` past 4 digits. Each
+  exposed via `*_udf()`.
   Inputs are coerced by `coerce_date_arg` / `coerce_to_date32` / `coerce_to_timestamp_micros`
   (`user_defined` signature): date / timestamp (any unit+zone) / string — matching Spark. Tests run
   the UDFs through a real `SessionContext` against ISO-8601 / Spark goldens.

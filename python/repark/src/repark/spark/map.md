@@ -531,17 +531,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   compound rewriter (`_rebind_qualified_refs`), the qualified star expansion
   (`_expand_qualified_star`, unknown qualifiers fall through to the engine), and the qualified sort
   bind (`_resolve_sort_qualified_name`, ambiguous twins and multi-hit binds under a join raise
-  unresolved as Spark does in sort). No module docstring: the lane's no-comments ruling covers the
-  new file; the contract lives here.
-  **ATTR-ID-1 PERF-1 (2026-10-03):** `_frame_id_snapshot` reads stamped ids plus engine names once
-  per native handle into the `_ID_SNAPSHOTS` weak table (keyed by frame, guarded by handle identity,
-  so any `_inner` swap misses and recomputes); `_stamped_frame_id_snapshot` adds the
-  stamp-on-missing pass. Every id-reader funnels through one of the two. `_frame_engine_names`
-  caches names alone per frame-plus-handle for the `columns` fallback, which must not call `_plan()`
-  (it would materialize map bridges); it copies on return, so callers keep a fresh list. The
-  stable-id rebind and the subset `_bindings` funnel through the snapshots; all downstream uses read
-  the shared lists without mutation. `_expand_select_star_item` returns early without a `*` in the
-  written name, which star expansion needs.
+  unresolved as Spark does in sort). **SQL-EXPLODE-1 (2026-11-23):** `_rewrap_rebound_column`
+  keeps `_GeneratorColumn` and bare generator `F.expr` calls bare; so does `Column.for_select`.
+  **ATTR-ID-1 PERF-1 (2026-10-03):** `_frame_id_snapshot` caches stamped ids and engine names in
+  `_ID_SNAPSHOTS` (keyed by frame and handle identity); `_stamped_frame_id_snapshot` adds
+  stamp-on-missing. `_frame_engine_names` caches names alone for `columns` without calling `_plan()`.
+  `_expand_select_star_item` returns early without `*`.
   **ATTR-ID-1 S4 follow-up (2026-10-02):** the qualified star expansion, the
   qualified sort bound column, and the rebound rewrap carry `_birth_frame` with
   `_attr_id`, so expanded columns count as birth-frame columns at the bind.

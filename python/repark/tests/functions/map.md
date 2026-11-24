@@ -54,16 +54,16 @@ pins.
 - [test_fnp_6d_bitmap_aggregates.py](test_fnp_6d_bitmap_aggregates.py) — SQL-door pins for Spark bitmap aggregates.
 - [test_fnp_6d_followup_1.py](test_fnp_6d_followup_1.py) — SQL-door pins for the FNP-6D followup bitmap signature fix; [its oracle](fnp_6d_followup_1_spark_oracle.json) (74 cells) is also read by `test_fnp_bitmap_facade_1.py`.
 - [test_fnp_8_sql_door.py](test_fnp_8_sql_door.py) — FNP-8 candidate matrix for higher-order lambdas on both Spark facade entry points.
-- [test_fnp_9_collections_json.py](test_fnp_9_collections_json.py) — FNP-9: `get_json_object` and the collection / JSON functions answer Spark's values on both doors.
+- [test_fnp_9_collections_json.py](test_fnp_9_collections_json.py) — FNP-9: `get_json_object` and the collection / JSON functions match Spark on both doors.
 - [test_fnp_agg_1.py](test_fnp_agg_1.py) — FNP-AGG-1 slice (d) pins: grouping_id answers PySpark 4.1.2 on both doors.
 - [test_fnp_agg_1_critic.py](test_fnp_agg_1_critic.py) — FNP-AGG-1 slice (d) remediation pins: the grouping_id exact-order rule.
 - [test_fnp_alias_1.py](test_fnp_alias_1.py) — FNP-ALIAS-1 pins: PySpark alias names over existing kernels, oracle-driven.
 - [test_fnp_bitmap_facade_1.py](test_fnp_bitmap_facade_1.py) — Facade pins for the three Spark bitmap aggregates against oracle cells F6D-*/B8-*.
 - [test_fnp_critic_remediation.py](test_fnp_critic_remediation.py) — Regression pins for critic-found defects, grouped by provenance.
 - [test_fnp_degrees_rust_1.py](test_fnp_degrees_rust_1.py) — DEGREES-RUST-1 pins: facade and SQL-door degrees/radians against DEG-* and DEGI-* cells.
-- [test_fnp_gen_1.py](test_fnp_gen_1.py) — FNP-GEN-1 step-1 pins: generators and semi-structured parsers over the o245 oracle.
-- [test_fnp_gen_1_s34.py](test_fnp_gen_1_s34.py) — FNP-GEN-1 steps 3-4 pins: tuple, csv and csv-schema kernels over the s34 oracle.
-- [test_fnp_gen_1_s34_critic.py](test_fnp_gen_1_s34_critic.py) — FNP-GEN-1 remediation pins: critic cells (corrupt records, timestamps, decimals, dot access).
+- [test_fnp_gen_1.py](test_fnp_gen_1.py) — FNP-GEN-1 step 1: generators and semi-structured parsers. SQL-EXPLODE-1: [test_sql_explode_1.py](test_sql_explode_1.py), `sql_explode_1_spark_oracle.json`, `_record_sql_explode_1.py`.
+- [test_fnp_gen_1_s34.py](test_fnp_gen_1_s34.py) — FNP-GEN-1 steps 3-4: tuple, csv and csv-schema kernels.
+- [test_fnp_gen_1_s34_critic.py](test_fnp_gen_1_s34_critic.py) — FNP-GEN-1 critic cells: corrupt records, timestamps, decimals, dot access.
 - [test_fnp_math_1.py](test_fnp_math_1.py) — FNP-MATH-1 step-1 red pins over fnp_math_1_spark_oracle.json, both doors, both ANSI settings.
 - [test_fnp_misc_1.py](test_fnp_misc_1.py) — FNP-MISC-1 pins for call_function, call_udf, arrow_udf, arrow_udtf, bucket(Column).
 - [test_fnp_win_1.py](test_fnp_win_1.py) — FNP-WIN-1 pins for window, window_time, session_window over [the oracle](fnp_win_1_spark_oracle.json) (320 cells).
@@ -116,9 +116,9 @@ pins.
 - [fnp_alias_1_spark_oracle.json](fnp_alias_1_spark_oracle.json) — Recorded Spark oracle (98 cells) read by `test_fnp_alias_1.py`.
 - [fnp_bitmap_facade_1_spark_oracle.json](fnp_bitmap_facade_1_spark_oracle.json) — Recorded Spark oracle (22 cells) read by `test_fnp_bitmap_facade_1.py`.
 - [fnp_degrees_rust_1_spark_oracle.json](fnp_degrees_rust_1_spark_oracle.json) — Recorded Spark oracle (344 cells) read by `test_fnp_degrees_rust_1.py`.
-- [fnp_gen_1_s34_critic_spark_oracle.json](fnp_gen_1_s34_critic_spark_oracle.json) — Recorded Spark oracle (34 cells) read by `test_fnp_gen_1_s34_critic.py`.
-- [fnp_gen_1_s34_spark_oracle.json](fnp_gen_1_s34_spark_oracle.json) — Recorded Spark oracle (80 cells) read by `test_fnp_gen_1_s34.py`.
-- [fnp_gen_1_spark_oracle.json](fnp_gen_1_spark_oracle.json) — Recorded Spark oracle (62 cells) read by `test_fnp_gen_1.py`.
+- [fnp_gen_1_s34_critic_spark_oracle.json](fnp_gen_1_s34_critic_spark_oracle.json) — Spark oracle (34 cells) of `test_fnp_gen_1_s34_critic.py`.
+- [fnp_gen_1_s34_spark_oracle.json](fnp_gen_1_s34_spark_oracle.json) — Spark oracle (80 cells) of `test_fnp_gen_1_s34.py`.
+- [fnp_gen_1_spark_oracle.json](fnp_gen_1_spark_oracle.json) — Spark oracle (62 cells) of `test_fnp_gen_1.py`.
 - [fnp_math_1_q12_q15_oracle.json](fnp_math_1_q12_q15_oracle.json) — Recorded Spark oracle, kept for the record (no test loads it).
 - [fnp_math_1_spark_oracle.json](fnp_math_1_spark_oracle.json) — Recorded Spark oracle read by `test_fnp_math_1.py`.
 - [fnp_misc_1_agg_spark_oracle.json](fnp_misc_1_agg_spark_oracle.json) (202 cells), [fnp_misc_1_arrow2_spark_oracle.json](fnp_misc_1_arrow2_spark_oracle.json) (13), [fnp_misc_1_arrow_bucket_spark_oracle.json](fnp_misc_1_arrow_bucket_spark_oracle.json) (11) — Recorded Spark oracles read by `test_fnp_misc_1.py`.

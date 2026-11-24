@@ -56,19 +56,7 @@ P_DOORS = ("sql", "fcol", "sexpr", "fexpr")
 G_DOORS = ("where_sql", "group_sql", "order_sql", "where_f", "group_f", "order_f")
 G_WANT = {"hour": 3, "minute": 4, "second": 5}
 
-N8: dict[str, str] = {
-    "a0-la|L|date|fexpr|hour": "16",
-    "a0-la|L|frac|fexpr|hour": "19",
-    "a0-la|L|full|fexpr|hour": "19",
-    "a0-la|L|gap|fexpr|hour": "18",
-    "a0-la|L|tsep|fexpr|hour": "16",
-    "a1-la|L|date|fexpr|hour": "16",
-    "a1-la|L|frac|fexpr|hour": "19",
-    "a1-la|L|full|fexpr|hour": "19",
-    "a1-la|L|gap|fexpr|hour": "18",
-    "a1-la|L|tsep|fexpr|hour": "16",
-    "a1-la-ntz|L|gap|fexpr|hour": "18",
-}
+N8: dict[str, str] = {}
 
 COND = re.compile(r"\[([A-Z][A-Z0-9_]+(?:\.[A-Z0-9_]+)*)\]")
 
