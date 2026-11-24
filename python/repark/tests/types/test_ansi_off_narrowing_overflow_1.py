@@ -624,3 +624,67 @@ def test_unary_plus_suffixed_literals_narrow_as_spark(tmp_path: Path) -> None:
     finally:
         session.stop()
         _reset_active_session_for_tests()
+
+
+_NON_NULL_SUFFIX_CELLS: list[tuple[str, list[list[Any]], str, tuple[str, ...]]] = [
+    (
+        "SELECT CAST(r AS TINYINT) AS r2 FROM (SELECT CAST(+1S AS SMALLINT) AS r) t",
+        [[1]],
+        "tinyint",
+        ANSI_MODES,
+    ),
+    (
+        "WITH c AS (SELECT CAST(+1S AS SMALLINT) AS r) SELECT CAST(r AS TINYINT) AS r2 FROM c",
+        [[1]],
+        "tinyint",
+        ANSI_MODES,
+    ),
+    (
+        "SELECT CAST(r AS TINYINT) AS r2 FROM (SELECT CAST(+128S AS SMALLINT) AS r) t",
+        [[-128]],
+        "tinyint",
+        ("false",),
+    ),
+    (
+        "WITH c AS (SELECT CAST(+128S AS SMALLINT) AS r) SELECT CAST(r AS TINYINT) AS r2 FROM c",
+        [[-128]],
+        "tinyint",
+        ("false",),
+    ),
+    (
+        "SELECT CAST(r AS SMALLINT) AS r2 FROM (SELECT CAST(+4294967297L AS INT) AS r) t",
+        [[1]],
+        "smallint",
+        ("false",),
+    ),
+    (
+        "WITH c AS (SELECT CAST(+4294967297L AS INT) AS r) SELECT CAST(r AS SMALLINT) AS r2 FROM c",
+        [[1]],
+        "smallint",
+        ("false",),
+    ),
+    ("SELECT CAST(-+4294967297L AS INT) AS r", [[-1]], "int", ("false",)),
+    ("SELECT CAST(+-4294967297L AS INT) AS r", [[-1]], "int", ("false",)),
+    ("SELECT CAST(-+129S AS TINYINT) AS r", [[127]], "tinyint", ("false",)),
+    ("SELECT 1BD AS r", [[Decimal("1")]], "decimal(1,0)", ANSI_MODES),
+    ("SELECT +1BD AS r", [[Decimal("1")]], "decimal(1,0)", ANSI_MODES),
+    ("SELECT -1BD AS r", [[Decimal("-1")]], "decimal(1,0)", ANSI_MODES),
+    ("SELECT (+1BD) AS r", [[Decimal("1")]], "decimal(1,0)", ANSI_MODES),
+]
+
+
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+def test_suffixed_literals_keep_spark_non_null_through_subqueries_and_decimals(
+    tmp_path: Path, ansi: str
+) -> None:
+    session = _open(tmp_path / "suffix_nn_wh", ansi)
+    try:
+        for sql, expected_rows, expected_type, modes in _NON_NULL_SUFFIX_CELLS:
+            if ansi not in modes:
+                continue
+            _assert_frame_rows_and_nullability(
+                session.sql(sql), expected_rows, [expected_type], [False]
+            )
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
