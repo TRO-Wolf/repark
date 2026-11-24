@@ -244,6 +244,7 @@ def test_duplicate_row_rule_fires_on_two_rows(tmp_path: Path) -> None:
     (repo / "map.md").write_text(
         "# m\n\n- [a.py](a.py) — one\n- [a.py](a.py) — two\n", encoding="utf-8"
     )
+    _seed_task_wo_maps(repo)
     _commit(repo, "base")
     result = _sync(repo)
     assert result.returncode == 1
@@ -259,6 +260,7 @@ def test_duplicate_row_rule_survives_fix(tmp_path: Path) -> None:
     (repo / "map.md").write_text(
         "# m\n\n- [a.py](a.py) — one\n- [a.py](a.py) — two\n", encoding="utf-8"
     )
+    _seed_task_wo_maps(repo)
     _commit(repo, "base")
     result = _sync(repo, "--fix")
     assert result.returncode == 1

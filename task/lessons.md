@@ -653,10 +653,10 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   rewords them with the next non-Anthropic harness change." *Why:* Anthropic models never reword a
   comment, and those strings still say "exact-baseline".
 
-## 2026-11-23 — no map.md under task/wo below a work order's top level
+## 2026-11-23 — no new map.md under task/wo
 
-- **DO NOT create a `map.md` under `task/wo` below a work order's top level.** The three items of the
-  ruling: (1) no new `map.md` under `task/wo` below a work order's top level; (2) delete the existing
+- **DO NOT create a `map.md` under `task/wo`** (a new work order carries none). The three items of the
+  ruling: (1) no new `map.md` under `task/wo`; (2) delete the existing
   ones below each work order's top level, and repoint every link to a deleted map at the directory
   that held it; (3) fix the stale docstring in `scripts/sync_map_md.py`. Item 3 and the gate that keeps
   new maps out are the second commit of NO-MAPS-UNDER-TASK-WO-1. Owner ruling, 2026-11-23, verbatim:
