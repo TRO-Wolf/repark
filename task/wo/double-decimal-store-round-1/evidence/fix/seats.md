@@ -42,7 +42,7 @@ UPDATE pass their pins.
 The critic's coercion fuzz ([coercion_fuzz.py](coercion_fuzz.py)): 1,000 doubles (16- and 17-digit
 neighbours of halfway values, short decimals, uniform values) through eight shapes where a DECIMAL meets a
 DOUBLE (`=` at two scales, `=` a literal, `coalesce`, `CASE`, `IN`, `BETWEEN`, `UNION`), base, head and
-Spark, both modes ([raw/](raw/map.md)).
+Spark, both modes ([raw/](raw/)).
 
 | ANSI | cells | base ≠ Spark, head = Spark | base = Spark, head ≠ Spark |
 |---|---|---|---|
@@ -92,5 +92,3 @@ fast path covers rows away from a half and the remaining 16% is the per-row chec
 The finishing run on the merged head `3eed6799` against main `6f9f2aaa` re-measures these rows and adds the
 rows without that cast and the C-012 like-for-like set: [cost-finish.md](cost-finish.md). The cast rows' exception is
 owner word owed (asked 2026-11-14); see the card's cost section.
-
-Up: [map.md](map.md).

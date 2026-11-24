@@ -2589,40 +2589,70 @@ Unit ICE-RESOURCE-BOUND-1 (U-11), dated 2026-10-26, owner rulings Q1 to Q5 of th
 
 ### 2.8 Multiset set operations
 
-#### SQL-SETOP-ALL-REFUSE-1 — SQL `INTERSECT ALL`, `EXCEPT ALL` and `MINUS ALL` refuse on both SQL doors (declared refusal, owner ruling 2026-11-12)
+#### SQL-SETOP-ALL-MULTISET-1 — SQL and DataFrame `INTERSECT ALL`, `EXCEPT ALL` and `MINUS ALL` answer Spark's multiset — **FIXED 2026-11-23 (branch `fix/sql-setop-all-multiset-1`, merge pending; it retires SQL-SETOP-ALL-REFUSE-1, [EX-DF-3](#ex-df-3--fixed-2026-11-23-sql-setop-all-multiset-1-exceptall--except_all-answer-the-multiset-difference) and [EX-DF-7](#ex-df-7--fixed-2026-11-23-sql-setop-all-multiset-1-intersectall--intersect_all-answer-the-multiset-intersect))**
 
-- **repark** — a statement that names `INTERSECT ALL`, `EXCEPT ALL` or `MINUS ALL` anywhere (top
-  level, a CTE, a scalar or `IN` subquery, a temporary or persistent view body, the source of
-  `INSERT`, CTAS or `MERGE USING`, nested in `UNION ALL`, under `EXPLAIN`, in any letter case,
-  with whitespace or a comment between the words) refuses on `spark.sql` and on `repark.sql()`
-  with `UnsupportedOperationException`: `SQL INTERSECT ALL multiset semantics are not
-  Spark-correct on this engine yet; use INTERSECT for distinct bags, or number each side's
-  duplicates with row_number() and INTERSECT the numbered rows (SQL-SETOP-ALL-MULTISET-1)` (the
-  `EXCEPT ALL` and `MINUS ALL` texts name `EXCEPT`). It refuses before either door plans, so a
-  refused `INSERT`, CTAS or `MERGE` writes nothing: no snapshot, no rows, no CTAS table. The
-  `F.expr`, `selectExpr` and `filter` fragments and a stored Iceberg view body that name the
-  operator refuse the same way; the DataFrame `intersectAll` / `exceptAll` refusals
-  ([EX-DF-7](#ex-df-7--intersectall--intersect_all-refuse-spark-answers-the-multiset-intersect))
-  are unchanged. Before this refusal both doors answered the wrong multiset for every column
-  type: on `l = {1, 1, 1, 2, 2, 4}`, `r = {1, 2, 2, 3}`, `INTERSECT ALL` answered
-  `1, 1, 1, 2, 2` and `EXCEPT ALL` answered `4`, and the writes stored those rows; `MINUS ALL`
-  was refused by DataFusion (`MINUS ALL not implemented`).
+- **repark** — Before (main `e80e6bc8`): SQL-SETOP-ALL-REFUSE-1 refused every SQL spelling of the
+  three operators on `spark.sql` and `repark.sql()`, in the `F.expr`, `filter` and `selectExpr`
+  fragments and in stored view bodies, with `UnsupportedOperationException` naming this card, and
+  the DataFrame `intersectAll` / `exceptAll` refused (`octo C1-L-005`, `-006`). Underneath,
+  DataFusion plans `INTERSECT ALL` as a left-semi join and `EXCEPT ALL` as a left-anti join with
+  no left `DISTINCT`, so every left duplicate survived or every copy went (`1, 1, 1, 2, 2` and `4`
+  on `l = {1, 1, 1, 2, 2, 4}`, `r = {1, 2, 2, 3}`), and DataFusion plans no `MINUS`. After: an
+  analyzer rule right after `struct_setop_names` replaces that join with Spark's own rewrite
+  (`RewriteIntersectAll` / `RewriteExceptAll`): both sides tagged and joined by `UNION ALL`, the
+  per-side counts aggregated by every column, and each kept row replicated by `range(0, copies)`
+  under `Unnest` with no filter.
+  The keys group as set-operation keys do: NULLs equal, both zeros and every NaN one key, and the
+  output carries the normalised key (`0.0`, the canonical NaN), as Spark's does. `MINUS ALL` is
+  spelled `EXCEPT ALL` on the Spark door only, using `sqlparser`'s Databricks parse after Spark
+  pre-parse normalizers (`canonicalize_verbatim`, `time_travel`, `rewrite_sql_for_execute`,
+  `strip_schema_evolution`) so only true set operators (including comments, odd spacing, `VALUES`
+  CTAS, `BY NAME (...)`, raw strings, scientific decimals, and `FOR VERSION AS OF`) respell while
+  identifiers, aliases, table names, literals and unparsable SQL stay untouched: at the statement
+  seat, in `filter` strings and stored/temp view bodies of a Spark-door session, and in `F.expr`
+  (which belongs to `pyspark.sql.functions`, built before any frame or door, so it uses Spark grammar
+  even on native frames); the distinct
+  `MINUS` still refuses (SQL-MINUS-REFUSE-1). On the native door `MINUS ALL` refuses as `MINUS` does
+  there (`UnsupportedOperationException: This feature is not implemented: MINUS ALL not
+  implemented`, nothing written), under the owner ruling that the native door follows Trino, then
+  DuckDB, then refuses, and neither accepts `MINUS`. A null-safe `LEFT SEMI` / `LEFT ANTI JOIN`
+  written as a join, in SQL or as a DataFrame `eqNullSafe` join over every column, keeps its left
+  multiplicity and types (guard pins, equal to Spark on main and head alike). On the Spark door a
+  DECIMAL beside a DOUBLE widens to `double` in the ALL forms as in the distinct ones. An untyped
+  `NULL` left column against a typed right column answers with the distinct twin's `void` (`Null`)
+  schema (Spark widens to the right side's type). Every cell of the domain table answers Spark's
+  rows on the Spark door in both ANSI modes (all nine spellings, fragments, stored view bodies, and
+  DataFrame `intersectAll`, `exceptAll`, `intersect_all`, `except_all`), and every `INTERSECT ALL`
+  and `EXCEPT ALL` cell answers on the native door while native `MINUS ALL` refuses: INT, BIGINT,
+  DECIMAL, DOUBLE and FLOAT (both zeros, NaN), STRING, DATE, TIMESTAMP, NULL, struct and
+  three-column cells both ways round; empty and duplicate-only sides; top level, CTE, scalar and
+  `IN` subqueries, temporary and persistent views, Iceberg sources, `INSERT`, CTAS and `MERGE USING`
+  (read back cold), nested in `UNION ALL`, `EXPLAIN`. The distinct and `UNION` forms keep their
+  answers. Evidence: `task/wo/sql-setop-all-multiset-1/`.
+- **Residue** — a column count or type mismatch raises `AnalysisException`, Spark's class, with
+  DataFusion's planner text and no condition or SQLSTATE, as the distinct `INTERSECT` / `EXCEPT`
+  and `UNION` already do; Spark raises `[NUM_COLUMNS_MISMATCH]` (`42826`) and
+  `[INCOMPATIBLE_COLUMN_TYPE]` (`42825`). On the Spark door an ALL set operation over a MAP column
+  (either side, top-level or nested inside a struct or list) refuses with Spark's
+  `[UNSUPPORTED_FEATURE.SET_OPERATION_ON_MAP_TYPE]` (`SQLSTATE: 0A000`), while distinct forms keep
+  main's top-level left refusal. When a multiset key's cast back from DataFusion's coerced key type
+  to the left output type is not lossless (such as `STRING` left against numeric, `DATE` or
+  `TIMESTAMP`, lossy `INT`/`BIGINT` against `FLOAT`/`DOUBLE`, `DATE`/`TIMESTAMP` narrowing, or
+  nested containers), `setop_all_multiset` refuses during analysis before any write with
+  `AnalysisException` naming `SETOP-MIXED-TYPE-COERCION-1` (lossless widenings such as `INT`/`BIGINT`,
+  `FLOAT`/`DOUBLE` and Spark-door `DECIMAL`/`DOUBLE` keep answering). The native door's persistent
+  view, CTAS into Iceberg (`NATIVE-CTAS-ICEBERG-REFUSE-1`) and `MERGE` shapes keep their own
+  refusals.
 - **Apache Spark** — `INTERSECT ALL` keeps each row at the smaller of the two sides'
   multiplicities (`1, 2, 2`); `EXCEPT ALL` and its synonym `MINUS ALL` subtract the right side's
-  count (`1, 1, 4`); every shape above answers, and the writes store those rows. *(oracle:
-  recorded from PySpark 4.1.2 with Iceberg 1.11.0, 2026-11-12,
-  `task/wo/sql-setop-all-refuse-1/evidence/step0/`.)*
-- **Pin** — `python/repark/tests/sql/test_sql_setop_all_refuse_1.py::test_every_shape_refuses_before_any_write`
-  (with `test_every_spelling_refuses`, `test_sql_fragments_refuse_the_same_way`,
-  `test_a_stored_view_body_naming_the_operator_refuses_at_read` and the controls
-  `test_controls_keep_answering`), and the seat tests in
-  `crates/repark-core/src/pre_execute/setop_all/tests.rs`.
-- **Rationale** — DECLARED refusal, owner ruling 2026-11-12, verbatim "Go with the defaults"
-  (signed-zero part B, Q2): a refusal is honest where the answer is silently wrong. It blocks
-  the scoped label ICE-V2-FLAT-AWS-LABEL-1 and ships in v1.5.7. The fix is card
-  SQL-SETOP-ALL-MULTISET-1
-  ([card](../task/roadmap/mid-term/sql-setop-all-multiset-1-card-2026-11-12.md)); the row
-  retires when it lands.
+  count (`1, 1, 4`). *(oracle: recorded PySpark 4.1.2 with Iceberg 1.11.0, 2026-11-23,
+  `python/repark/tests/sql/setop_all_multiset_1_spark_oracle.json`.)*
+- **Pin** — `python/repark/tests/sql/test_sql_setop_all_multiset_1.py` (every cell above against
+  the oracle), `python/repark/tests/sql/test_decimal_double_coercion_2.py::test_the_all_set_operations_over_a_mixed_values_leg_answer_as_spark`,
+  and the seat tests in `crates/repark-core/src/pre_execute/setop_all/tests.rs`.
+- **Rationale** — FIXED under the owner ruling of 2026-11-22: replace the declared refusal with
+  Spark's multiset answer
+  ([card](../task/roadmap/mid-term/sql-setop-all-multiset-1-card-2026-11-12.md)).
 
 ## 3. Identifier resolution (DECLARED)
 
@@ -5756,7 +5786,6 @@ still open is `isModifiable`.
   Pins: `python/repark/tests/sql/test_decimal_double_coercion_2.py` and `test_decimal_double_in_ranges_2.py`, both
   ANSI modes; Rust `repark-spark` `values_marker/tests.rs` and `extension/decimal_float_widen/tests.rs` (`in_ranges`).
 - **Still unlike Spark** — also:
-  - `INTERSECT ALL` / `EXCEPT ALL` over a mixed `VALUES` leg still refuse (SQL-SETOP-ALL-REFUSE-1);
   - a `DELETE` / `UPDATE` whose `WHERE` holds a subquery the identity path declines (every `VALUES` source among
     them) still refuses (repark-sql-update-subquery-where-1, UPDATE-SUBQUERY-STORE-1);
   - `<lit> IS DISTINCT FROM <col>` with the literal on the left refuses on the Spark door
@@ -5826,7 +5855,7 @@ still open is `isModifiable`.
 - **Still unlike Spark:**
   - **with ANSI off, a narrowing cast that overflows refuses** in the kernel where Spark wraps or answers NULL
     (named class EQUAL→REFUSE (Q2), 122 cells that main answered right by luck, and WRONG→REFUSE (Q2), 648 cells);
-    [ANSI-OFF-NARROWING-OVERFLOW-1](../task/roadmap/mid-term/ansi-off-narrowing-overflow-1-card-2026-11-16.md), S2;
+    [ANSI-OFF-NARROWING-OVERFLOW-1](../task/roadmap/mid-term/ansi-off-narrowing-overflow-1-card-2026-11-16.md), S2 (fixed 2026-11-23);
   - **a comparison with the target type's top or bottom** (`CAST(c AS TINYINT) > 127`) refuses per row where Spark
     answers no rows without casting (WRONG→REFUSE (Q4), 33 cells);
     [CAST-TOP-OF-TYPE-FOLD-1](../task/roadmap/mid-term/cast-top-of-type-fold-1-card-2026-11-16.md), S3;
@@ -6135,6 +6164,38 @@ still open is `isModifiable`.
   the EQUAL cells lost to N8); card
   [STRING-HOUR-MINUTE-SECOND-1](../task/roadmap/mid-term/cards-2026-11-19/string-hour-minute-second-1-card-2026-11-19.md).
 
+### EXTRACT-FIELD-ALIASES-1 — `extract` refuses or misreads Spark's field spellings on the SQL doors — **FIXED 2026-11-23 (branch `fix/sql-explode-extract-fields-1`, not merged)**
+
+- **repark** — Before (main `efa72bb7`): on `spark.sql`, `selectExpr` and `F.expr`, `extract(<field> FROM x)` failed
+  to parse (`Expected: date/time field`) for `YEAROFWEEK`, `DAYOFWEEK_ISO`, `DOW_ISO`, `H`, `HR`, `HRS`, `Y`, `YR`,
+  `YRS`, `QTR`, `MON`, `MONS`, `W`, `D`, `M`, `MIN`, `MINS`, `S`, `SEC` and `SECS`; `DAYOFWEEK` parsed and raised
+  `Date part 'DAYOFWEEK' not supported`; `DOW` answered from Sunday 0 (`3` for a Wednesday, Spark `4`), silently.
+  The stock extract planner calls DataFusion's own `date_part`, not the session's Spark one. `date_part('<field>',
+  x)` already answered every spelling. After: the front-door canonicalizer
+  (`crates/repark-spark/src/spark_rewrites/extract_field.rs`) spells those 22 fields as `date_part('<field>', x)`,
+  and region-splicing passes (`spark_rewrites/struct_field.rs` for `named_struct(…).field` including nested struct
+  access, `create_options.rs`, and the `INSERT PARTITION` swap in `spark_rewrites/mod.rs`) splice inner regions so
+  the rewrite survives views, `UPDATE`, `MERGE`, `OPTIONS` CTAS, and `named_struct(…).field`. `DOW` is a named
+  addition: it parsed but answered from Sunday 0, a silent wrong value at the same seat. The other fields stay as
+  written and keep their answers.
+- **Apache Spark** — `DatePart.parseExtractField` maps every spelling (`YEAROFWEEK` the ISO week-year,
+  `DAYOFWEEK` / `DOW` 1 = Sunday, `DAYOFWEEK_ISO` / `DOW_ISO` 1 = Monday, `H` / `HR` / `HRS` the hour) and answers
+  `int` (`decimal(8,6)` for the seconds). *(oracle: PySpark 4.1.2, 2026-11-23, upper- and lower-case fields over
+  DATE, TIMESTAMP and TIMESTAMP_NTZ including fractional seconds, pre-1970 values, 1582-10-15, 1900-02-28, the ISO
+  week-53 days 2020-12-31 and 2021-01-03, a leap day, year ends, and `named_struct(…).field`; zones `UTC` and
+  `America/New_York`, ANSI on and off, three SQL seats.)*
+- **Still unlike Spark:** the seconds answer `int` (EXTRACT-SECOND-DECIMAL-1); a `TIMESTAMP` outside UTC reads
+  its fields in UTC (DATE-PART-SESSION-ZONE-1); a `STRING` argument fails to plan (SQL-DATE-PART-STRING-1); the
+  typed `F.extract` / `F.date_part` refuse `YEAROFWEEK`, `DAYOFWEEK`, `DAYOFWEEK_ISO`, `DOW_ISO` and answer `DOW`
+  from Sunday 0; `EPOCH` and `ISODOW` answer where Spark raises `INVALID_EXTRACT_FIELD`; an unknown field raises a
+  parse error, not `INVALID_EXTRACT_FIELD`; an interval argument refuses; an unaliased column is named
+  `date_part(…)`, not `extract(…)`.
+- **Pin** — `python/repark/tests/timestamps/test_extract_field_aliases_1.py` over
+  `extract_field_aliases_1_spark_oracle.json`; Rust `repark-spark` `spark_rewrites::extract_field::tests`.
+- **Rationale** — [card](../task/roadmap/mid-term/cards-2026-11-19/extract-field-aliases-1-card-2026-11-19.md)
+  (row N6 of the STRING-HOUR-MINUTE-SECOND-1 domain table), built with SQL-EXPLODE-1 for a calendar-dimension
+  build.
+
 ### UNIX-TIMESTAMP-TRUNCATE-1 — `unix_timestamp` truncates and `unix_seconds` / `unix_millis` floor, as Spark divides — **FIXED 2026-11-22 (branch `fix/unix-timestamp-truncate-1`, not merged)**
 
 - **repark** — Before (main `c5370be6`): `unix_timestamp` / `to_unix_timestamp` of a `TIMESTAMP` or
@@ -6346,7 +6407,7 @@ still open is `isModifiable`.
   Dataset's own plan (`collectToPython`, `tailToPython`, `collectAsArrowToPython`, `toPythonIterator` and `javaToPython`
   behind `rdd`, `foreach`, `foreachPartition`, `checkpoint`) fixes it for that Dataset; `count` (`groupBy().count()`),
   `isEmpty`, `head` and `take` (`limit`) and `show` (`getRows`) build a new one. `toLocalIterator` fixes it at the call,
-  not at the first pull. *(matrix: [built/evidence/cmp/delta/](../task/wo/temp-view-frame-reader-parse-1/built/evidence/cmp/delta/map.md),
+  not at the first pull. *(matrix: [built/evidence/cmp/delta/](../task/wo/temp-view-frame-reader-parse-1/built/evidence/cmp/delta/),
   1,435 cells, measured 2026-11-19; the call sites are from the 4.1.2 bytecode.)* *(oracle: step 0's recorded cells, Fable's probes and
   `python/repark/tests/session/temp_view_frame_reader_parse_1_spark_oracle.json`, measured 2026-11-19.)*
 - **Still unlike Spark:** a view made under ANSI off over JSON or CSV timestamp text, read under ANSI on, raises
@@ -6375,7 +6436,7 @@ still open is `isModifiable`.
   [built/cost.md](../task/wo/temp-view-frame-reader-parse-1/built/cost.md).
 - **Rationale** — the owner's ruling of 2026-11-18 ("We better go with B to be safe"); Fable's guidance under the
   owner's delegation of 2026-11-19, not an owner ruling (seat (a) amended with G1 to G4, the held-frame family in the
-  bar, the Q9 stop rule, Q11 disclosed); [work order](../task/wo/temp-view-frame-reader-parse-1/built/map.md).
+  bar, the Q9 stop rule, Q11 disclosed); [work order](../task/wo/temp-view-frame-reader-parse-1/built/).
 
 ### TEMP-VIEW-CACHE-LAZY-PARSE-1 A1 — a lazy `cache()` fills at its first use, under the live settings — **FIXED 2026-11-20 on the DataFrame doors (branch `fix/temp-view-cache-lazy-a1`)**
 
@@ -6422,7 +6483,7 @@ still open is `isModifiable`.
 - **Rationale** — the owner's ruling of 2026-11-18 ("We better go with B to be safe"); the owner's "Let's go with
   defaults across the board" (2026-11-20); Fable's guidance under that delegation, not an owner ruling (Q1 rule (a)
   with two additions, the 188 and 128 bar split, Q6's verbs, §14's twelve items);
-  [work order](../task/wo/temp-view-cache-lazy-parse-1/built/map.md).
+  [work order](../task/wo/temp-view-cache-lazy-parse-1/built/).
 - **Release note (v1.5.7, owner 2026-11-20)** — "A child of a cached DataFrame (for example `df.cache()`, then
   `df.filter(...).count()`) now fills the whole cache on its first action, as Spark does. That first action can take
   several times as long as before (about 5x on a 2M-row JSON read). Later actions on the cache, other children
@@ -9489,6 +9550,58 @@ the pin rather than obeying it.
 - **Rationale** — the INT-family slice of S2 card
   [STRING-CAST-LENIENT-1](../task/roadmap/mid-term/string-cast-lenient-1-card-2026-11-16.md); it also closes the
   INT-family half of SET-ANSI-RUNTIME-3.
+
+### ANSI-OFF-NARROWING-OVERFLOW-1 — narrowing numeric casts wrap or answer NULL with ANSI off, raise Spark's conditions with ANSI on, and bar footer stats
+
+- **Status** — **fixed** on `fix/ansi-off-narrowing-overflow-1` (2026-11-23).
+- **repark** — reuses the pre-`TypeCoercion` `SparkStringIntegralCast` / post-coercion `SparkCoercionCastMark` seam in
+  `crates/repark-functions/src/cast_map/string_integral.rs` (no second pair of rules) and `narrow_numeric` in
+  `crates/repark-functions/src/cast_map/leaf.rs`. User-written explicit `CAST`s from signed integers (`BIGINT`, `INT`,
+  `SMALLINT`) and overflowing `DECIMAL` to narrower signed integers, overflowing `DECIMAL` to narrower `DECIMAL`, and
+  `FLOAT`/`DOUBLE` to `TINYINT`/`SMALLINT`/`INT`/`BIGINT` rewrite to `__repark_narrow_to_{tinyint,smallint,int,bigint}__`
+  and `__repark_narrow_to_decimal_<p>_<s>__`, reading `spark.sql.ansi.enabled` at invoke:
+  - **ANSI off (`false`):** signed integer and decimal-to-integer targets keep the low bits (`CAST(4294967297 AS INT)` =
+    1; `CAST(128.00 AS TINYINT)` = -128); `FLOAT`/`DOUBLE` follow JVM narrowing (saturate to `i32` then wrap for
+    TINYINT/SMALLINT, saturate to `i64` for BIGINT, `NaN -> 0`; `CAST(1e10F AS TINYINT)` = -1,
+    `CAST(9007199254740992.0D AS INT)` = 2147483647); overflowing `DECIMAL` targets round `HALF_UP` and answer `NULL`.
+  - **ANSI on (`true`):** integer targets raise `[CAST_OVERFLOW]` (`SQLSTATE: 22003`) with Spark 4.1.2's exact literal
+    rendering (`S`/`L`/`BD` suffixes, FLOAT without `F`, DOUBLE with `D` for finite values only, `2^63` accepted as
+    `9223372036854775807` for BIGINT); decimal targets raise `[NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION]`
+    (`SQLSTATE: 22003`).
+  - **Seats:** SQL `CAST` (literal including unary-plus suffixed literals like `+4294967297L` / `+128S`, column, view
+    body), `.cast`, `F.expr`, `selectExpr`, subquery/key seats (`GROUP BY`, `JOIN ON`, `UNION`/`INTERSECT`), and
+    cold-read Iceberg writes (CTAS, `INSERT INTO ... SELECT`, `INSERT OVERWRITE` with `expr_has_unsafe_cast` recognizing
+    `narrow_cast_parts`, `UPDATE ... SET`, `MERGE ... SET`, `writeTo().append()`). Top-level user `CAST`s in
+    `UPDATE ... SET` are marked by `crates/repark-spark/src/update_cast.rs` (only when the session installs the Spark
+    cast seam) so uncast `update_to_plan` store casts remain on `StoreOverflowCast` (`CAST_OVERFLOW_IN_TABLE_INSERT`).
+    Integer-to-integer narrowing casts preserve logical operand nullability (computed at rewrite time so nullable
+    operands such as `TRY_CAST`, `-TRY_CAST`, `CASE` without `ELSE`, `NULLIF`, outer-join columns, and scalar
+    subqueries never narrow at the physical layer).
+  - **Statistics barrier (`CAST-STATS-SILENT-1`):** `crates/repark-core/src/session/df_guards/cast_shield/stats_barrier.rs`
+    (`keeps_order`) bars every numeric cast that can wrap or overflow to NULL unless provably non-overflowing, preventing
+    silent footer `min`/`max` folding and row-group pruning across Parquet row groups. Non-overflowing casts
+    (`DECIMAL(10,2) -> INT`, `DECIMAL(10,2) -> DECIMAL(10,1)`) stay `Expr::Cast` so `CastShieldRule` + `preimage` keep
+    range pushdown.
+  - **Out of scope / excluded (kept as on main):** explicit user `CAST` inside SQL `VALUES` / `INSERT ... VALUES`
+    (inherited from PR #1413's `LogicalPlan::Values` guard; tracked by
+    [VALUES-EXPLICIT-CAST-1](../task/roadmap/mid-term/cards-2026-11-23/values-explicit-cast-1-card-2026-11-23.md)),
+    uncast store assignment (`INSERT`, `UPDATE`), reader schema casts (`DecimalType` added beside integer types in
+    `reader_support._schema_cast`), `TRY_CAST` (stays `Expr::TryCast`; note Spark 4.1.2 answers `9223372036854775807`
+    for `TRY_CAST(9223372036854775808.0 AS BIGINT)` while Arrow answers `NULL`), native `repark.sql()`,
+    `FLOAT`/`DOUBLE -> DECIMAL` (`CAST-FLOAT-DECIMAL-OVERFLOW-NULL-1`), and `INT`/`BIGINT -> DECIMAL`.
+- **Apache Spark** — Spark 4.1.2 with `iceberg-spark-runtime-4.1_2.13-1.11.0`, measured live 2026-11-23 in both ANSI
+  modes; fixture `python/repark/tests/types/ansi_off_narrowing_overflow_1_spark_oracle.json`.
+- **Pin** — `python/repark/tests/types/test_ansi_off_narrowing_overflow_1.py` (all 21 kinds × 6 user seats + `TRY_CAST`,
+  6 card comparison families, multi-row-group Parquet stats barrier, reach queries, 6 cold-read Iceberg write seats,
+  empty `INSERT OVERWRITE` guard, and out-of-scope guards including native-door barrier pin);
+  `crates/repark-functions/src/cast_map/narrow_tests.rs`;
+  `crates/repark-core/src/session/df_guards/cast_shield/stats_barrier_tests.rs`.
+  Also converged existing pins to Spark 4.1.2: `test_cast_stats_interval_1.py` (removed strict xfail on ANSI-off
+  float-to-integer NaN-to-0), `test_decimal_divide_literal_1.py` (closed 9 `pmod` `NUMERIC_VALUE_OUT_OF_RANGE` strict
+  xfails), `test_temp_view_session_settings_1.py` / `2` (closed `filter/numcast/off_on` and `filter/df/numcast/off_on`
+  standing gaps), `test_cast_literal_unwrap_1.py`, `test_cast_failure_parity.py`, and `test_a3_cast_vocab.py`.
+- **Rationale** — S2 card
+  [ANSI-OFF-NARROWING-OVERFLOW-1](../task/roadmap/mid-term/ansi-off-narrowing-overflow-1-card-2026-11-16.md).
 
 ### SET-ANSI-RUNTIME-4 — sub-minute fixed offsets: Spark accepts, RePark refuses
 
@@ -17134,17 +17247,15 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   Spark answers and keeps all three spellings on the example backlog until the global_temp
   catalog exists.
 
-### EX-DF-3 — `exceptAll` / `except_all` refuse; Spark answers the multiset difference
+### EX-DF-3 — FIXED 2026-11-23 (SQL-SETOP-ALL-MULTISET-1): `exceptAll` / `except_all` answer the multiset difference
 
-- **repark** — both spellings raise
-  `UnsupportedOperationException: DataFrame.exceptAll multiset semantics are not Spark-correct
-  on this engine yet; use subtract() for distinct bags (octo C1-L-006)`.
-- **Apache Spark** — `[(1,), (1,), (2,)].exceptAll([(1,)])` answers `[(1,), (2,)]`: the
-  multiset difference keeps duplicate multiplicities. *(oracle: live PySpark 4.1.2, ANSI on,
-  2026-09-04, EX-15 DataFrame-a batch.)*
-- **Pin** — `python/repark/tests/parity/test_examples_dataframe_a.py::test_except_all_divergence`
-- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 measurement. Both spellings stay on
-  the example backlog until the multiset semantics are Spark-correct.
+- **repark** — before the fix both spellings raised `UnsupportedOperationException` (`octo
+  C1-L-006`). Since SQL-SETOP-ALL-MULTISET-1 they plan `EXCEPT ALL` and answer Spark's rows:
+  `[(1,), (1,), (2,)].exceptAll([(1,)])` is `[(1,), (2,)]`.
+- **Apache Spark** — `[(1,), (2,)]`: the multiset difference keeps duplicate multiplicities.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-15 DataFrame-a batch.)*
+- **Pin** — `python/repark/tests/parity/test_examples_dataframe_a.py::test_except_all_answers_the_spark_multiset_difference`
+- **Rationale** — FIXED; the row stays as the record of the example's former refusal.
 
 ### EX-DF-4 — FIXED 2026-09-11 (DF-DESCRIBE-STR-1): `describe` collected unordered rows and refused string columns
 
@@ -17213,18 +17324,16 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   where the engines agree; this row records the replace-on-existing arm until repark refuses an
   existing name the way Spark does.
 
-### EX-DF-7 — `intersectAll` / `intersect_all` refuse; Spark answers the multiset intersect
+### EX-DF-7 — FIXED 2026-11-23 (SQL-SETOP-ALL-MULTISET-1): `intersectAll` / `intersect_all` answer the multiset intersect
 
-- **repark** — both spellings raise
-  `UnsupportedOperationException: DataFrame.intersectAll multiset semantics are not Spark-correct
-  on this engine yet; use intersect() for distinct bags (octo C1-L-005)`.
-- **Apache Spark** — `[(1,), (1,), (2,)].intersectAll([(1,), (1,), (3,)])` answers `[(1,), (1,)]`:
-  the multiset intersect keeps each row at the minimum of the two sides' multiplicities.
-  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-16 DataFrame-b batch.)*
-- **Pin** — `python/repark/tests/parity/test_examples_dataframe_b.py::test_intersect_all_divergence`
-- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-16 measurement. Both spellings stay on
-  the example backlog until the multiset intersect is Spark-correct; the distinct-bag
-  `intersect` is covered and Spark-equal.
+- **repark** — before the fix both spellings raised `UnsupportedOperationException` (`octo
+  C1-L-005`). Since SQL-SETOP-ALL-MULTISET-1 they plan `INTERSECT ALL` and answer Spark's rows:
+  `[(1,), (1,), (2,)].intersectAll([(1,), (1,), (3,)])` is `[(1,), (1,)]`.
+- **Apache Spark** — `[(1,), (1,)]`: the multiset intersect keeps each row at the minimum of the
+  two sides' multiplicities. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-16 DataFrame-b
+  batch.)*
+- **Pin** — `python/repark/tests/parity/test_examples_dataframe_b.py::test_intersect_all_answers_the_spark_multiset_intersect`
+- **Rationale** — FIXED; the row stays as the record of the example's former refusal.
 
 ### EX-DF-8 — `groupingSets` takes one column each in repark; Spark takes a list of sets
 
@@ -18757,6 +18866,36 @@ field NAME.
   EX house form. The pin asserts the absence, so it reds the day the seam lands.
   **Supersedes EX-FN-2** (`posexplode` / `posexplode_outer`), whose EX-25 pin stays and whose
   mechanism is stated here.
+
+### SQL-EXPLODE-1 — `explode` / `explode_outer` in a SQL select list are unresolved — **FIXED 2026-11-23 (branch `fix/sql-explode-extract-fields-1`, not merged)**
+
+- **repark** — Before (main `efa72bb7`): `SELECT explode(array(1, 2))` and every `explode` / `explode_outer` in a
+  select list raised `[UNRESOLVED_ROUTINE]` on `spark.sql`, `selectExpr` and `F.expr`, over literals, a table, a
+  temp view, a CTE, a subquery and in `CREATE TABLE … AS SELECT` / `INSERT … SELECT`; the typed `F.explode`
+  answered. After: both names are `GeneratorRewrite` generators (`crates/repark-functions/src/generator.rs`, helper
+  UDFs in `generator/udfs.rs`); an array projects `col` (or the `AS` name, including aliases starting with
+  `explode(`), a map projects `key` and `value`, the outer spelling widens non-nullable list element fields
+  (`sequence`, `split`) to nullable (`ListArray::try_new`) and keeps one NULL row for a NULL or empty input, and
+  the projection keeps sibling columns in place. Over an array the placeholder types as the element and exposes
+  `col` in the plan schema, so aliased and unaliased outer subqueries (`SELECT *`, `SELECT col`, `WHERE`,
+  `GROUP BY`), `ORDER BY col`, `CTAS`, `INSERT INTO`, and `INSERT OVERWRITE` plan and answer as Spark. Explicit
+  aliases are marked before `type_coercion` (`GeneratorAliasMark`), so coerced arguments keep `pos, col` / struct
+  fields / `c0…`, stamps survive `F.expr` frame operations, and a chained `.alias(...).alias(...)` takes the outer
+  names (delta 3, as on main). A map `explode` beside a sibling named `col` is a declared loud refusal (delta 3).
+- **Apache Spark** — `Explode` / `ExplodeOuter` (`col`, or `key` / `value`); the sequence form over a leap day, a
+  year end, the daylight-saving changes and the ISO week-53 years answers one row per day. *(oracle: PySpark 4.1.2
+  with `iceberg-spark-runtime-4.1_2.13:1.11.0`, 2026-11-23, zones `UTC` and `America/New_York`, ANSI on and off;
+  the write cells read back cold.)*
+- **Still unlike Spark:** see the card's "Still unlike Spark" (`LATERAL VIEW`, the multi-alias `AS (k, v)`, two
+  generators in one select list, multi-column `MAP` / `posexplode` outer subqueries, an `array(...)` literal's
+  element nullability, `F.expr` over a `range` frame, `DataFrame.columns` on unaliased map `F.expr` and on typed
+  multi-output generators, the declared refusal of a map or array `explode` beside a `col` item (also through
+  `WITH`, `INSERT … PARTITION`, `selectExpr` and `F.expr`), `array_repeat` over an array, the native `repark.sql`
+  door).
+- **Pin** — `python/repark/tests/functions/test_sql_explode_1.py` over `sql_explode_1_spark_oracle.json`; Rust
+  `repark-functions` `generator::tests::explode_*` and
+  `generator::tests::a_chained_generator_alias_marker_lets_the_outer_names_win`.
+- **Rationale** — [card](../task/roadmap/mid-term/cards-2026-11-23/sql-explode-1-card-2026-11-23.md).
 
 ### FNP9-BYNAME-1 — `call_udf` / `call_function` resolve at call time
 

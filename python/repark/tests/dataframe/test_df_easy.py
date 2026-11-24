@@ -50,11 +50,9 @@ def test_set_ops_and_cross_join(spark: ReparkSession) -> None:
     left = spark.sql("SELECT 1 AS id UNION ALL SELECT 1 UNION ALL SELECT 2")
     right = spark.sql("SELECT 1 AS id UNION ALL SELECT 3")
     assert left.intersect(right).to_arrow().to_pylist() == [{"id": 1}]
-    # Multiset *All forms: engine bags diverge from Spark — fail loud.
-    with pytest.raises(UnsupportedOperationException, match="intersectAll"):
-        left.intersectAll(right)
-    with pytest.raises(UnsupportedOperationException, match="exceptAll"):
-        left.exceptAll(spark.sql("SELECT 1 AS id"))
+    assert left.intersectAll(right).to_arrow().to_pylist() == [{"id": 1}]
+    excepted = left.exceptAll(spark.sql("SELECT 1 AS id")).to_arrow().to_pylist()
+    assert sorted(row["id"] for row in excepted) == [1, 2]
     assert sorted(r["id"] for r in left.subtract(right).to_arrow().to_pylist()) == [2]
     crossed = spark.sql("SELECT 1 AS a").crossJoin(spark.sql("SELECT 2 AS b"))
     assert crossed.to_arrow().to_pylist() == [{"a": 1, "b": 2}]

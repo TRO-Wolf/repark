@@ -61,7 +61,7 @@ Ratio = median head / median main; the band is the min to max of `main-aa / main
 The head `fcb0c888` (package `pkg-sum-fcb0c888`) is measured against main now (`pkg-main-6286ba19`, the base of this
 series), with the delta 1 runner ([cost/run.sh](cost/run.sh)) copied. Cores 48–57; main, head and main again (`main-aa`)
 alternate, one sample at a time under the exclusive measure lock with the link lock and both cargo locks, the clock
-started inside the locks. Samples and the table: [delta2/cost/](delta2/cost/map.md).
+started inside the locks. Samples and the table: [delta2/cost/](delta2/cost/).
 
 **Bars:** the held rows are at 1.05x, except `k1_sum_d38_off` and `k1_sum_d38_on`, held to 1.12x (the 1.12x bar is for
 precision 20 and up on K1 only). `k5_try_sum_d10_grouped` is reported, not held.
@@ -96,7 +96,7 @@ lock that holds the builder's own shared-lock jobs back while a sample waits. Ro
 (reported)**: K1 is a grouped query, so the ungrouped batch add this delta changed is reached by K3, and at `d10` by no
 held row. Bars: 1.12x for K1 `d38` (both modes), 1.05x for every other held row, K3 included.
 
-Samples and the table: [delta3/cost/](delta3/cost/map.md).
+Samples and the table: [delta3/cost/](delta3/cost/).
 
 | row | main (s) | head (s) | head / main | control main-aa / main | runs | answers equal | bar |
 |---|---|---|---|---|---|---|---|

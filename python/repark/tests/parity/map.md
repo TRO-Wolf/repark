@@ -29,7 +29,7 @@ pins.
 - [test_dogfood_gaps.py](test_dogfood_gaps.py) — Group F — production-job gaps from the dogfood run.
 - [test_examples_column_a.py](test_examples_column_a.py) — Divergence pins for the EX-17 Column-a example batch (registry §7 EX-COL-1..2).
 - [test_examples_dataframe_a.py](test_examples_dataframe_a.py) — Divergence pins for the EX-15 DataFrame-a example batch (registry §7 EX-DF-1..6).
-- [test_examples_dataframe_b.py](test_examples_dataframe_b.py) — Divergence pins for the EX-16 DataFrame-b example batch (registry §7 EX-DF-7..10).
+- [test_examples_dataframe_b.py](test_examples_dataframe_b.py) — EX-16 DataFrame-b pins (EX-DF-7..10; EX-DF-7 pins asymmetric multiset multiplicity).
 - [test_examples_dataframe_c.py](test_examples_dataframe_c.py) and [test_examples_dataframe_d.py](test_examples_dataframe_d.py) — Divergence pins for the EX-18, EX-19 and EX-29 DataFrame batches (registry §7 EX-DF-11..17 and the class remainder).
 - [test_examples_functions_a.py](test_examples_functions_a.py) and [test_examples_functions_b.py](test_examples_functions_b.py) — Divergence pins for the EX-25 and EX-28/EX-30 F.* batches.
 - [test_examples_io_session.py](test_examples_io_session.py) — Divergence pins for the EX-26 reader/writer/session batch.

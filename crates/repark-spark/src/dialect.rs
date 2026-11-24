@@ -70,6 +70,10 @@ impl SqlDialect for SparkDialect {
             !crate::spark_door_case_insensitive(options),
         ))
     }
+
+    fn owns_minus_all_rewrite(&self) -> bool {
+        true
+    }
 }
 
 #[cfg(test)]

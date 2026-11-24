@@ -32,7 +32,7 @@ No product code changed. Every measurement below was taken on throwaway builds o
   | b1 | (a) + B1 |
   | head | (a) + B1 + general (c), the full throwaway |
 
-- **Raw outputs** are in [design-evidence/](design-evidence/map.md), one JSON per probe and build. The probe scripts stay in `/tmp/oc-worker/direct/wo/attr-view-semantics-1/design/` (outside the repo, so ruff does not rewrite them). Every row id cited below is a key in those JSONs.
+- **Raw outputs** are in [design-evidence/](design-evidence/), one JSON per probe and build. The probe scripts stay in `/tmp/oc-worker/direct/wo/attr-view-semantics-1/design/` (outside the repo, so ruff does not rewrite them). Every row id cited below is a key in those JSONs.
 
 ## 2.1 The mint points, measured
 

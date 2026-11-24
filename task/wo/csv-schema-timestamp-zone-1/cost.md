@@ -161,7 +161,7 @@ again), and a URL's infers again. A Rust route that skips the second inference c
 the build (the 10-15 percent above) for about half a millisecond. This is a cost miss for the orchestrator: a ceiling
 ruling on `k0_count` (about 1.08x), or a Rust unit that hands the first read's types to the re-read, measured
 on its own build; TEXT-TIMESTAMP-PARSE-KERNEL-1 stays the way out for K2 and `k0_hour`. Samples: `<scratchpad>/csv-ts-delta2/cost/` and
-`costiso/`, and [evidence/raw/](evidence/raw/map.md) (`delta2-cost-*.jsonl`).
+`costiso/`, and [evidence/raw/](evidence/raw/) (`delta2-cost-*.jsonl`).
 
 
 ## Delta 3 (2026-11-19): no series; the cost lines as ruled

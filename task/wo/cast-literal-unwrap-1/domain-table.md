@@ -1,7 +1,7 @@
 # CAST-LITERAL-UNWRAP-1 — the domain table
 
 Measured 2026-11-16 on main `83df6be1`'s package against Spark 4.1.2, ANSI off and on. Provenance and commands:
-[evidence/map.md](evidence/map.md). Every cell, with both answers and its verdict, is in
+[evidence/map.md](evidence/). Every cell, with both answers and its verdict, is in
 [evidence/raw/verdicts.jsonl](evidence/raw/verdicts.jsonl); the cell definitions are
 [evidence/probes/cells.py](evidence/probes/cells.py).
 

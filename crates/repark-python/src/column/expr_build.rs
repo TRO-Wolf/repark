@@ -48,9 +48,13 @@ pub(crate) fn parse_canonical_predicate(
     predicate: &str,
 ) -> datafusion::error::Result<Expr> {
     let verbatim = frame_verbatim(frame.inner());
-    let canonical = repark_spark::spark_literals::canonicalize_verbatim(predicate, verbatim)?;
+    let raw_canonical = repark_spark::spark_literals::canonicalize_verbatim(predicate, verbatim)?;
     let schema = frame.inner().schema();
     let state = predicate_state(frame);
+    let canonical = repark_core::minus_all_as_except_all(
+        state.config().options().sql_parser.dialect,
+        raw_canonical.as_ref(),
+    );
     let parsed = match marked_logical_expr(&state, canonical.as_ref(), schema) {
         Ok(expr)
             if expr
@@ -65,7 +69,7 @@ pub(crate) fn parse_canonical_predicate(
     parsed.map_err(|error| {
         repark_spark::spark_literals::translate_downstream_error_verbatim(
             predicate,
-            canonical.as_ref(),
+            raw_canonical.as_ref(),
             error,
             verbatim,
         )
@@ -133,13 +137,17 @@ pub(crate) fn parse_canonical_predicate_exact(
     predicate: &str,
 ) -> datafusion::error::Result<Expr> {
     let verbatim = frame_verbatim(frame.inner());
-    let canonical = repark_spark::spark_literals::canonicalize_verbatim(predicate, verbatim)?;
+    let raw_canonical = repark_spark::spark_literals::canonicalize_verbatim(predicate, verbatim)?;
     let mut state = predicate_state(frame);
     state
         .config_mut()
         .options_mut()
         .sql_parser
         .enable_ident_normalization = false;
+    let canonical = repark_core::minus_all_as_except_all(
+        state.config().options().sql_parser.dialect,
+        raw_canonical.as_ref(),
+    );
     match marked_logical_expr(&state, canonical.as_ref(), frame.inner().schema()) {
         Ok(expr) => Ok(expr),
         Err(error) => {
@@ -158,7 +166,7 @@ pub(crate) fn parse_canonical_predicate_exact(
             Err(
                 repark_spark::spark_literals::translate_downstream_error_verbatim(
                     predicate,
-                    canonical.as_ref(),
+                    raw_canonical.as_ref(),
                     error,
                     verbatim,
                 ),
@@ -323,6 +331,7 @@ pub(super) fn build_expr_context() -> datafusion::error::Result<SessionContext> 
     let rules = repark_core::insert_struct_setop_after_coercion(
         datafusion::optimizer::Analyzer::new().rules,
     )?;
+    let rules = repark_core::insert_multiset_set_operations(rules)?;
     let rules = repark_functions::analyzer_rules_with_higher_order_preparation(rules)?;
     let rules = repark_spark::spark_literal_typing::insert_literal_rule_before_coercion(rules)?;
     let rules = repark_functions::collection::insert_map_subscript_before_coercion(rules)?;

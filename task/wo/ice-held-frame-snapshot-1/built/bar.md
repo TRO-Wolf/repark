@@ -4,14 +4,14 @@
 `S/ddu-work/pkg-ice1a-58c7e307` (`BUILT_FROM` `58c7e307`), label `head`. Spark 4.1.2 with the Iceberg 1.11.0 runtime.
 The first head `330f6aba` ran the same bar before the same-state fix (`140b260b`, then `58c7e307`); its counts are not
 in this record. `S` is the lane scratchpad and `N` the session scratchpad; neither is in the repository (see
-[evidence/](evidence/map.md)).
+[evidence/](evidence/)).
 
 **Verdicts** ([probes/barcmp.py](evidence/probes/barcmp.py)). EQUAL when both engines give the same answer, or both raise at the
 top level. RAISE when only the build raises. Any other difference is WRONG, judged on the whole cell answer.
 
 ## Deciding cell and new schema-change cells
 
-Spark 4.1.2; both ANSI modes give the same answers ([raw](evidence/map.md)).
+Spark 4.1.2; both ANSI modes give the same answers ([raw](evidence/)).
 
 - Drop `c`, re-add `c` as STRING, insert: Spark answers `(1, None)`, `(2, None)`, `(9, 'z')`. The check and the
   mapping are by name.
@@ -367,5 +367,3 @@ every answer equal to delta 1's (the 10 left are the named residuals above). #13
 **Against `verdicts-fix1.jsonl` and delta 1's verdicts no verdict moved**; 36 answers differ from each, and none once
 the generated `_repark_jl_` and `_repark_jr_` view names and the run's warehouse paths are normalised. The bar holds no
 frame built over a view before an incompatible change.
-
-Up: [map.md](map.md).

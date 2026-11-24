@@ -4,7 +4,7 @@ Every cell: an Iceberg v2 table `lc.db.tN (n INT, c STRING)` on a local `type=ha
 `(1, 'a'), (2, 'b')` in one commit (`PARTITIONED BY (c)` only for the two dynamic-overwrite writes); a frame or view
 **held** (built before the write); one **write** to the same table in the same session; then one **action** on the
 held object. Probes: [evidence/probes/cells.py](evidence/probes/cells.py). Raw cells:
-[evidence/raw/](evidence/raw/map.md). Verdicts: [evidence/raw/verdicts.jsonl.gz](evidence/raw/verdicts.jsonl.gz),
+[evidence/raw/](evidence/raw/). Verdicts: [evidence/raw/verdicts.jsonl.gz](evidence/raw/verdicts.jsonl.gz),
 made by [evidence/probes/cmp.py](evidence/probes/cmp.py).
 
 **Marks (main against Spark):** `E` EQUAL (both raising is EQUAL by class); `W` WRONG, RePark answers other rows,

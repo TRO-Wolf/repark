@@ -82,5 +82,3 @@ every row's answers equal across the builds. The full table: [raw/cost-delta-tab
   truncated `1e-20`. It is a fix and reported, not held.
 - Every other `in` row is at most 1.064 (`in_dbl:d38:1`, a 47 ms sample inside its band 0.944 to 1.107) or below
   1.0; the precision-16 rows `p16_in_8`, `_16`, `_32` read 0.280, 0.328 and 0.957, and `ice_in20` 0.795.
-
-Up: [map.md](map.md).

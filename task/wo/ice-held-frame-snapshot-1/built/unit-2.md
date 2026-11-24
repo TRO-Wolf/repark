@@ -6,7 +6,7 @@ by what Spark measured (below). `S` is the lane scratchpad and `N` the session s
 repository. Builds: main `S/ddu-work/pkg-a1m-bb8ae8fc` (its product tree equals main `0cc65e9a`), head
 `S/ddu-work/pkg-iceu2-eac90dd7` (`BUILT_FROM` `eac90dd7`). Spark 4.1.2 with `iceberg-spark-runtime-4.1_2.13-1.11.0`,
 the local `type=hadoop` catalog, zone UTC, both ANSI modes; every answer, on every engine, is the same in both modes.
-The probes and the 616 recorded answers are in [evidence/unit-2/](evidence/unit-2/map.md).
+The probes and the 616 recorded answers are in [evidence/unit-2/](evidence/unit-2/).
 
 ## 1. The state table on today's main
 
@@ -24,7 +24,7 @@ held frame through 1a's re-bind, not the cache (1a's bar already showed both EQU
 
 ## 2. Spark's invalidation surface, measured
 
-97 cells per mode on Spark, main and the head ([evidence/unit-2/](evidence/unit-2/map.md); the full table is
+97 cells per mode on Spark, main and the head ([evidence/unit-2/](evidence/unit-2/); the full table is
 `N/ice-u2-out/state-table.md` and `state-head.md`). What they show:
 
 1. **A same-session data commit re-caches** for the next new query: every write verb (`INSERT`, `INSERT … SELECT`,
@@ -115,7 +115,7 @@ narrowed C-009 drop (`catalog_surface.py`, `dataframe/cache_handle.py`, one line
 ## 5. The bar
 
 **The cells of this unit** (§1, both modes): `C|cache_count`, `C|cache_append` and `K|cache_held` move WRONG to
-EQUAL; `C|cache_lazy` and `C|cache_table` stay EQUAL. **The probes' 97 cells per mode** ([evidence/unit-2/](evidence/unit-2/map.md)):
+EQUAL; `C|cache_lazy` and `C|cache_table` stay EQUAL. **The probes' 97 cells per mode** ([evidence/unit-2/](evidence/unit-2/)):
 main 35 EQUAL and 62 WRONG per mode, the head 77 EQUAL and 20 WRONG; **42 cells per mode move WRONG to EQUAL, 0
 EQUAL lost**. The 20 left per mode:
 
@@ -573,5 +573,3 @@ and refill on `REFRESH TABLE`, as Spark does. The query-level shapes answer the 
 and new frame under a table-level cache (3 where Spark answers 2) and every `CACHE TABLE` read are
 FRESH-READ-WHILE-TABLE-CACHED-1, a kept divergence (owner, 2026-11-22). `df_view` is unchanged. The 27 reads
 `PENDING_1394` held (27 per catalog, 54 in all) were asserted on this run and passed: 0 pending, 0 failed.
-
-Up: [map.md](map.md).

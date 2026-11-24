@@ -9,7 +9,9 @@ use crate::dialect::EngineContext;
 use crate::sorted_view::refuse_iceberg_create_of_tightened_ddl;
 
 pub(crate) mod setop_all;
-pub use setop_all::refuse_multiset_set_operation;
+pub use setop_all::{
+    insert_multiset_set_operations, is_multiset_set_operation, minus_all_as_except_all,
+};
 
 /// The per-statement belt: plan without executing, guard the plan, then execute it.
 // No `Debug`: neither `SessionContext` nor `CatalogRegistry` implements it.

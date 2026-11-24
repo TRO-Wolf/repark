@@ -84,8 +84,7 @@ pub use router::{
 /// Collation or declared-function refusal.
 pub fn refuse_sql_fragment(sql: &str) -> datafusion::error::Result<()> {
     refuse_collation_in_sql(sql)?;
-    refuse_declared_function_in_sql(sql)?;
-    repark_core::refuse_multiset_set_operation(datafusion::config::Dialect::Databricks, sql)
+    refuse_declared_function_in_sql(sql)
 }
 
 #[must_use]

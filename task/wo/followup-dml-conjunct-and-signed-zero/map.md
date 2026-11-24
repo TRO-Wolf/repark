@@ -5,6 +5,6 @@ release wheel built from `fdc61f26`. Table A asks whether a DML predicate that t
 drop a conjunct and widen a write. Table B asks where `-0.0` against `0.0` reaches reads and writes. Measurement
 only; no product code; a records-only round with no frontier critic.
 
-- [evidence/](evidence/map.md) — the probe, the raw leg files, the two tables and the provenance.
+- [evidence/](evidence/) — the probe, the raw leg files, the two tables and the provenance.
 
 Up: [../map.md](../map.md).

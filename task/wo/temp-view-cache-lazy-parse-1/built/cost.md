@@ -99,5 +99,3 @@ slower in A1's binary, a code-layout effect of the build. Builds that do not tou
 build-level fix (function and loop alignment, or profile-guided optimisation of the release build) would be its own
 unit and would move every cost row. **The owner rules on the two rows,** as the cost rule requires for rows over
 1.15x.
-
-Up: [map.md](map.md).

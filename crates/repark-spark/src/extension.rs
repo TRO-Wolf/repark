@@ -174,7 +174,8 @@ impl SessionExtension for SparkExtension {
             repark_functions::datetime::spark_date_part::insert_extract_date_part_before_coercion(
                 rules,
             )?;
-        crate::values_marker::insert_values_typing_first(rules)
+        let rules = crate::values_marker::insert_values_typing_first(rules)?;
+        Ok(repark_functions::generator::with_alias_mark_first(rules))
     }
 
     /// Register Spark functions and analyzer rules, then compose the TA window extension.

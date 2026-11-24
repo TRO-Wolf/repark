@@ -301,6 +301,11 @@ async fn execute_inner(
     let evolving = merge::schema_evolution::strip_schema_evolution(sql);
     let schema_evolution = evolving.is_some();
     let sql = evolving.as_deref().unwrap_or(sql);
+    let sql_minus = repark_core::minus_all_as_except_all(
+        ctx.state_ref().read().config_options().sql_parser.dialect,
+        sql,
+    );
+    let sql = sql_minus.as_ref();
     // Refuse genuine multi-statement scripts before any intercept or passthrough.
     refuse_multi_statement_sql(sql)?;
     if let Some(replace) = insert_positional::replace_where::parse_replace_where(sql)? {

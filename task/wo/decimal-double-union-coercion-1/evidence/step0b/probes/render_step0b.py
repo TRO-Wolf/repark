@@ -13,14 +13,14 @@ w = out.append
 w("# DECIMAL-DOUBLE-UNION-COERCION-1 step 0' on main `dc6b4c94` — the table")
 w("")
 w(
-    "Rendered by `probes/render_step0b.py` from [cells/](cells/map.md). Spark "
+    "Rendered by `probes/render_step0b.py` from [cells/](cells/). Spark "
     "4.1.2 on Zulu JDK 17 against main"
 )
 w(
     "`dc6b4c94`, both ANSI modes. Every joined cell also carries the recorded "
     "`ff34baf5` answer and the step-0 main"
 )
-w("(`6f9f2aaa`) answer. The provenance is in [map.md](map.md).")
+w("(`6f9f2aaa`) answer. The provenance is in [map.md](./).")
 w("")
 w("## 1. The joined cells per section")
 w("")
@@ -248,6 +248,4 @@ w(
     "Spark's fresh fuzz run differs from its"
 )
 w("2026-11-14 recording in that cell only.")
-w("")
-w("Up: [map.md](map.md).")
 print("\n".join(out))

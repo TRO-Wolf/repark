@@ -535,3 +535,48 @@ fn expr_context_defers_zoneless_timestamp_literals_and_folds_zoned_text() {
         }
     }
 }
+
+#[test]
+fn fexpr_and_filter_respell_minus_all_after_spark_canonicalization() {
+    Python::attach(|py| {
+        let spark = crate::session::PyReparkSession::new(py, None, None, None, None, None)
+            .expect("the Spark-door session builds");
+        let native = crate::session::PyReparkSession::native(py, None, None, None, None)
+            .expect("the native session builds");
+        let spark_frame = spark
+            .sql(py, "SELECT 'a\\b' AS s, 1 AS k")
+            .expect("Spark frame");
+        let native_frame = native
+            .sql(py, "SELECT 'a\\b' AS s, 1 AS k")
+            .expect("native frame");
+        for raw_predicate in [
+            r"s IN (SELECT r'a\b' AS x UNION ALL SELECT r'a\b' MINUS ALL SELECT r'c' AS x)",
+            "k IN (SELECT 1e2BD AS x UNION ALL SELECT 1e2BD MINUS ALL SELECT 100BD AS x)",
+            "k IN (SELECT minus all FROM (SELECT 1 AS minus, 2 AS except) t)",
+        ] {
+            let folded = super::expr_build::parse_canonical_predicate(&spark_frame, raw_predicate);
+            assert!(folded.is_ok(), "folded {raw_predicate}: {folded:?}");
+            let exact =
+                super::expr_build::parse_canonical_predicate_exact(&spark_frame, raw_predicate);
+            assert!(exact.is_ok(), "exact {raw_predicate}: {exact:?}");
+        }
+        let native_err = super::expr_build::parse_canonical_predicate(
+            &native_frame,
+            "k IN (SELECT 1 AS x UNION ALL SELECT 1 MINUS ALL SELECT 1 AS x)",
+        )
+        .expect_err("native filter must refuse MINUS ALL")
+        .to_string();
+        assert!(
+            native_err.contains("MINUS ALL not implemented"),
+            "{native_err}"
+        );
+        for fexpr_sql in [
+            r"(SELECT count(*) FROM (SELECT r'a\b' AS a UNION ALL SELECT r'a\b' MINUS ALL SELECT r'a\b' AS a) x)",
+            "(SELECT count(*) FROM (SELECT 1e2BD AS a UNION ALL SELECT 1e2BD MINUS ALL SELECT 100BD AS a) x)",
+            "(SELECT minus all FROM (SELECT 1 AS minus, 2 AS except) t)",
+        ] {
+            let parsed = super::PyColumn::sql(fexpr_sql, false);
+            assert!(parsed.is_ok(), "F.expr {fexpr_sql}: {:?}", parsed.err());
+        }
+    });
+}

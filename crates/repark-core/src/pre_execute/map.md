@@ -4,7 +4,7 @@
 
 File-backed tests for the shared pre-execute belt (`../pre_execute.rs`): the ONE choke point
 every door's planned statement passes through before it executes (Z-2 / Z-3); and `setop_all.rs`,
-the statement-text refusal that runs before any door plans.
+the multiset set-operation rewrite and the `MINUS ALL` spelling.
 
 ## Contents
 
@@ -22,23 +22,31 @@ the statement-text refusal that runs before any door plans.
   `guard_passes_an_update_whose_set_value_has_no_scalar_subquery` holds it silent for a
   literal, an expression of the column, a subquery in the `WHERE` only, and `arrow_cast` of
   the column. The walk is `Expr::contains_scalar_subquery` over the whole assigned expression.
-- `setop_all.rs` — **SQL-SETOP-ALL-REFUSE-1 (2026-11-12, owner ruling, signed-zero part B Q2):**
-  the statement-level refusal of SQL `INTERSECT ALL`, `EXCEPT ALL` and `MINUS ALL`, which DataFusion
-  answers with the wrong multiset (left-semi and left-anti joins without the left `DISTINCT`).
-  `multiset_set_operation` tokenizes the text in a sqlparser dialect and finds an unquoted
-  `INTERSECT`, `EXCEPT` or `MINUS` word followed by an unquoted `ALL`, whitespace and comments
-  between; string literals, comments and quoted identifiers never match, and a text that does not
-  tokenize is left to the door's parser. A byte pre-check skips the tokenizer unless the text holds
-  `all` and an operator word. `refuse_in_session_sql` is the seat both SQL doors pass: the first
-  line of `ReparkSession::sql_with_write_options_inner` (`../session/write_options.rs`), before the
-  session's `SqlDialect`, in the session's `sql_parser.dialect` (Databricks on the Spark door,
-  Generic on `repark.sql()`), so nothing is planned or written; it answers
-  `Error::NotImplemented` (`UnsupportedOperationException`). `refuse_multiset_set_operation`
-  (re-exported at the crate root) is the same check as an `UnsupportedMarker` DataFusion error,
-  which `engine_err` maps to the same text; the Spark door calls it for SQL fragments
-  (`refuse_sql_fragment`) and stored view bodies (`view_ddl/read.rs`). The text names the
-  operator, the distinct form (`EXCEPT` for `MINUS ALL`), the `row_number()` workaround and the card
-  SQL-SETOP-ALL-MULTISET-1, in the DataFrame `intersectAll` refusal's words.
+- `setop_all.rs` — **SQL-SETOP-ALL-MULTISET-1 (2026-11-23, owner ruling 2026-11-22; it retires
+  SQL-SETOP-ALL-REFUSE-1):** `MultisetSetOperations` (`setop_all_multiset`), the analyzer rule
+  `insert_multiset_set_operations` seats right after `struct_setop_names` (every core session and the
+  `F.expr` context). DataFusion plans `INTERSECT ALL` / `EXCEPT ALL` as a left-semi / left-anti join
+  with null-safe keys on every column and no left `DISTINCT`; the rule finds that shape
+  (`multiset_join`, the signature `struct_setop.rs` and `decimal_float_widen.rs` read) and replaces it
+  with Spark's own rewrite: each side projected to its coerced keys and a count tag, a `UNION ALL`, an
+  aggregate of the per-side counts, and `range(0, copies)` (the smaller count, or left minus right
+  floored at zero) under an `Unnest`, with no filter, under a projection that keeps the join's
+  schema; `range` builds one list of `copies` per key, so allocation is O(max copies per key).
+  Delta 2: a top-level `DataType::Null` output column emits `lit(ScalarValue::Null)` (matching the
+  distinct twin's `Null` schema instead of failing to cast back); any non-lossless cast back from
+  coerced key type to output type (`is_lossless_round_trip`) refuses loudly during analysis with
+  `DataFusionError::Plan` naming `SETOP-MIXED-TYPE-COERCION-1` (before any write). The distinct forms
+  and joins written as joins do not match. `minus_all_as_except_all` (re-exported at the crate root)
+  uses `sqlparser` (`DatabricksDialect`) to respell only `SetExpr::SetOperation { Minus, All }`
+  positions as `EXCEPT` (preserving comments and spacing, leaving identifiers, aliases, literals and
+  unparsable SQL untouched), on the Spark door only (the Databricks parser); the native door refuses
+  `MINUS ALL` as it refuses `MINUS` (owner ruling: Trino, then DuckDB, then refuse). Delta 3:
+  `resolve_ddl_dml_fallback` also accepts `VALUES`, `TABLE`, and any depth-0 `(` trailing query
+  suffix (such as `BY NAME (SELECT …)`), and `SparkDialect` runs `minus_all_as_except_all` after
+  Spark normalizers (`canonicalize_verbatim`, `time_travel`, `rewrite_sql_for_execute`,
+  `strip_schema_evolution`) across statements, view bodies, `filter` strings, and `F.expr`; non-owning
+  dialects still run it at `ReparkSession::sql_with_write_options_inner`. The distinct `MINUS` is
+  untouched (SQL-MINUS-REFUSE-1).
 - [setop_all/](setop_all/map.md) — its tests.
 
 ## Pointers

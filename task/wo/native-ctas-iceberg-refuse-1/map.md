@@ -8,7 +8,7 @@ The card is [native-ctas-iceberg-refuse-1-card-2026-11-12.md](../../roadmap/mid-
 
 ## Contents
 
-- [evidence/](evidence/map.md) — the inventory, step 0 and the head run.
+- [evidence/](evidence/) — the inventory, step 0 and the head run.
 
 ## Pointers
 

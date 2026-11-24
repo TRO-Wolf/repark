@@ -35,7 +35,7 @@ re-run, a refusal one red cell, and 80M cut the pool-dependent hangs from 16 of 
 with 0 refusals in 229 loaded-type runs and the join still spilling 12 to 14 times. A later commit on the same branch changes
 the default argument and the docstring digit that names the pool; the assertions are untouched.
 
-The evidence is in [evidence/](evidence/map.md). The unit's ledger is
+The evidence is in [evidence/](evidence/). The unit's ledger is
 [../../ledgers/staging/spill-reach-fair-pool-flake-1-ledger.md](../../ledgers/archive/2026-10/2026-10-30-spill-reach-fair-pool-flake-1-ledger.md);
 it stays in staging because clause C-006 (the runner sample) is open.
 

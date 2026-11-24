@@ -40,8 +40,13 @@ use window::{OverSpec, build_over_expression};
 impl PyColumn {
     async fn plan_sql_text(sql: &str, keep_verbatim: bool) -> PyResult<Expr> {
         repark_spark::refuse_sql_fragment(sql).map_err(crate::datafusion_to_py_err)?;
-        let context = expr_build::sql_context(sql, true).map_err(crate::datafusion_to_py_err)?;
         let canonical = repark_spark::spark_literals::canonicalize_verbatim(sql, keep_verbatim)
+            .map_err(crate::datafusion_to_py_err)?;
+        let canonical = repark_core::minus_all_as_except_all(
+            datafusion::config::Dialect::Databricks,
+            canonical.as_ref(),
+        );
+        let context = expr_build::sql_context(canonical.as_ref(), true)
             .map_err(crate::datafusion_to_py_err)?;
         expr_build::plan_expr_column(&context, canonical.as_ref(), sql).await
     }
@@ -64,7 +69,6 @@ impl PyColumn {
     }
 }
 
-// The fence converts Rust panics into catchable PySpark exceptions at the Python boundary.
 #[allow(
     clippy::must_use_candidate,
     clippy::return_self_not_must_use,
@@ -862,6 +866,12 @@ impl PyColumn {
     pub fn display_name(&self) -> PyResult<String> {
         fenced!("Column.display_name", {
             Ok(self.grown_read(|expr| expr.schema_name().to_string()))
+        })
+    }
+
+    pub fn is_bare_generator(&self) -> PyResult<bool> {
+        fenced!("Column.is_bare_generator", {
+            Ok(self.grown_read(repark_functions::generator::is_bare_generator_expr))
         })
     }
 

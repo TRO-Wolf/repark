@@ -828,6 +828,7 @@ pub(crate) fn expr_has_unsafe_cast(expr: &DataFusionExpr, schema: &DFSchema) -> 
             DataFusionExpr::ScalarFunction(_) => {
                 if let Some((operand, target)) =
                     repark_functions::cast_map::string_integral_cast_parts(node)
+                        .or_else(|| repark_functions::cast_map::narrow_cast_parts(node))
                     && let Ok(from_type) = operand.get_type(schema)
                     && assignment_types::cast_may_fail_at_runtime(&from_type, &target)
                 {

@@ -3,8 +3,8 @@
 **Builds.** Main `6d3739ab`, package `S/ddu-work/pkg-rp1base-8bc26cba` (its product tree equals `8bc26cba`'s).
 Unit 1's head (PR #1373), package `S/ddu-work/pkg-rp1d-acd27d6e`. Spark 4.1.2 live, the Iceberg 1.11.0 runtime jar,
 `local[1]`. Every RePark run printed `repark._native.__file__` from its package. Session zone UTC, `TZ=UTC` in
-both processes. Raw cells and verdicts: [evidence/raw/](evidence/raw/map.md); probes:
-[evidence/probes/](evidence/probes/map.md).
+both processes. Raw cells and verdicts: [evidence/raw/](evidence/raw/); probes:
+[evidence/probes/](evidence/probes/).
 
 **Verdicts.** Against Spark: **EQUAL** (rows and types equal), **WRONG** (RePark answers and the rows or types
 differ, or RePark answers where Spark raises: **silent**), **RAISE** (RePark raises where Spark answers: loud),

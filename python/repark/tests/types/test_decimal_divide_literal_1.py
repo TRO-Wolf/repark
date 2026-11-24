@@ -25,14 +25,8 @@ SET_KEYS = sorted(
 CONDITION = re.compile(r"\[([A-Z_]+)")
 PICK_KEY = "spark.sql.legacy.literal.pickMinimumPrecision"
 CARDED_CONDITIONS = {"REMAINDER_BY_ZERO": "DIVIDE_BY_ZERO"}
-OVERFLOW_CLASS = "an overflowing pmod() raises Arrow's error, not NUMERIC_VALUE_OUT_OF_RANGE"
 FPMOD_TYPE = "F.pmod answers its formula's type, not Pmod's (proposed card)"
 GAPS = {
-    **{
-        ("true", f"pm/{door}/{p}/left_neg"): OVERFLOW_CLASS
-        for door in ("sql", "expr", "select_expr")
-        for p in cells.PRECISIONS
-    },
     **{
         (mode, f"pm/F/{p}/left_neg"): FPMOD_TYPE
         for mode in ("false", "true")

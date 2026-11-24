@@ -3,7 +3,7 @@
 Every cell ran on Spark 4.1.2 and on main `9a48932f` (product of `a4d8857f`), session zone UTC, in both ANSI modes except
 Spark's grid (`G`), which the builder ran with ANSI on only and the critic ran with ANSI off on 2026-11-20 (2,268
 records); main ran every group in both modes, and a main cell with no Spark
-answer has no verdict ([evidence/](evidence/map.md) has the provenance). Spark's answer is `left._joinAsOf(...)` (surface `D`), the
+answer has no verdict ([evidence/](evidence/) has the provenance). Spark's answer is `left._joinAsOf(...)` (surface `D`), the
 oracle for every verdict. Main's cells are three surfaces: the same direct call (`main-D`), and the two workarounds
 a user can write today, W1 (a range join plus `row_number`) and W2 (a union plus a window fill)
 ([sketch.md](sketch.md) §2). `merge_asof` (`P`) and the SQL spellings (`S`) have their own rows.

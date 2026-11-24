@@ -32,5 +32,3 @@ commits. Raw: `N/string-hms-out/rustprobe/head.log`, `main.log`.
 
 Risk 1 does not materialize on the head: a session with the Spark extension plans `hour(to_timestamp(c))` on both
 dialects, and a session without it has no `hour`. No door answers a zoneless text read as UTC through seat A's cast.
-
-Up: [map.md](map.md).

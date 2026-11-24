@@ -3,7 +3,7 @@
 The recorded answers CSV-FIELD-KERNEL-1 tests against. Each cell is Spark 4.1.2 live: `spark.read.schema("x <type>, k
 STRING").csv(<one-row file>)`, header off, session zone UTC, the value of `x` as PySpark collects it. Probe:
 [evidence/probes/revision.py](evidence/probes/revision.py) (`oracle`, `zones`); raw cells:
-[evidence/raw/](evidence/raw/map.md) (`revision-cells-spark.jsonl.gz`, `revision-tables.md.txt`).
+[evidence/raw/](evidence/raw/) (`revision-cells-spark.jsonl.gz`, `revision-tables.md.txt`).
 
 ## The converters (the jar, `UnivocityParser.makeConverter`; the critic's `javap` agrees)
 

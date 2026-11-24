@@ -279,3 +279,88 @@ async fn a_map_operand_refuses_comparison_ordering_and_distinct_as_spark_does() 
         "+----+------+\n| id | note |\n+----+------+\n| 0  | n    |\n| 1  | n    |\n+----+------+"
     );
 }
+
+#[tokio::test]
+async fn multiset_set_operations_refuse_map_on_either_side_and_nested_while_distinct_keeps_main() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    for op in ["INTERSECT ALL", "EXCEPT ALL"] {
+        for (sql, column) in [
+            (
+                format!("SELECT NULL AS m {op} SELECT map('a', CAST(1 AS INT)) AS m"),
+                "m",
+            ),
+            (
+                format!("SELECT map('a', CAST(1 AS INT)) AS m {op} SELECT NULL AS m"),
+                "m",
+            ),
+            (
+                format!(
+                    "SELECT named_struct('m', map('a', CAST(1 AS INT))) AS s {op} \
+                     SELECT named_struct('m', map('a', CAST(1 AS INT))) AS s"
+                ),
+                "s",
+            ),
+            (
+                format!(
+                    "SELECT NULL AS s {op} \
+                     SELECT named_struct('m', map('a', CAST(1 AS INT))) AS s"
+                ),
+                "s",
+            ),
+            (
+                format!(
+                    "SELECT make_array(map('a', CAST(1 AS INT))) AS a {op} \
+                     SELECT make_array(map('a', CAST(1 AS INT))) AS a"
+                ),
+                "a",
+            ),
+            (
+                format!("SELECT NULL AS a {op} SELECT make_array(map('a', CAST(1 AS INT))) AS a"),
+                "a",
+            ),
+            (
+                format!(
+                    "SELECT named_struct('x', make_array(map('a', CAST(1 AS INT)))) AS s {op} \
+                     SELECT named_struct('x', make_array(map('a', CAST(1 AS INT)))) AS s"
+                ),
+                "s",
+            ),
+            (
+                format!(
+                    "SELECT make_array(named_struct('m', map('a', CAST(1 AS INT)))) AS a {op} \
+                     SELECT make_array(named_struct('m', map('a', CAST(1 AS INT)))) AS a"
+                ),
+                "a",
+            ),
+        ] {
+            let error = refusal(&ctx, &catalogs, &sql).await;
+            assert!(
+                error.contains("[UNSUPPORTED_FEATURE.SET_OPERATION_ON_MAP_TYPE]"),
+                "{sql}: {error}"
+            );
+            assert!(error.contains("SQLSTATE: 0A000"), "{sql}: {error}");
+            assert!(
+                error.contains(&format!("column `{column}`")),
+                "{sql}: {error}"
+            );
+        }
+    }
+    let distinct_right = rendered(
+        &ctx,
+        &catalogs,
+        "SELECT NULL AS m EXCEPT SELECT map('a', CAST(1 AS INT)) AS m",
+    )
+    .await;
+    assert_eq!(distinct_right, "+---+\n| m |\n+---+\n|   |\n+---+");
+    let distinct_left = refusal(
+        &ctx,
+        &catalogs,
+        "SELECT map('a', CAST(1 AS INT)) AS m INTERSECT SELECT map('a', CAST(1 AS INT)) AS m",
+    )
+    .await;
+    assert!(
+        distinct_left.contains("[UNSUPPORTED_FEATURE.SET_OPERATION_ON_MAP_TYPE]"),
+        "{distinct_left}"
+    );
+}

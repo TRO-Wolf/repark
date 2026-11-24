@@ -61,5 +61,3 @@ were not measured with a supported type, so Spark's v3 behaviour for a `TIMESTAM
 - A nanosecond value that is not a SQL literal (for example a cast from a string or an `ns` column written by a
   different route). Point 2 covers the literal only.
 - The native v3 controls with a `format-version` clause (the brief limits v3 to the facade).
-
-Up: [map.md](map.md).

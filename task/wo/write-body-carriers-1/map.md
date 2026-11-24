@@ -5,6 +5,6 @@ main on `CREATE [OR REPLACE] TABLE z AS <write>` for the five write bodies,
 plus the wrapper verbs on main and the seam note. No product code. The ledger is
 [write-body-carriers-1-ledger.md](../../ledgers/archive/2026-10/2026-10-30-write-body-carriers-1-ledger.md).
 
-- [evidence/](evidence/map.md) — the recorded cells and the seam note.
+- [evidence/](evidence/) — the recorded cells and the seam note.
 
 Up: [../map.md](../map.md).

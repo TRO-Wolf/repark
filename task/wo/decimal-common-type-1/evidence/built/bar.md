@@ -7,14 +7,14 @@ built from the committed tree) against main `33bfde4e` (package `pkg-cu-88999454
 ## Method
 
 - Step 0's whole cell set re-ran on the head: `run_cells.py`, `run_side.py` and `run_revision.py` in both ANSI modes
-  and `run_native.py` ([../probes/](../probes/map.md), unchanged), by [probes/run_repark.sh](probes/run_repark.sh),
+  and `run_native.py` ([../probes/](../probes/), unchanged), by [probes/run_repark.sh](probes/run_repark.sh),
   then `compact.py` and `analyze.py` against step 0's Spark raw files (Spark does not change). Main's verdicts are
   step 0's [../raw/verdicts.jsonl](../raw/verdicts.jsonl); main's native door ran a second time to show which error
   texts vary run to run.
 - [probes/bar.py](probes/bar.py) pairs head and main cell by cell, names every non-EQUAL common-type cell, and
   renders a struct value alike on both engines (PySpark returns a `Row`, RePark a `dict`; the types and values
   are equal — 6 cells: `literal/u_struct` on `t` and `tx`, `rev/pin/struct_pos`, both modes).
-- Raw: [raw/](raw/map.md). The full table is [raw/bar-table.md](raw/bar-table.md), the other causes cell for cell
+- Raw: [raw/](raw/). The full table is [raw/bar-table.md](raw/bar-table.md), the other causes cell for cell
   [raw/other-causes.md](raw/other-causes.md).
 
 ## Result
@@ -82,5 +82,3 @@ because the first overflowing row depends on the partition order.
 - **main** `pkg-cu-88999454`: 1078 failed, 226 passed (the 226 are the controls, the legacy sample, the agreeing
   integer-literal comparisons and the both-raise struct comparison);
 - **head** `pkg-dct-7bf32859`: 1304 passed.
-
-Up: [map.md](map.md).

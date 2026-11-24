@@ -22,4 +22,4 @@ The owner adopted the evaluation's shape (option D) on 2026-10-22 and its §3 do
 - [order-step-3b.md](order-step-3b.md) — The order for WRITE-SPINE-1 step (3b), the door matrix against the step-0 fixtures, committed unchanged; its Q1 and Q2 rulings are recorded in the hand-back, not in this file.
 - [order-step-2.md](order-step-2.md) — **the order for WRITE-SPINE-1 step (2) (2026-10-25, grade B):** one plan-time conform stage for every Iceberg write door, its gates and halts; its Outcome section records the three slices, the 288 moved cells and the WS2-25 and WS2-26 rulings.
 - [sketch-step-2.md](sketch-step-2.md) — **the step-0 sketch for WRITE-SPINE-1 step (2) (2026-10-25):** the conform stage's design and corrections, the questions the orchestrator ruled as WS2-12 to WS2-24, and the file list the builder slices followed.
-- [evidence/](evidence/map.md) — **step (2) census evidence (2026-10-25):** the F-1 text-leaf table and the WS2-9 per-cell tables for mutants A and A+B.
+- [evidence/](evidence/) — **step (2) census evidence (2026-10-25):** the F-1 text-leaf table and the WS2-9 per-cell tables for mutants A and A+B.

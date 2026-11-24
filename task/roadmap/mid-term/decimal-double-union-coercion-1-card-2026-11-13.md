@@ -65,7 +65,7 @@ the read and write doors.
 - the owner's split plan, 2026-11-14, about 13:38 UTC, verbatim "Merge and go with the split plan";
 - step 0′ on main `dc6b4c94` ([evidence/step0b/table.md](../../wo/decimal-double-union-coercion-1/evidence/step0b/table.md));
 - the orchestrator's rulings at the step 0′ check, 2026-11-15;
-- the build on branch `fix/decimal-double-coercion-part1` ([evidence/fix/](../../wo/decimal-double-union-coercion-1/evidence/fix/map.md)).
+- the build on branch `fix/decimal-double-coercion-part1` ([evidence/fix/](../../wo/decimal-double-union-coercion-1/evidence/fix/)).
 
 **Status: part 1 FIXED on the Spark door (branch, not merged); part 2 open.** Part 1 has three pieces:
 - **Seat E** (`SparkDecimalFloatWiden`, before `type_coercion` on the Spark-door list). A DECIMAL beside a FLOAT
@@ -165,7 +165,7 @@ recommendation it adopts:
 defaults for the next 8 hours". It adopts the default of each step 0 question: the #1339 regression is fixed inside
 part 2 by seat V (not reverted); Q1 (a), `L = 32`; Q2 yes, no DML marker position; Q3 yes, the stale outer union is
 part 2's; Q4 accepted on the critic's condition. The orchestrator capped the unit at 10 product files. Evidence:
-[evidence/part2/](../../wo/decimal-double-union-coercion-1/evidence/part2/map.md); inventory section J's build note.
+[evidence/part2/](../../wo/decimal-double-union-coercion-1/evidence/part2/); inventory section J's build note.
 
 **Status: part 2 BUILT on the Spark door (branch `fix/decimal-double-coercion-part2`, not merged).**
 
@@ -230,7 +230,7 @@ execute correctly. Cards: `repark-sql-update-subquery-where-1` (WHERE) and `UPDA
 
 **Sources:** the owner's "Proceed", 2026-11-16, about 11:00 UTC, after two verifiers returned FAIL on PR #1341 (head
 `d78d669f`) with three behaviour findings, and the build's cost runs halted on held rows. One delta under the
-one-round cap. Evidence: [evidence/part2/](../../wo/decimal-double-union-coercion-1/evidence/part2/map.md)
+one-round cap. Evidence: [evidence/part2/](../../wo/decimal-double-union-coercion-1/evidence/part2/)
 (`bar.md`, the delta section; `cost.md`).
 
 **Status: part 2 BUILT, delta applied (commit `12101e9b`, not merged).** The delta's package is `pkg-p2-12101e9b`.
