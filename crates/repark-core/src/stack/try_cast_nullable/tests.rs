@@ -170,7 +170,7 @@ fn nullable_field_udf_preserves_schema_name_and_metadata() {
 }
 
 #[test]
-fn repair_inlined_try_cast_wraps_only_consumer_arguments() {
+fn repair_inlined_try_cast_wraps_projection_consumer_arguments() {
     let schema = Arc::new(Schema::new(vec![Field::new("s", DataType::Utf8, false)]));
     let input: Arc<dyn ExecutionPlan> = Arc::new(EmptyExec::new(Arc::clone(&schema)));
     let raw_try: Arc<dyn PhysicalExpr> = Arc::new(TryCastExpr::new(
@@ -185,22 +185,20 @@ fn repair_inlined_try_cast_wraps_only_consumer_arguments() {
         "DataFusion 54.1 TryCastExpr::return_field bug precondition"
     );
 
-    let abs_udf = datafusion::functions::math::abs();
-    let return_field = Arc::new(Field::new("r", DataType::Int32, true));
     let call_expr: Arc<dyn PhysicalExpr> = Arc::new(ScalarFunctionExpr::new(
         "abs",
-        abs_udf,
+        datafusion::functions::math::abs(),
         vec![Arc::clone(&raw_try)],
-        return_field,
+        Arc::new(Field::new("r", DataType::Int32, true)),
         Arc::new(datafusion::config::ConfigOptions::default()),
     ));
     let projection: Arc<dyn ExecutionPlan> = Arc::new(
         ProjectionExec::try_new(
             vec![
-                ProjectionExpr::new(Arc::clone(&raw_try), "bare"),
+                ProjectionExpr::new(raw_try, "bare"),
                 ProjectionExpr::new(call_expr, "wrapped"),
             ],
-            Arc::clone(&input),
+            input,
         )
         .expect("projection"),
     );
@@ -231,14 +229,16 @@ fn repair_inlined_try_cast_wraps_only_consumer_arguments() {
             .expect("repaired return_field")
             .is_nullable()
     );
+}
 
-    let filter_pred: Arc<dyn PhysicalExpr> = datafusion::physical_expr::expressions::binary(
-        Arc::clone(&proj.expr()[1].expr),
-        Operator::Gt,
-        datafusion::physical_expr::expressions::lit(ScalarValue::Int32(Some(0))),
-        &schema,
-    )
-    .expect("pred");
+#[test]
+fn repair_inlined_try_cast_wraps_filter_consumer_arguments() {
+    let schema = Arc::new(Schema::new(vec![Field::new("s", DataType::Utf8, false)]));
+    let input: Arc<dyn ExecutionPlan> = Arc::new(EmptyExec::new(Arc::clone(&schema)));
+    let raw_try: Arc<dyn PhysicalExpr> = Arc::new(TryCastExpr::new(
+        Arc::new(Column::new("s", 0)),
+        DataType::Int32,
+    ));
     let bare_filter_pred: Arc<dyn PhysicalExpr> = datafusion::physical_expr::expressions::binary(
         Arc::clone(&raw_try),
         Operator::Gt,
@@ -268,13 +268,21 @@ fn repair_inlined_try_cast_wraps_only_consumer_arguments() {
     let unshielded_filter: Arc<dyn ExecutionPlan> =
         Arc::new(FilterExec::try_new(unshielded_filter_pred, input).expect("unshielded filter"));
     let repaired_filter = repair_inlined_try_cast_plan(unshielded_filter).expect("repaired filter");
-    assert_eq!(
-        repaired_filter
-            .downcast_ref::<FilterExec>()
-            .expect("FilterExec")
-            .predicate()
-            .to_string(),
-        filter_pred.to_string()
+    let predicate = repaired_filter
+        .downcast_ref::<FilterExec>()
+        .expect("FilterExec")
+        .predicate();
+    assert!(
+        predicate
+            .children()
+            .into_iter()
+            .next()
+            .expect("lhs")
+            .downcast_ref::<ScalarFunctionExpr>()
+            .expect("ScalarFunctionExpr")
+            .args()[0]
+            .downcast_ref::<NullableFieldPhysicalExpr>()
+            .is_some()
     );
 }
 

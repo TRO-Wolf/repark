@@ -22,8 +22,11 @@ awaits the owner's rating. Each card row records its own status.
   aligned the inventoried Python and Rust SQL string/raw/backtick/comment scanners with Spark 4.1.2 (residual
   still-unlike-Spark list on the card); evidence in
   [task/wo/filter-string-escaped-quote-1/evidence/](../../../wo/filter-string-escaped-quote-1/evidence/).
-- [TRY-CAST-NONNULL-FIELD-1](try-cast-nonnull-field-1-card-2026-11-24.md) (S2) — **card:** 87 cells crash where a
-  function consumes `TRY_CAST` of a NOT NULL column.
+- [TRY-CAST-NONNULL-FIELD-1](try-cast-nonnull-field-1-card-2026-11-24.md) (S2) — **fixed (2026-11-24):**
+  shields `TryCast` consumers in physical planning (`__repark_nullable_field__`), post-`ProjectionPushdown`
+  (`TryCastSafeSanityCheck`), and cross-ANSI temp views while keeping pruning and `EXPLAIN` byte-identical on
+  non-`TRY_CAST` queries; 9 separate `array_remove`/`make_dt_interval` cells remain on the card's still-unlike-Spark
+  list; evidence in [task/wo/try-cast-nonnull-field-1/evidence/](../../../wo/try-cast-nonnull-field-1/evidence/).
 - [CAST-SHIELD-INT-DECIMAL-OVERFLOW-1](cast-shield-int-decimal-overflow-1-card-2026-11-24.md) (S2) — **card:** an
   integer-to-decimal overflow in a filter is silently false under ANSI.
 - [INSERT-OVERWRITE-CONST-CAST-1](insert-overwrite-const-cast-1-card-2026-11-24.md) (S2) — **card:** an empty
