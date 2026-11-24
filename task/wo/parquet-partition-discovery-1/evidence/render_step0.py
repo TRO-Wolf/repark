@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
+
+_SCRATCH_PATH_RE = re.compile(r"(?:file://)?/tmp/[^\s'\"]+/fixtures")
 
 
 def _norm(val: Any) -> Any:
@@ -30,7 +33,8 @@ def _cell_summary(val: Any) -> str:
     if val.get("status") == "err":
         cond = val.get("condition")
         err_type = val.get("type", "Error")
-        msg = str(val.get("message", "")).replace("|", "/").replace("\n", " ")[:75]
+        raw_msg = _SCRATCH_PATH_RE.sub("<fixtures>", str(val.get("message", "")))
+        msg = raw_msg.replace("|", "/").replace("\n", " ")[:75]
         if cond:
             return f"ERR `{cond}` ({err_type})"
         return f"ERR `{err_type}`: {msg}"
