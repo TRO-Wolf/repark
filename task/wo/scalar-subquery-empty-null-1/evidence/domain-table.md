@@ -1,8 +1,8 @@
 # SCALAR-SUBQUERY-EMPTY-NULL-1 — Domain Table (Main vs Head vs Spark 4.1.2)
 
-Base: `fa7d75e446e6f0a3edf48f6538c6a42c376515e7` (`main`)  
+Base: `fa7d75e446e6f0a3edf48f6538c6a42c376515e7` (`main`), merged with `ed637ffb7250b4d1ada60cb52cd7e7d8dffa4aa2` (`main`) in Delta 1  
 Model: `gemini-4-neon-xhigh`  
-Date: 2026-11-23  
+Date: 2026-11-23 (Delta 1 updated 2026-11-24)  
 
 ## 1. WS3 Read Matrix (121 cells; ANSI=false and ANSI=true identical on main and head)
 
@@ -223,9 +223,9 @@ Summary on HEAD vs Spark 4.1.2: **57/57** S1 cells fixed in each ANSI mode and o
 | `tempview_df_subq_where_isnull` | `[[1], [2]]` | `[]` | `[[1], [2]]` |
 | `tempview_df_ansi_flip` | `[[1, True, 42], [2, True, 42]]` | `[[1, False, None], [2, False, None]]` (NN:['c']) | `[[1, True, 42], [2, True, 42]]` |
 | `cached_subq_where_isnull` | `[[1, None], [2, None]]` | `[]` | `[[1, None], [2, None]]` |
-| `spark_explode_empty_isnull` | `[[True]]` | ERR: `AnalysisException: [UNRESOLVED_ROUTINE] Cannot r` | ERR: `AnalysisException: [UNRESOLVED_ROUTINE] Cannot r` |
+| `spark_explode_empty_isnull` | `[[True]]` | `[[False]]` (current main `ed637ffb`) | `[[True]]` |
 
-## 5. EXPLAIN Plan-Quality Comparison (Main vs Head)
+## 5. EXPLAIN Plan-Quality Comparison (Current Main vs Delta 1 Head, 16 cores)
 
 | Query | Logical Plan Equal | Physical Plan Equal | Marker Free |
 |---|---|---|---|
@@ -239,3 +239,17 @@ Summary on HEAD vs Spark 4.1.2: **57/57** S1 cells fixed in each ANSI mode and o
 | `lit_1_isnull` | `True` | `True` | `True` |
 | `subq_eq_1_outer_join_elim` | `False` | `True` | `True` |
 | `subq_isnull_where` | `False` | `False` | `True` |
+
+## 6. Delta 1 Verification Summary (Spark 4.1.2 / Old Main / Current Main / Merged / Delta 1)
+
+| Suite / Section | Cells | Old Main (`fa7d75e4`) | Current Main (`ed637ffb`) | Merged (`19bb3e3b`) | Delta 1 Head | Regressions vs Current Main |
+|---|---:|---:|---:|---:|---:|---:|
+| WS3 Read Matrix (`spark.sql`, ANSI F/T, value + clean Arrow schema) | 121 | 28 | 33 | 115 | 115 | 0 |
+| Verifier `repro_repark.py` (F-001/F-002/F-003, ANSI F/T) | 20 | 6 | 9 | 0 | 20 | 0 |
+| Verifier `full_attack.py` SQL (ANSI F/T) | 154 | 55 | 63 | 133 | 148 | 0 |
+| Verifier `full_attack.py` Doors (ANSI F / T) | 16 | 3 / 2 | 1 / 0 | 16 / 12 | 16 / 12 | 0 |
+| Verifier `full_attack.py` Writes (ANSI F/T) | 6 | 0 | 0 | 5 | 5 | 0 |
+| Delta 1 Generator + Iceberg/Parquet SQL (ANSI F/T) | 50 | 32 | 42 | 35 | 50 | 0 |
+| Delta 1 `selectExpr` + Temp Views (ANSI F/T) | 14 | 9 | 10 | 8 | 14 | 0 |
+| Delta 1 Iceberg/Parquet `INSERT ... SELECT` (ANSI F/T) | 5 | 5 | 5 | 3 | 5 | 0 |
+| Delta 1 Native `repark.sql()` (unnest + Iceberg/Parquet casts/INSERT) | 11 | 10 | 10 | 11 | 11 | 0 |
