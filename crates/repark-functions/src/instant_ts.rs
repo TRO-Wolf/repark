@@ -971,7 +971,8 @@ mod tests {
                 "try_to_timestamp",
             ),
         ] {
-            let plan = ctx.sql(sql).await.expect(sql).into_unoptimized_plan();
+            let unoptimized = ctx.sql(sql).await.expect(sql).into_unoptimized_plan();
+            let plan = crate::analyze_eagerly(&ctx.state(), unoptimized).expect(sql);
             let display = format!("{plan}");
             assert!(display.contains(expected_fn), "{sql}: {display}");
             assert!(
@@ -984,7 +985,8 @@ mod tests {
             "SELECT CAST('2024-01-01 02:00:00+00:00' AS TIMESTAMP) AS ts",
             "SELECT TRY_CAST('2024-01-01 02:00:00Z' AS TIMESTAMP) AS ts",
         ] {
-            let plan = ctx.sql(sql).await.expect(sql).into_unoptimized_plan();
+            let unoptimized = ctx.sql(sql).await.expect(sql).into_unoptimized_plan();
+            let plan = crate::analyze_eagerly(&ctx.state(), unoptimized).expect(sql);
             let display = format!("{plan}");
             assert!(
                 display.contains("TimestampMicrosecond(1704074400000000"),
