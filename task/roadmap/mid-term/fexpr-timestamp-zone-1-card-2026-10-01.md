@@ -1,8 +1,12 @@
 # FEXPR-TIMESTAMP-ZONE-1 — F.expr TIMESTAMP literals resolve in UTC, not the session zone
 
 **Filed: 2026-10-01 from the overnight owner-items backlog** (the owner-items list of
-2026-09-29, line 72; #888 re-verify 10). **Severity:** wrong results, not yet rated (owner). **Status:** C-001 fixed by
-DATE-PART-SESSION-ZONE-1 (PR #1420, 2026-11-24). The NTZ remainder below is open, and S2 is proposed for it.
+2026-09-29, line 72; #888 re-verify 10). **Severity:** S1 (measured on the NTZ remainder, 2026-11-24 — silent 5-hour
+wrong stored values in Iceberg `TIMESTAMP_NTZ` and Parquet writes confirmed by live Spark 4.1.2 cross-read, plus silent
+wrong query values). **Status:** **FIXED** — C-001 (session zone) fixed by DATE-PART-SESSION-ZONE-1 (PR #1420,
+2026-11-24); NTZ remainder fixed by FEXPR-TIMESTAMP-NTZ-1 (2026-11-24, evidence in
+[task/wo/fexpr-timestamp-ntz-1/evidence/](../../wo/fexpr-timestamp-ntz-1/evidence/)). Display names split to
+[FEXPR-TIMESTAMP-DISPLAY-NAME-1](cards-2026-11-23/fexpr-timestamp-display-name-1-card-2026-11-24.md).
 **Target:** mid-term.
 
 ## The divergence it records
@@ -60,6 +64,51 @@ column or a zone change. That is not yet measured.
   [SPARK-DOOR-OVER-ACCEPT-SYNTAX-1](cards-2026-11-23/spark-door-over-accept-syntax-1-card-2026-11-24.md).
 - `T - TIMESTAMP '2024-01-01 00:00:00'`: `dtypes` reports `string` where Spark reports `interval day to second`, and
   the value agrees.
+
+## Resolution 2026-11-24 (FEXPR-TIMESTAMP-NTZ-1, SEVERITY: S1 measured)
+
+**What was fixed** (branch `fix/fexpr-timestamp-ntz-1`, verified on `b9add8f73` across 1,771 domain cells — 510 fixed,
+0 regressed — and 84/84 live Spark 4.1.2 Iceberg/Parquet cross-reads; pinned in `test_fexpr_timestamp_ntz_1.py`):
+
+- **Deferred `spark.sql.timestampType` in `build_expr_context`:** added `DeferredSparkTimestampTypeConfig`
+  (`crates/repark-functions/src/timestamp_type.rs`) and attached it in `build_expr_context()` so bare `TIMESTAMP`
+  literals and casts survive `F.expr` eager analysis and resolve in the consumer session under its
+  `spark.sql.timestampType` and `spark.sql.session.timeZone`.
+- **Fragment timestamp cast & `TIMESTAMP_LTZ` literal lowering:** exposed `lower_fragment_timestamp_casts`,
+  `canonicalize_fragment`, and `canonicalize_predicate` across all `F.expr` and Spark-door `filter(str)` seats so
+  `CAST`/`::`/`TRY_CAST`/`SAFE_CAST` to `TIMESTAMP_NTZ`, explicit `TIMESTAMP_LTZ` casts and literals, and zoned
+  `TIMESTAMP '...Z'` literals preserve their exact target semantics across deferral and under
+  `spark.sql.timestampType=TIMESTAMP_NTZ`.
+- **Analyzer, nullability, and Iceberg/DML write fixes:** added `Expr::TryCast` + LTZ-to-NTZ wall conversion in
+  `rewrite_cast_as_ntz`, stale `LogicalPlan::Union` schema rebuild under NTZ, string-source nullability in
+  `SparkTimestampNtzCast::return_field_from_args`, `TIMESTAMP_LTZ_CAST_NAME` emission in `conform_stage.rs::leaf_store`,
+  and `retarget_dml_ltz_store_casts` so Iceberg/DML writes into `TIMESTAMP` (LTZ) columns succeed under
+  `spark.sql.timestampType=TIMESTAMP_NTZ`.
+
+## Still unlike Spark (measured on `b9add8f73`, out of scope for this unit)
+
+1. **Unaliased column display names** (carded as
+   [FEXPR-TIMESTAMP-DISPLAY-NAME-1](cards-2026-11-23/fexpr-timestamp-display-name-1-card-2026-11-24.md), S3 proposed):
+   `F.expr` names `TIMESTAMP '2024-01-01 02:00:00Z'` as `TIMESTAMP '2024-01-01 02:00:00Z'` (Spark:
+   `TIMESTAMP '2023-12-31 21:00:00'`) and `TIMESTAMP '2024-01-01 02:00:00'` under NTZ as
+   `TIMESTAMP '2024-01-01 02:00:00'` (Spark: `TIMESTAMP_NTZ '2024-01-01 02:00:00'`); `spark.sql`/`selectExpr` render
+   raw microsecond ticks or `__repark_cast_timestamp_ntz__(...)`.
+2. **Runtime `spark.conf.set("spark.sql.timestampType", "TIMESTAMP_NTZ")` after session creation** (all doors): stored
+   only in the Python conf dict without updating the live Rust `SparkTimestampTypeConfig` (3 cells in
+   `runtime_conf_cells`).
+3. **Pre-existing both-door divergences under `spark.sql.timestampType=TIMESTAMP_NTZ`:**
+   - `CAST(0 AS TIMESTAMP)`: RePark answers `1970-01-01 00:00:00` (`timestamp_ntz`) across all 4 doors (pinned in
+     `instant_ts/tests.rs`); Spark raises `DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION` (24 cells).
+   - `CAST(TIMESTAMP '2024-01-01 02:00:00' AS BIGINT)`: RePark answers `1704074400` (`bigint`) across all 4 doors; Spark
+     raises `DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION` (24 cells).
+   - `to_timestamp('2024-01-01 02:00:00')`: RePark stays `timestamp` (LTZ) across all 4 doors (pinned in
+     `test_timestamp_type.py`); Spark returns `timestamp_ntz` (24 cells).
+4. **Pre-existing SQL-door (`spark.sql`/`selectExpr`) divergences under `spark.sql.timestampType=TIMESTAMP_NTZ`:**
+   `TIMESTAMP '2024-01-01 02:00:00Z'`, `TIMESTAMP '2024-01-01 02:00:00+05:30'`, `CAST(... AS TIMESTAMP_LTZ)`, and
+   `CAST(s AS TIMESTAMP_LTZ)` lower to bare `TIMESTAMP` and resolve as `timestamp_ntz` on `spark.sql`/`selectExpr` (60
+   cells); `F.expr` (`select`/`withColumn`) matches Spark (`timestamp`).
+5. **Original "Not this card" items above:** `TIMESTAMP 'bad'` / `TIMESTAMP '2024-01-01 02:00:00[UTC]'` over-acceptance
+   and `T - T` interval `dtypes` reporting `string`.
 
 ## Pointers
 
