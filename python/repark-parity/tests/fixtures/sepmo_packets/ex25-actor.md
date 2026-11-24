@@ -28,7 +28,7 @@ Live PySpark is the oracle when a unit asserts Spark values. Provision with `--e
 Size ceilings only ratchet down. A new Python file stays under 1000 lines. A ratchet is a single-row edit in `scripts/check_lib_py.py`; `python/repark-parity/tests/test_cap_1_source_file_line_cap.py` checks the tree. Do not raise a gate baseline without owner approval. Do not change what any gate requires.
 
 ### Map lockstep
-`map.md` in every directory, updated in the same change. A new directory gets a new `map.md`. No amends.
+`map.md` where the design needs one, updated in the same change; no new ones under `task/wo`. No amends.
 
 ### Frozen ledgers
 A ledger in `completed/` or `archive/` is frozen. Do not amend it.

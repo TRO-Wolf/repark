@@ -22,6 +22,9 @@ the multiset set-operation rewrite and the `MINUS ALL` spelling.
   `guard_passes_an_update_whose_set_value_has_no_scalar_subquery` holds it silent for a
   literal, an expression of the column, a subquery in the `WHERE` only, and `arrow_cast` of
   the column. The walk is `Expr::contains_scalar_subquery` over the whole assigned expression.
+  **SCALAR-SUBQUERY-EMPTY-NULL-1 (2026-11-23):** `execute_wraps_empty_scalar_subquery_in_prepare_and_create_view`
+  pins `PreExecute::execute`'s off-list wrap of `Statement::Prepare` and `DdlStatement::CreateView`
+  inputs before DataFusion's bare optimizer and `apply_type_coercion`.
 - `setop_all.rs` — **SQL-SETOP-ALL-MULTISET-1 (2026-11-23, owner ruling 2026-11-22; it retires
   SQL-SETOP-ALL-REFUSE-1):** `MultisetSetOperations` (`setop_all_multiset`), the analyzer rule
   `insert_multiset_set_operations` seats right after `struct_setop_names` (every core session and the

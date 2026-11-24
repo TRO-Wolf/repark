@@ -78,8 +78,8 @@ STABLE_RULES: tuple[str, ...] = (
     "`python/repark-parity/tests/test_cap_1_source_file_line_cap.py` checks the "
     "tree.",
     "Do not raise a gate baseline without owner approval. Do not change what any gate requires.",
-    "`map.md` in every directory, updated in the same change. A new directory "
-    "gets a new `map.md`. No amends.",
+    "`map.md` where the design needs one, updated in the same change; no new "
+    "ones under `task/wo`. No amends.",
     "A ledger in `completed/` or `archive/` is frozen. Do not amend it.",
 )
 
@@ -144,8 +144,8 @@ STABLE_PREFIX: str = (
     "change what any gate requires.\n"
     "\n"
     "### Map lockstep\n"
-    "`map.md` in every directory, updated in the same change. A new directory "
-    "gets a new `map.md`. No amends.\n"
+    "`map.md` where the design needs one, updated in the same change; no new "
+    "ones under `task/wo`. No amends.\n"
     "\n"
     "### Frozen ledgers\n"
     "A ledger in `completed/` or `archive/` is frozen. Do not amend it.\n"
