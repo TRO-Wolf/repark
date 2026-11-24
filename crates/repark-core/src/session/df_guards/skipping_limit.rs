@@ -5,14 +5,16 @@ use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
 use datafusion::common::{Statistics, internal_err};
 use datafusion::error::Result as DataFusionResult;
 use datafusion::execution::TaskContext;
-use datafusion::physical_optimizer::PhysicalOptimizerRule;
 use datafusion::physical_optimizer::optimizer::PhysicalOptimizer;
+use datafusion::physical_optimizer::{PhysicalOptimizerContext, PhysicalOptimizerRule};
 use datafusion::physical_plan::limit::GlobalLimitExec;
 use datafusion::physical_plan::{
     DisplayAs, DisplayFormatType, ExecutionPlan, PlanProperties, SendableRecordBatchStream,
 };
 
 pub(crate) const ENFORCE_SORTING_RULE_NAME: &str = "EnforceSorting";
+
+const SANITY_CHECK_RULE_NAME: &str = "SanityCheckPlan";
 
 pub(crate) fn skip_safe_physical_optimizer_rules()
 -> Vec<Arc<dyn PhysicalOptimizerRule + Send + Sync>> {
@@ -23,11 +25,47 @@ pub(crate) fn skip_safe_physical_optimizer_rules()
             if rule.name() == ENFORCE_SORTING_RULE_NAME {
                 Arc::new(SkipSafeEnforceSorting { inner: rule })
                     as Arc<dyn PhysicalOptimizerRule + Send + Sync>
+            } else if rule.name() == SANITY_CHECK_RULE_NAME {
+                Arc::new(TryCastSafeSanityCheck { inner: rule })
+                    as Arc<dyn PhysicalOptimizerRule + Send + Sync>
             } else {
                 rule
             }
         })
         .collect()
+}
+
+#[derive(Debug)]
+struct TryCastSafeSanityCheck {
+    inner: Arc<dyn PhysicalOptimizerRule + Send + Sync>,
+}
+
+impl PhysicalOptimizerRule for TryCastSafeSanityCheck {
+    fn optimize(
+        &self,
+        plan: Arc<dyn ExecutionPlan>,
+        config: &ConfigOptions,
+    ) -> DataFusionResult<Arc<dyn ExecutionPlan>> {
+        let repaired = crate::stack::repair_inlined_try_cast_plan(plan)?;
+        self.inner.optimize(repaired, config)
+    }
+
+    fn optimize_with_context(
+        &self,
+        plan: Arc<dyn ExecutionPlan>,
+        context: &dyn PhysicalOptimizerContext,
+    ) -> DataFusionResult<Arc<dyn ExecutionPlan>> {
+        let repaired = crate::stack::repair_inlined_try_cast_plan(plan)?;
+        self.inner.optimize_with_context(repaired, context)
+    }
+
+    fn name(&self) -> &str {
+        self.inner.name()
+    }
+
+    fn schema_check(&self) -> bool {
+        self.inner.schema_check()
+    }
 }
 
 #[derive(Debug)]
