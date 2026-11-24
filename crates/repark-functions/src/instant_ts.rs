@@ -21,7 +21,9 @@ use datafusion::logical_expr::{
 use datafusion::optimizer::AnalyzerRule;
 
 use crate::datetime::localize_wall_micros_in_zone;
-use crate::session_time_zone::{current_timezone_udf, session_time_zone_from_options};
+use crate::session_time_zone::{
+    current_timezone_udf, is_session_time_zone_deferred, session_time_zone_from_options,
+};
 use crate::spark_string_timestamp::{
     StringCastFailure, cast_columnar_strings_to_ltz, is_string_type, rewrite_string_try_cast,
     spark_string_literal,
@@ -525,13 +527,15 @@ struct SparkLtzTimestampCast;
 
 impl AnalyzerRule for SparkLtzTimestampCast {
     fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
-        let zone = session_time_zone_from_options(config).to_string();
+        let zone = (!is_session_time_zone_deferred(config))
+            .then(|| session_time_zone_from_options(config).to_string());
+        let zone_ref = zone.as_deref();
         let timestamp_type = spark_timestamp_type_from_options(config);
         let empty = DFSchema::empty();
         let plan = crate::timestamp_ns_cast::widen_mixed_values_timestamps(
             plan,
             &|cell: Expr| {
-                cell.transform_up(|node| Ok(rewrite_cast(node, &empty, &zone, timestamp_type)))
+                cell.transform_up(|node| Ok(rewrite_cast(node, &empty, zone_ref, timestamp_type)))
                     .data()
             },
             timestamp_type.is_ntz(),
@@ -541,7 +545,7 @@ impl AnalyzerRule for SparkLtzTimestampCast {
         } else {
             crate::timestamp_ntz_cast::retarget_dml_store_casts(plan)?
         };
-        plan.transform_up_with_subqueries(|node| rewrite_plan(node, &zone, timestamp_type))
+        plan.transform_up_with_subqueries(|node| rewrite_plan(node, zone_ref, timestamp_type))
             .data()
     }
 
@@ -553,7 +557,7 @@ impl AnalyzerRule for SparkLtzTimestampCast {
 
 fn rewrite_plan(
     plan: LogicalPlan,
-    zone: &str,
+    zone: Option<&str>,
     timestamp_type: SparkTimestampType,
 ) -> Result<Transformed<LogicalPlan>> {
     let mut schema = DFSchema::empty();
@@ -578,7 +582,7 @@ fn rewrite_plan(
 fn rewrite_cast(
     expr: Expr,
     schema: &DFSchema,
-    zone: &str,
+    zone: Option<&str>,
     timestamp_type: SparkTimestampType,
 ) -> Transformed<Expr> {
     if timestamp_type.is_ntz() {
@@ -941,5 +945,52 @@ mod tests {
             .as_primitive::<TimestampMicrosecondType>()
             .value(0);
         assert_eq!(ticks, -1_800_000_000);
+    }
+
+    #[tokio::test]
+    async fn deferred_session_zone_skips_zoneless_fold_and_keeps_zoned_fold() {
+        let config = crate::session_time_zone::with_deferred_session_time_zone(
+            datafusion::prelude::SessionConfig::new(),
+        );
+        let ctx = crate::spark_type_planner::planned_context(config);
+        crate::register_all(&ctx);
+        for rule in crate::analyzer_rules() {
+            ctx.add_analyzer_rule(rule);
+        }
+        for (sql, expected_fn) in [
+            (
+                "SELECT TIMESTAMP '2024-01-01 02:00:00' AS ts",
+                "to_timestamp",
+            ),
+            (
+                "SELECT CAST('2024-01-01 02:00:00' AS TIMESTAMP) AS ts",
+                "to_timestamp",
+            ),
+            (
+                "SELECT TRY_CAST('2024-01-01 02:00:00' AS TIMESTAMP) AS ts",
+                "try_to_timestamp",
+            ),
+        ] {
+            let plan = ctx.sql(sql).await.expect(sql).into_unoptimized_plan();
+            let display = format!("{plan}");
+            assert!(display.contains(expected_fn), "{sql}: {display}");
+            assert!(
+                !display.contains("TimestampMicrosecond("),
+                "{sql}: {display}"
+            );
+        }
+        for sql in [
+            "SELECT TIMESTAMP '2024-01-01 02:00:00Z' AS ts",
+            "SELECT CAST('2024-01-01 02:00:00+00:00' AS TIMESTAMP) AS ts",
+            "SELECT TRY_CAST('2024-01-01 02:00:00Z' AS TIMESTAMP) AS ts",
+        ] {
+            let plan = ctx.sql(sql).await.expect(sql).into_unoptimized_plan();
+            let display = format!("{plan}");
+            assert!(
+                display.contains("TimestampMicrosecond(1704074400000000"),
+                "{sql}: {display}"
+            );
+            assert!(!display.contains("to_timestamp"), "{sql}: {display}");
+        }
     }
 }

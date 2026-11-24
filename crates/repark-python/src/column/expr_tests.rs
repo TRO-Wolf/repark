@@ -490,3 +490,48 @@ fn a_string_predicate_takes_spark_null_placement_only_on_the_spark_door() {
         }
     });
 }
+
+#[test]
+fn expr_context_defers_zoneless_timestamp_literals_and_folds_zoned_text() {
+    use datafusion::common::ScalarValue;
+    let context = super::expr_build::build_expr_context().expect("expression context");
+    let config = context.copied_config();
+    assert!(repark_functions::session_time_zone::is_session_time_zone_deferred(config.options()));
+    assert!(
+        config
+            .options()
+            .extensions
+            .get::<repark_functions::session_time_zone::SessionTimeZoneConfig>()
+            .is_none()
+    );
+    for (sql, expected_udf) in [
+        ("TIMESTAMP '2024-01-01 02:00:00'", "to_timestamp"),
+        ("CAST('2024-01-01 02:00:00' AS TIMESTAMP)", "to_timestamp"),
+        (
+            "TRY_CAST('2024-01-01 02:00:00' AS TIMESTAMP)",
+            "try_to_timestamp",
+        ),
+    ] {
+        let column = PyColumn::sql(sql, false).expect(sql);
+        match column.expr() {
+            Expr::ScalarFunction(function) => {
+                assert_eq!(function.func.name(), expected_udf, "{sql}");
+            }
+            other => panic!("{sql}: expected {expected_udf}, got {other:?}"),
+        }
+    }
+    for sql in [
+        "TIMESTAMP '2024-01-01 02:00:00Z'",
+        "TIMESTAMP '2024-01-01 02:00:00+00:00'",
+        "TRY_CAST('2024-01-01 02:00:00Z' AS TIMESTAMP)",
+    ] {
+        let column = PyColumn::sql(sql, false).expect(sql);
+        match column.expr() {
+            Expr::Literal(ScalarValue::TimestampMicrosecond(Some(micros), Some(zone)), _) => {
+                assert_eq!(*micros, 1_704_074_400_000_000, "{sql}");
+                assert_eq!(zone.as_ref(), "UTC", "{sql}");
+            }
+            other => panic!("{sql}: expected folded UTC TimestampMicrosecond, got {other:?}"),
+        }
+    }
+}

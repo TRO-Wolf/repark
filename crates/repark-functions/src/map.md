@@ -683,6 +683,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **R-17c-4:** the carrier holds `display` (raw echo) + canonical `zone` (extractor reader).
   **R-17c-6:** the in-crate canonicaliser mirrors the core gate (exact-case prefixes,
   zero-seconds to `±HH:MM`) and asserts the same shared table.
+  **DATE-PART-SESSION-ZONE-1 (2026-11-24):** `DeferredSessionTimeZoneConfig` (`repark.deferred_session_tz`)
+  marks zone-free fragment contexts so `SparkLtzTimestampCast` and `rewrite_string_try_cast` fold only zoned text.
 - `current_date.rs` — **CURRENT-DATE-SESSION-ZONE-1 (2026-10-10):** the owned `current_date`
   (+ `today` alias) overwrite. DataFusion's builtin folds at plan time from
   `execution.time_zone`, which RePark never sets (parity doc SET-ANSI-RUNTIME note), so it

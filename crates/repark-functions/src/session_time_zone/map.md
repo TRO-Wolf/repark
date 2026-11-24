@@ -33,6 +33,12 @@ session timezone (`spark.sql.session.timeZone`) down to the calendar extractors 
   - **R-17c-6 (batch-17 oracle):** the in-crate copy mirrors the narrowed core gate
     (exact-case `GMT`/`UTC`/`UT` and `Z`; zero-seconds to `±HH:MM`) and reads the same
     `canonical_zone_table.txt` instead of a second table.
+  - **deferred-zone marker** — DATE-PART-SESSION-ZONE-1 (2026-11-24):
+    `DeferredSessionTimeZoneConfig` (`repark.deferred_session_tz`, attached only by
+    `repark-python::column::expr_build::build_expr_context`) is separate from
+    `SessionTimeZoneConfig`, refuses `SET`, and tells `SparkLtzTimestampCast` /
+    `rewrite_string_try_cast` to defer zoneless `TIMESTAMP` literal folds to runtime UDFs while
+    keeping explicit-zone text folded (`deferred_session_time_zone_marker_is_separate_and_not_settable`).
 
 Deliberately NOT here: the extraction SEMANTICS. What `year` / `hour` / `date_trunc` actually
 answer under a zone is pinned end-to-end on real sessions in

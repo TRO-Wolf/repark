@@ -315,7 +315,8 @@ pub(super) fn sql_context(
 }
 
 pub(super) fn build_expr_context() -> datafusion::error::Result<SessionContext> {
-    let mut config = SessionConfig::new();
+    let mut config =
+        repark_functions::session_time_zone::with_deferred_session_time_zone(SessionConfig::new());
     config.options_mut().sql_parser.dialect = datafusion::config::Dialect::Databricks;
     config.options_mut().sql_parser.enable_ident_normalization = false;
     config.options_mut().sql_parser.default_null_ordering = SPARK_NULL_ORDERING.to_string();
