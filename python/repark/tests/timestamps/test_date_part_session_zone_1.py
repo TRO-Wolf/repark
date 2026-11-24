@@ -338,9 +338,10 @@ def test_a1_string_inputs_across_zones_and_ansi_modes(tmp_path: Path) -> None:
         )
         assert null_table.column("h").to_pylist() == [None]
         session.conf.set("spark.sql.ansi.enabled", "true")
+        bad_frame_ansi = session.sql("SELECT 'not-a-date' AS s UNION ALL SELECT '' AS s")
         for field in ("year", "hour"):
             with pytest.raises(Exception, match="CAST_INVALID_INPUT"):
-                bad_frame.select(
+                bad_frame_ansi.select(
                     spark_functions.date_part(spark_functions.lit(field), spark_functions.col("s"))
                 ).collect()
     finally:
