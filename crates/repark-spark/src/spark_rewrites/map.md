@@ -48,9 +48,6 @@ path stay in `spark_literals.rs`.
   holds the word `extract`; region-splicing passes (`struct_field.rs`, `create_options.rs`,
   and the `INSERT PARTITION` swap) preserve its regions. The other fields, unknown fields
   and quoted words stay as written (unit pins in the file).
-- `bare_explode.rs` — **SQL-EXPLODE-1 delta 2 (2026-11-23):** a bare `explode` / `explode_outer`
-  select item beside an item named `col` becomes `__repark_gen_alias(explode(...))`, so its plan
-  name cannot collide and a map still answers `key, value` (unit pins in the file).
 - `create_options.rs` — **D-5 (2026-09-21):** the `OPTIONS` → `TBLPROPERTIES`
   seam. Recognizes `CREATE [OR REPLACE] TABLE [IF NOT EXISTS] name [(cols)]
   USING iceberg` and rewrites its single well-formed `OPTIONS (k=v, …)` clause

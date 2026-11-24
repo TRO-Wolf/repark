@@ -521,6 +521,26 @@ fn a_zero_name_marker_leaves_a_map_explode_named_by_type() {
 }
 
 #[test]
+fn a_chained_generator_alias_marker_lets_the_outer_names_win() {
+    let mark = |inner: Expr, names: [&str; 2]| {
+        Expr::ScalarFunction(ScalarFunction::new_udf(
+            generator_udf(GENERATOR_ALIAS_UDF),
+            vec![inner, lit(names[0]), lit(names[1])],
+        ))
+    };
+    let fields = frame_names(|table| {
+        let marked = mark(
+            mark(explode_of("posexplode", "arr_i"), ["p", "c"]),
+            ["x", "y"],
+        );
+        table.select(vec![col("id"), marked])
+    })
+    .unwrap();
+    let names: Vec<&str> = fields.iter().map(|field| field.name().as_str()).collect();
+    assert_eq!(names, ["id", "x", "y"]);
+}
+
+#[test]
 fn array_repeat_fails_the_same_with_or_without_a_generator() {
     for sql in [
         "SELECT array_repeat(sequence(1, 2), 0) AS a",

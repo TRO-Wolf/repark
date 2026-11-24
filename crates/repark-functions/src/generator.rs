@@ -445,11 +445,6 @@ fn peel_generator(expr: &Expr) -> Result<Option<GeneratorSite>> {
             let Some(mut site) = peel_generator(inner)? else {
                 return plan_err!("'{GENERATOR_ALIAS_UDF}' wraps a non-generator expression");
             };
-            if site.names.is_some() && !names.is_empty() {
-                return plan_err!(
-                    "[UNSUPPORTED_GENERATOR] a generator output does not support nested aliasing"
-                );
-            }
             if !names.is_empty() {
                 site.names = Some(names);
             }
