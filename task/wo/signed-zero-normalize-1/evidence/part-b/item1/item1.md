@@ -57,8 +57,8 @@ RePark cites:
 
 ## 2. Re-measure (order §2.2)
 
-All three step-0 parts ran again on `276dc503`'s RePark legs ([raw/](raw/map.md)) and were labelled against step 0's
-Spark legs and the Q3 re-run's Spark floatkeys leg ([remeasure/](remeasure/map.md)). Spark did not change, so its legs
+All three step-0 parts ran again on `276dc503`'s RePark legs ([raw/](raw/)) and were labelled against step 0's
+Spark legs and the Q3 re-run's Spark floatkeys leg ([remeasure/](remeasure/)). Spark did not change, so its legs
 were not re-run. `compare_legs.py` compared every RePark cell with step 0's: outcome, error text, columns, rows and
 label. Step 0's floatkeys variant `matrix` was compared with today's `bare`, which is the same seed under its new name.
 
@@ -73,8 +73,8 @@ Each difference is in [remeasure/differences.jsonl](remeasure/differences.jsonl)
 
 ## 3. Added cells (order §2.3)
 
-All the cells are on step 0's seeds and doors. The raw legs are in [raw/](raw/map.md), labelled in
-[new-cells/](new-cells/map.md).
+All the cells are on step 0's seeds and doors. The raw legs are in [raw/](raw/), labelled in
+[new-cells/](new-cells/).
 
 **D16, spill** ([spill.md](spill.md)).
 - **Setup:** 2,000,000 rows. `d` is `-0.0` when `id % 4 = 0`, `0.0` when `id % 4 = 1`, and `id` otherwise; `f` is

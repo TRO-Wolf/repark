@@ -5,7 +5,7 @@
 #888 (NVL-TYPE-COERCION-1) closes and its table folds in here; one xhigh critic reviews
 [inventory.md](inventory.md) before any code. **Measured:** RePark main `04d84ab9` (the
 `pkg-04d84ab9` package, Spark door, DataFrame API and native door) against Spark 4.1.2, ANSI on and
-off; Iceberg 1.11.0 runtime for the writes. Provenance: [evidence/map.md](evidence/map.md). **Revised the same day** after the xhigh inventory
+off; Iceberg 1.11.0 runtime for the writes. Provenance: [evidence/map.md](evidence/). **Revised the same day** after the xhigh inventory
 critic (`VERDICT: GAPS`): its doors re-measured in both modes, a second seat for `VALUES`, the
 INTERSECT / EXCEPT discriminator, the RecursiveQuery exclusion, the signed-zero ordering, cost and
 pruning, and rewritten questions.

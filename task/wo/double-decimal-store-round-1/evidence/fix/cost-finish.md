@@ -14,7 +14,7 @@ opus2-cargo, on cores 32-47; median seconds. A sample whose one-minute load exce
 - **C-012** — PERF-1's like-for-like set through the ATTR-ID-1 replay harness (`c012p6` and `c012rest`, the cells
   whose outcome class matches on both builds, deterministic and recorded on Spark), the per-cell work times summed.
 
-Summary script: [finish_summary.py](finish_summary.py). Raw: [raw/](raw/map.md) `cost-finish-*.jsonl`.
+Summary script: [finish_summary.py](finish_summary.py). Raw: [raw/](raw/) `cost-finish-*.jsonl`.
 
 ## First run: the cast rows, the no-cast rows (five repeats) and C-012
 
@@ -191,5 +191,3 @@ Re-run (30 samples; 18 waited; 1 above load 4):
 | 5 | double | head | 0 | 4.75 | 4.8 | 3.42 | yes |
 | 5 | double | base-aa | 0 | 4.81 | 3.78 | 3.78 |  |
 | 5 | double | base | 0 | 4.87 | 3.96 | 3.96 |  |
-
-Up: [map.md](map.md).

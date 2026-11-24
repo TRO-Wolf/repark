@@ -2,8 +2,8 @@
 
 Measured 2026-11-16 (about 21:20–21:28 UTC) on main `e50ed17f`'s package against Spark 4.1.2, ANSI off and on.
 Every number below is produced by [evidence/probes/analyze.py](evidence/probes/analyze.py) and
-[evidence/probes/grids.py](evidence/probes/grids.py) from the raw cells in [evidence/raw/](evidence/raw/map.md);
-provenance and commands are in [evidence/map.md](evidence/map.md).
+[evidence/probes/grids.py](evidence/probes/grids.py) from the raw cells in [evidence/raw/](evidence/raw/);
+provenance and commands are in [evidence/map.md](evidence/).
 
 ## The data
 

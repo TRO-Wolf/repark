@@ -5,6 +5,6 @@ constants `0.0` and `-0.0` compare by bits once DataFusion folds them; Spark 4.1
 the domain table on main `d843d37e` and the inventory. No product code.
 
 - [inventory.md](inventory.md) — how the wrong answer is made, every seat that compares or folds two float values (DataFusion 54.1.0, Arrow, RePark, the fork) with "seen: yes / no, because", how each was searched, and the proposed seat.
-- [evidence/](evidence/map.md) — the probe, the comparer, the generated table and the raw cells.
+- [evidence/](evidence/) — the probe, the comparer, the generated table and the raw cells.
 
 Up: [../map.md](../map.md).

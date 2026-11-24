@@ -6,7 +6,7 @@ the wrong multiset for every column type. Its own PR in v1.5.7; it blocks ICE-V2
 real fix is the card SQL-SETOP-ALL-MULTISET-1
 ([../../roadmap/mid-term/sql-setop-all-multiset-1-card-2026-11-12.md](../../roadmap/mid-term/sql-setop-all-multiset-1-card-2026-11-12.md)).
 
-- [evidence/map.md](evidence/map.md) — the step-0 table on main against Spark 4.1.2, the same cells on
+- [evidence/map.md](evidence/) — the step-0 table on main against Spark 4.1.2, the same cells on
   the branch, the scripts that measured them, the seat and the red/green record.
 
 Up: [../map.md](../map.md).

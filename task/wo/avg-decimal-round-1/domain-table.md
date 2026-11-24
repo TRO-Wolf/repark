@@ -3,8 +3,8 @@
 Measured 2026-11-17 on main `a792ce47` (the package built from `7bf32859`, whose product tree differs from
 `a792ce47` only in `map.md` files) against Spark 4.1.2 with Iceberg 1.11.0, ANSI on and off, the session zone
 pinned. Documents and probes only. Every cell's raw answer, both types and the verdict are in
-[evidence/raw/](evidence/raw/map.md); the letter grids below are copied from `grids.md` there. Provenance and
-commands: [evidence/map.md](evidence/map.md).
+[evidence/raw/](evidence/raw/); the letter grids below are copied from `grids.md` there. Provenance and
+commands: [evidence/map.md](evidence/).
 
 ## The data
 

@@ -230,7 +230,7 @@ tables only. None of them held a total past 38 digits with an average under `10^
 
 Every cell the critic measured is re-measured here, with the critic's tables re-written by
 [evidence/r1_tables.py](evidence/r1_tables.py) and five new ones. Rendered tables:
-[evidence/raw-r1/](evidence/raw-r1/map.md); raw runs stay in `N/avg-revision-out/` (`raw/`, `logs/`, every
+[evidence/raw-r1/](evidence/raw-r1/); raw runs stay in `N/avg-revision-out/` (`raw/`, `logs/`, every
 `repark._native.__file__` print).
 
 - **Builds:** `avg` on `pkg-main-4c365814` (main `d9eebe06` has the same `avg` source: `git diff 6903fb48

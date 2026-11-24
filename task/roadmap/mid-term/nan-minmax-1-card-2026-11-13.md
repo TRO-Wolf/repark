@@ -47,7 +47,7 @@ DataFusion's Parquet format, with two demotions to `Precision::Inexact`:
   (the sketch's shape kept the file). The wrapper reads the footer from DataFusion's file-metadata cache
   (`unbounded_float_columns`). An all-NULL row group keeps the bounds exact, and a footer it cannot read demotes
   every float bound of that file. The fix commit is `1a8f2749`; its evidence is
-  [delta/](../../wo/nan-minmax-1/evidence/delta/map.md).
+  [delta/](../../wo/nan-minmax-1/evidence/delta/).
 - **per scan** (`create_physical_plan`): every float `min_value`/`max_value` in the table and file-group statistics,
   which are what the `max`/`min` shortcut reads.
 
@@ -120,7 +120,7 @@ positive pin, and the switch pins, each over 10 runs on both doors. The pins:
 the three-file `min` fails with the default removed; the umbrella refusal and the specific key's opt-in) and
 `python/repark/tests/io/test_nan_minmax_stats_1.py`.
 
-**Cost** ([cost](../../wo/nan-minmax-1/evidence/cost/map.md)): six alternating rounds of main `631d283c`, the first
+**Cost** ([cost](../../wo/nan-minmax-1/evidence/cost/)): six alternating rounds of main `631d283c`, the first
 delta `1a8f2749` and the second delta `d7ae795a` (release wheels; each sample under the exclusive measure lock, then
 both cargo locks, on cores 48-57; raw `cost-raw-d7ae795a.jsonl`; the C-012 table
 [delta2/c012-l4l.md](../../wo/nan-minmax-1/evidence/delta2/c012-l4l.md)). Second delta against main, median of pair

@@ -15,7 +15,7 @@ the shared measure lock with `TZ=UTC`, no `-I`, each RePark run printing the pac
   fresh.
 - **2,772 paired cells:** 2,495 `run.py` (start ANSI on), 32 `run.py` unset, 156 `rev.py`, 89 `rc.py`.
   [probes/bar.py](probes/bar.py) pairs them, gives each a scope by door and the step 0's verdict classes, and lists
-  every move; [probes/target.py](probes/target.py) checks part 1's 375 view gaps. Raw: [raw/](raw/map.md).
+  every move; [probes/target.py](probes/target.py) checks part 1's 375 view gaps. Raw: [raw/](raw/).
 
 ## Counts per verdict
 
@@ -161,7 +161,7 @@ cells.
 table with its own probes and the re-critic's `rc.py`, 2,772 paired cells: `run.py` (both start modes), `rev.py` and
 `rc.py` fresh on the head (`pkg-view1-92a55871`); `rev.py` and `rc.py` fresh on main, part 1 as built and Spark; main's and part 1's `run.py`
 from part 1's own run, the step 0's Spark files for `run.py`. Raw: [raw/delta1-rev-*.jsonl,
-raw/delta1-rc-*.jsonl](raw/map.md); moves by [probes/bar_moves.py](probes/bar_moves.py).
+raw/delta1-rc-*.jsonl](raw/); moves by [probes/bar_moves.py](probes/bar_moves.py).
 
 | build | EQUAL | BOTH_RAISE | BOTH_RAISE_OTHER | VALUE | REPARK_ANSWERS | REPARK_RAISES |
 |---|---|---|---|---|---|---|
@@ -183,5 +183,3 @@ off twin among them; on main 606 fail (part 1's positions; the sweep passes ther
 passes on the head: it asserts the analysed `ts >= '…'` frame differs by zone and is found, as are the unanalysed one,
 mixed `IN` and `BETWEEN`, string against number, a computed column, a coercing union and join and `VALUES`, while bare
 columns, a boolean-column filter, an equal-typed union and join are not.
-
-Up: [map.md](map.md).

@@ -89,7 +89,7 @@ Every `avg` / `try_avg` (query, ANSI mode) pair on `t`, `big` and `t4` where the
 ## Revision r1 (critic round 1): the classes after seat A's revision
 
 The table above is step 0's, against step 0's seat A. Two changes follow from the critic's round 1
-([raw-r1/critic-verdict.md](raw-r1/critic-verdict.md)), each measured in [raw-r1/](raw-r1/map.md):
+([raw-r1/critic-verdict.md](raw-r1/critic-verdict.md)), each measured in [raw-r1/](raw-r1/):
 
 - **The windows leave.** Seat A's window path now checks only the quotient, as Spark's window does (sketch §7,
   item 2). The three window pairs above (`t/c38_0/win/avg/g2`, `g3`, `g5`, ANSI on) become EQUAL: the revised seat A
@@ -136,5 +136,3 @@ NULL / AO.
   NULL at `local[1]`. It is the same class; its count is not added above.
 - Q7 (a) keeps this class; Q7 (b) and (c) would trade it for a layout-dependent check or for disagreeing with
   `local[1]` (sketch §6).
-
-Up: [map.md](map.md).

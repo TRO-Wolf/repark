@@ -652,3 +652,16 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   verbatim: "Makefile:430, check_map_size.py line 2 and the docstring's 1/3/4 numbering: a Muse clerk
   rewords them with the next non-Anthropic harness change." *Why:* Anthropic models never reword a
   comment, and those strings still say "exact-baseline".
+
+## 2026-11-23 — no map.md under task/wo below a work order's top level
+
+- **DO NOT create a `map.md` under `task/wo` below a work order's top level.** The three items of the
+  ruling: (1) no new `map.md` under `task/wo` below a work order's top level; (2) delete the existing
+  ones below each work order's top level, and repoint every link to a deleted map at the directory
+  that held it; (3) fix the stale docstring in `scripts/sync_map_md.py`. Item 3 and the gate that keeps
+  new maps out are the second commit of NO-MAPS-UNDER-TASK-WO-1. Owner ruling, 2026-11-23, verbatim:
+  "Yes lets rule those out, delete the current ones and prevent new ones from arising right away".
+- **Reading Fable flagged, adopted:** "the current ones" means the maps below a work order's top level,
+  so `task/wo/map.md` and the 73 top-level work-order maps (`task/wo/<unit>/map.md`) stay.
+- *Why (2026-11-23):* 256 of the 330 tracked `map.md` files under `task/wo` sat below a work order's
+  top level, and 696 Markdown links pointed at them.

@@ -253,7 +253,7 @@ the wide rows over one answer.
 
 The critic ([evidence/raw-r1/critic-verdict.md](evidence/raw-r1/critic-verdict.md), Opus 5.5 medium) returned
 UNSOUND with a narrow repair of eight items; seat A's core stands (an exact grouped sum, state by precision, one
-check at `evaluate`). Each item is closed here with r1's measurement ([evidence/raw-r1/](evidence/raw-r1/map.md),
+check at `evaluate`). Each item is closed here with r1's measurement ([evidence/raw-r1/](evidence/raw-r1/),
 raw runs `N/avg-revision-out/`); §1, §4, §5 and §6 are amended in place.
 
 1. **Spark's rule (§1).** Rewritten with the operator table. Measured at `local[1]` and `local[4]`, both modes,

@@ -395,5 +395,3 @@ Each command ran under `measure.sh shared` on cores 32 to 47 and exited 0. The f
 | `sync_map_md.py --check`, `check_map_size.py`, `typos` 1.47.2 | clean |
 | `make check-docs-links check-ledgers check-ledger-grammar` (offline) | clean |
 | comments, docstrings and `noqa` added outside Markdown | 0 |
-
-Up: [map.md](map.md).

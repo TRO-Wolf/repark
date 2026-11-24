@@ -143,5 +143,3 @@ The C-012 set and the three ruled rows (`d38 < v`, written `CAST(v AS DECIMAL(10
 A CASE nested 50 deep does not parse on main or on the head (`Expected: ), found: WHEN at Line: 1, Column: 17`);
 30 deep does. This is pre-existing and not this unit's. The builder's 50-deep row was replaced by the nested-30 and
 flat-50 rows above.
-
-Up: [map.md](map.md).

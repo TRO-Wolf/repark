@@ -6,7 +6,7 @@ label-blocking; owner "Defaults" (2026-11-17): this unit runs next, before NAN-M
 measures DECIMAL-DIVIDE-LITERAL-1 (S1, label-blocking), folding the two only if they share a seat; owner "Merge them.
 Dispatch the avg unit" (2026-11-17). Card:
 [avg-decimal-round-1-card-2026-11-16.md](../../roadmap/mid-term/decimal-common-type-1-side/avg-decimal-round-1-card-2026-11-16.md).
-Measured: [domain-table.md](domain-table.md); seats: [inventory.md](inventory.md); raw: [evidence/](evidence/map.md).
+Measured: [domain-table.md](domain-table.md); seats: [inventory.md](inventory.md); raw: [evidence/](evidence/).
 
 ## 1. The faults
 

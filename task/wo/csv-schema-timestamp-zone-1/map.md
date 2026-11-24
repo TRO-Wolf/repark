@@ -54,6 +54,6 @@ residual). Every other record equals delta 2's. See [bar.md](bar.md) and [cost.m
 - [bar.md](bar.md) — the bar of step 0's sketch §6 for unit 0, measured: step 0's whole table re-run on main and on
   the head, the reader sweep, part 2's write sweep, the extra shapes, every moved cell, `EXPLAIN` before and after.
 - [cost.md](cost.md) — K0 (CSV), K2 and C-012, like-for-like medians against main.
-- [evidence/](evidence/map.md) — the probes, the raw cells and the verdicts.
+- [evidence/](evidence/) — the probes, the raw cells and the verdicts.
 
 Up: [../map.md](../map.md).

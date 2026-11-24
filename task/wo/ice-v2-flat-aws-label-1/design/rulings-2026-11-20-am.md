@@ -84,7 +84,5 @@ The last full list is the one in [rulings-2026-11-17.md](rulings-2026-11-17.md) 
 ## Filed with this record
 
 - Two cards in [cards-2026-11-19/](../../../roadmap/mid-term/cards-2026-11-19/map.md), each in its own file: ICE-HELD-FRAME-SNAPSHOT-1 (`ice-held-frame-snapshot-1-card-2026-11-20.md`) and ICE-HELD-PATH-READ-1 (`ice-held-path-read-1-card-2026-11-20.md`), with one row each in the folder's map.
-- The row for this file in [map.md](map.md).
+- The row for this file in [map.md](./).
 - Not edited by this record: the label text, `kept-divergences.md`, the two step 0 work orders, and the cards that Fable's guidance asks to take extra cells (TEMP-VIEW-ALTER-AND-CACHE-AS-1 and CACHE-HONESTY-1).
-
-Up: [map.md](map.md).

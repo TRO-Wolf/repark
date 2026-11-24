@@ -41,7 +41,7 @@ and DOOR-PROTECTION-INVENTORY-1's measurement (the router ships on no door) is r
 
 ## Measured on main (`a3f8c7d9`, release build)
 
-Step 0 is in [the evidence](../../wo/native-ctas-iceberg-refuse-1/evidence/map.md): 380 native
+Step 0 is in [the evidence](../../wo/native-ctas-iceberg-refuse-1/evidence/): 380 native
 cells, 66 Spark-door cells and 66 Spark 4.1.2 cells. On both Iceberg catalogs of the native
 session (the memory catalog and a `type=hadoop` catalog):
 

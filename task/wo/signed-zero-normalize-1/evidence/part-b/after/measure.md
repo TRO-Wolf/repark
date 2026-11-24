@@ -1,7 +1,7 @@
 # Part 1 measurements: the mutation record, the literal-skip pin and the 50-repeat check
 
 Head `66fb7f13` (product code identical to `e710af4f`), base frozen at `276dc503`. Measured 2026-11-12 by
-`claude-opus-5-5`. The cost gates (order §8) are in [../cost/](../cost/map.md).
+`claude-opus-5-5`. The cost gates (order §8) are in [../cost/](../cost/).
 
 ## 1. The mutation record (order §6)
 
@@ -138,5 +138,3 @@ For each one it asserts:
     would turn it red, and the row says that is allowed.
   - Kept as is: the brief leaves the judgement to the verifiers. The narrower form would compare OB-4 as a multiset,
     or check only that the column is all zeros.
-
-Up: [map.md](map.md).

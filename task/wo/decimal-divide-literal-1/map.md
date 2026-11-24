@@ -5,7 +5,7 @@ Owner ruling 2026-11-17 ("Defaults", ruling 2): S1, label-blocking; "Merge 1352 
 [../avg-decimal-round-1/](../avg-decimal-round-1/map.md) (sketch §4 "A2"). Card:
 [decimal-divide-literal-1-card-2026-11-17.md](../../roadmap/mid-term/consult-2026-11-17/decimal-divide-literal-1-card-2026-11-17.md).
 
-- [evidence/built/](evidence/built/map.md) — the bar against main and Spark (`bar.md`), the cost (`cost.md`), the
+- [evidence/built/](evidence/built/) — the bar against main and Spark (`bar.md`), the cost (`cost.md`), the
   raw data and the scripts. Branch `fix/decimal-divide-literal-1`, product commit `a30a8d60`, package
   `pkg-ddl-a30a8d60`; delta 1: product commit `8efe8e69` (a decimal `mod()` on the `%` path), package
   `pkg-ddl-8efe8e69`; delta 2: product commit `5b34022f` (a decimal `pmod()` on Spark's formula, the runtime `SET`,

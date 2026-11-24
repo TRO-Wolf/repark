@@ -87,7 +87,7 @@ Spark's 106 recorded cells (53 shapes in two modes) answer alike in both modes.
 
 Step 0's probes unchanged, on both packages one after the other ([probes/rerun.py](probes/rerun.py),
 [raw/rerun-table.md.txt](raw/rerun-table.md.txt)); Spark's answers are step 0's recordings
-([../evidence/raw/](../evidence/raw/map.md)). 13,050 records per build. Main reproduces step 0's counts exactly.
+([../evidence/raw/](../evidence/raw/)). 13,050 records per build. Main reproduces step 0's counts exactly.
 
 | set | cells | main EQUAL / WRONG / RAISE / BOTHERR | head |
 |---|---|---|---|
@@ -406,5 +406,3 @@ two more. One Spark cell family per caller, 36 shapes in both ANSI modes (72 cel
 **Ruled by the owner on 2026-11-21** ("You have my yes for whatever is needed"), as proposed: the refusal is
 accepted with a release-note line, WITHCOLUMNS-KEY-COLLISION-1 is S2 and not label-blocking, and JAVA-CASE-WORD-CLASS-TABLE-1
 is S4.
-
-Up: [map.md](map.md).

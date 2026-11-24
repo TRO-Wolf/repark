@@ -71,5 +71,3 @@ to exist on `a4284f4d`); **Spark** = the Spark door's equivalent; **Native** = t
 | `DataFrame.filter(str)` | `dataframe/core.py:1117` -> `filter_sql` (`dataframe/mod.rs:490`) -> `filter_frame_with_sql` (`dataframe_names.rs:106`) -> `parse_canonical_predicate` (`expr_build.rs:46`) | direct DataFusion expression parse |
 | CLI or server binary | none: the only `[[bin]]`-class targets are benches in `repark-functions`, `repark-spark`, `repark-ta`; `repark-connect` and `repark-distributed` have no statement entry (`repark-distributed/src/iceberg_provider.rs:209` is an internal file-list query) | not applicable |
 | `AnsiDialect` (the router) | `repark-sql/src/dialect.rs:16`; constructed only in `crates/repark-sql/src/**/tests.rs` and `crates/repark-sql/tests/*.rs` | **no production caller** |
-
-Up: [map.md](map.md).

@@ -18,7 +18,7 @@ unit. Measured on main `2fdab5c7` (package `pkg-main-4c365814`) against Spark 4.
   the reader and write sweeps, unit 1's D4 cells, the doors outside the card.
 - [cost.md](cost.md) — K1, K1x, K2, K5 and C-012 against the base package, like-for-like medians, the short-row
   gate.
-- [evidence/](evidence/map.md) — probes, verdicts, `EXPLAIN` and cost records, `javap` excerpts; `built/`, the
+- [evidence/](evidence/) — probes, verdicts, `EXPLAIN` and cost records, `javap` excerpts; `built/`, the
   build's probes and records.
 
 Up: [../map.md](../map.md).

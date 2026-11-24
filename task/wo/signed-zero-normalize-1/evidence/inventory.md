@@ -8,7 +8,7 @@ and the fork is the pinned `66901f02` (`Cargo.lock:3301-3303`, unchanged).
 Cells are cited by id: `c…`, `m…` from Table B, `E…`/`R…` from the extension table, `D…` from
 [domain-table.md](domain-table.md), and this item's `A1-…` (integer-literal spelling), `A2-…` (`PREPARE` /
 `EXECUTE`), `A3-…` (simple `CASE`) and `X-div-…` (the legacy division guard). The raw legs and the runners are in
-[item1/](item1/map.md).
+[item1/](item1/).
 
 ## 1. The sketch's citations on today's main
 
