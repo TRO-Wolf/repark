@@ -955,8 +955,9 @@ mod tests {
             .iter()
             .position(|name| name == "type_coercion")
             .unwrap();
-        assert_eq!(seat + 2, coercion);
+        assert_eq!(seat + 3, coercion);
         assert_eq!(names[seat + 1], "spark_string_integral_cast");
+        assert_eq!(names[seat + 2], "spark_extract_date_part");
         assert_eq!(names[seat - 1], "spark_map_subscript");
         let planners = context.state().expr_planners().len();
         let bare = SessionContext::new().state().expr_planners().len();
