@@ -459,12 +459,13 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   USING-key choke (**SM-2 R6, 2026-10-06**).
   **FILTER-STRING-ESCAPED-QUOTE-1 (2026-11-24):** adds Spark lexical helpers (`_iter_spark_sql_spans`,
   `_quoted_span_closed`, `_quoted_span_end`, `_is_string_prefix_at`, `_spark_line_comment_end`,
-  nested `_spark_block_comment_end`) and context-aware `_boolean_operator_spans` so `'`/`"` skip `\`
-  escapes and doubled quotes, `r`/`R`/`x`/`X` raw/hex literals take no escapes, backticks skip only
-  doubled backticks, comments never mis-open literals, `_select_expr_frame` separates items with newlines,
-  and `and`/`or`/`not` columns work alongside boolean operators. Shared across `column_fields.py`,
-  `qualified_names.py`, `merge_aliases.py`, `_idents.py`, `udtf.py`, `dataframe/join_attr_tokens.py`,
-  and `session/`.
+  nested `_spark_block_comment_end`, `_skip_spark_sql_trivia`) and context-aware `_boolean_operator_spans`
+  so `'`/`"` skip `\` escapes and doubled quotes, `r`/`R`/`x`/`X` raw/hex literals take no escapes,
+  backticks skip only doubled backticks, `_select_expr_frame` joins with `\n, ` before `\nFROM`, and
+  `and`/`or`/`not` + non-reserved (`over`/`mod`/`div`/`escape`/`asc`/`desc`/`nulls`) columns resolve
+  without turning `not NOT IN`/`not OR not` into wrong answers. Shared across `column_fields.py`,
+  `qualified_names.py`, `merge_aliases.py`, `_idents.py`, `udtf.py` (comments + leading trivia; literal
+  escape decoding stays on main), `dataframe/join_attr_tokens.py`, and `session/` (excluding `SET`/`CACHE`).
 - `subset_resolve.py` — **ATTR-ID-1 S3d (2026-10-01):** the
   `drop`/`dropDuplicates`/`fillna`/`dropna` name-binding home. `_bindings` reads the stamped ids,
   native engines, and facade displays (or `None` for a bridge frame or a desynced overlay, where

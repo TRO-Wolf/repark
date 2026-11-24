@@ -202,9 +202,7 @@ def _sql_mask_strings_and_comments(query: str) -> str:
 
     single quotes (``''`` escape), double quotes (``""`` escape), backticks, ``--``
 
-    line comments, and ``/* … */`` block comments. Does not interpret nested block
-
-    comments (SQL standard single-level).
+    line comments, and ``/* … */`` block comments.
 
     """
 

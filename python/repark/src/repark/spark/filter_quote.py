@@ -68,10 +68,6 @@ _PREFIX_EXPR_KEYWORDS = frozenset(
         "from",
         "as",
         "by",
-        "escape",
-        "over",
-        "div",
-        "mod",
         "exists",
     }
 )
@@ -90,9 +86,6 @@ _POSTFIX_OR_INFIX_KEYWORDS = frozenset(
         "else",
         "end",
         "as",
-        "asc",
-        "desc",
-        "nulls",
         "from",
         "where",
         "group",
@@ -129,6 +122,23 @@ def _spark_block_comment_end(sql: str, index: int) -> int:
             cursor += 2
         else:
             cursor += 1
+    return cursor
+
+
+def _skip_spark_sql_trivia(sql: str, index: int = 0) -> int:
+    cursor = index
+    bound = len(sql)
+    while cursor < bound:
+        if sql[cursor].isspace():
+            cursor += 1
+            continue
+        if sql[cursor] == "-" and cursor + 1 < bound and sql[cursor + 1] == "-":
+            cursor = _spark_line_comment_end(sql, cursor)
+            continue
+        if sql[cursor] == "/" and cursor + 1 < bound and sql[cursor + 1] == "*":
+            cursor = _spark_block_comment_end(sql, cursor)
+            continue
+        break
     return cursor
 
 
@@ -270,14 +280,18 @@ def _not_token_is_operator(
         return False
     if next_tok is None:
         return False
+    if (
+        prev_word == "by"
+        and next_tok[0] == "word"
+        and next_tok[1].casefold() in {"asc", "desc", "nulls"}
+    ):
+        return False
     if next_tok[0] == "word" and next_tok[1].casefold() == "not":
-        after = tokens[position + 2] if position + 2 < len(tokens) else None
-        return not (
-            after is not None and after[0] == "word" and after[1].casefold() in _INFIX_AFTER_NOT
-        )
+        return True
     if next_tok[0] == "word" and next_tok[1].casefold() in {"and", "or"}:
         after = tokens[position + 2] if position + 2 < len(tokens) else None
-        if after is None:
+        after2 = tokens[position + 3] if position + 3 < len(tokens) else None
+        if after is None or after2 is None:
             return True
         if after[0] == "punct":
             return after[1] not in {"(", "~"}
@@ -883,7 +897,7 @@ def _select_expr_frame(frame: Any, expr: tuple[str, ...]) -> Any:
     view = scratch_view_name(frame._session, "__repark_selx_")
     frame._session.create_or_replace_temp_view(view, frame._plan())
     try:
-        projection = ",\n".join(_quote_select_expr_dotted(frame, item) for item in expr)
+        projection = "\n, ".join(_quote_select_expr_dotted(frame, item) for item in expr)
         planned = frame._session.sql(f"SELECT {projection}\nFROM {view}")
         return frame._spawn(planned)
     finally:

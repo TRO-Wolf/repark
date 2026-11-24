@@ -150,10 +150,6 @@ def _scan_quoted_path(text: str, start: int) -> tuple[str | None, str | None]:
     chars: list[str] = []
     while cursor < len(text):
         char = text[cursor]
-        if char == "\\" and cursor + 1 < len(text):
-            chars.append(text[cursor + 1])
-            cursor += 2
-            continue
         if char == "'":
             if cursor + 1 < len(text) and text[cursor + 1] == "'":
                 chars.append("'")

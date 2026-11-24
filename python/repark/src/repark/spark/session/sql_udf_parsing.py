@@ -390,7 +390,7 @@ def _parse_simple_sql_udf_call(
 
             continue
 
-        if arg.startswith("'"):
+        if arg.startswith(("'", '"')):
             span_end, closed = _quoted_span_closed(arg, 0)
 
             if closed and span_end == len(arg):

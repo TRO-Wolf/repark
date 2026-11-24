@@ -33,12 +33,6 @@ from repark.errors import (
     UnsupportedOperationException,
 )
 from repark import _native
-from repark.spark.filter_quote import (
-    _is_string_prefix_at,
-    _quoted_span_closed,
-    _spark_block_comment_end,
-    _spark_line_comment_end,
-)
 from repark.spark.session.builder_conf import SPARK_SQL_ANSI_DOUBLE_QUOTED_IDENTIFIERS_KEY
 from repark.spark.session.create_dataframe_rows import _materialize_arrow_as_memtable_frame
 from repark.spark.session.session_configuration import (
@@ -53,10 +47,7 @@ from repark.spark.session.session_time_zone import (
     SESSION_TIME_ZONE_KEY,
     refresh_session_zone_canonical,
 )
-from repark.spark.session.sql_relations import (
-    _split_leading_sql_trivia,
-    _sql_mask_strings_and_comments,
-)
+from repark.spark.session.sql_relations import _split_leading_sql_trivia
 from repark.spark.types import refuse_collation_session_key
 from repark.spark._secrets import mask_credentials
 
@@ -129,7 +120,7 @@ def try_sql_set_statement(session: ReparkSession, query: str) -> DataFrame | Non
     text = text.strip()
     if text.endswith(";"):
         text = text[:-1].rstrip()
-    if ";" in text and ";" in _sql_mask_strings_and_comments(text):
+    if ";" in text and _has_unquoted_semicolon(text):
         return None
     interval_match = _SET_TIME_ZONE_INTERVAL_RE.fullmatch(text)
     if interval_match is not None:
@@ -183,35 +174,63 @@ def _strip_sql_comments(text: str) -> tuple[str, bool]:
     """Drop ``--`` / ``/* … */`` comments outside string literals; report quote balance."""
     out: list[str] = []
     index = 0
-    length = len(text)
-    balanced = True
-    while index < length:
+    quote: str | None = None
+    while index < len(text):
         char = text[index]
-        if _is_string_prefix_at(text, index):
-            end, closed = _quoted_span_closed(text, index + 1, raw=True)
-            out.append(text[index:end])
-            index = end
-            if not closed:
-                balanced = False
-                break
+        if quote is not None:
+            out.append(char)
+            if char == quote:
+                if index + 1 < len(text) and text[index + 1] == quote:
+                    out.append(quote)
+                    index += 2
+                    continue
+                quote = None
+            index += 1
             continue
         if char in "'\"`":
-            end, closed = _quoted_span_closed(text, index)
-            out.append(text[index:end])
-            index = end
-            if not closed:
-                balanced = False
+            quote = char
+            out.append(char)
+            index += 1
+            continue
+        if char == "-" and index + 1 < len(text) and text[index + 1] == "-":
+            end = text.find("\n", index)
+            if end < 0:
                 break
+            index = end
             continue
-        if char == "-" and index + 1 < length and text[index + 1] == "-":
-            index = _spark_line_comment_end(text, index)
-            continue
-        if char == "/" and index + 1 < length and text[index + 1] == "*":
-            index = _spark_block_comment_end(text, index)
+        if char == "/" and index + 1 < len(text) and text[index + 1] == "*":
+            end = text.find("*/", index + 2)
+            if end < 0:
+                break
+            index = end + 2
             continue
         out.append(char)
         index += 1
-    return "".join(out), balanced
+    return "".join(out), quote is None
+
+
+def _has_unquoted_semicolon(text: str) -> bool:
+    index = 0
+    quote: str | None = None
+    length = len(text)
+    while index < length:
+        char = text[index]
+        if quote is not None:
+            if char == quote:
+                if index + 1 < length and text[index + 1] == quote:
+                    index += 2
+                    continue
+                quote = None
+            index += 1
+            continue
+        if char in "'\"`":
+            quote = char
+            index += 1
+            continue
+        if char == ";":
+            return True
+        index += 1
+    return False
 
 
 def _apply_set(session: ReparkSession, key: str, value: str) -> DataFrame:

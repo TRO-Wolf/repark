@@ -633,10 +633,6 @@ def _split_sql_literal_args(args_blob: str) -> list[Any]:
             pieces: list[str] = []
             closed = False
             while index < length:
-                if text[index] == "\\" and index + 1 < length:
-                    pieces.append(text[index + 1])
-                    index += 2
-                    continue
                 if text[index] == quote:
                     if index + 1 < length and text[index + 1] == quote:
                         pieces.append(quote)
@@ -831,9 +827,9 @@ def try_sql_registered_udtf(session: Any, query: str) -> Any | None:
 
     # Leading trivia strip (comments / whitespace) — match session SQL helpers.
     body = query
-    trivia_match = re.match(r"(?s)^(\s*(?:--[^\n]*\n|/\*.*?\*/\s*)*)", body)
-    trivia = trivia_match.group(1) if trivia_match else ""
-    body = body[len(trivia) :]
+    from repark.spark.filter_quote import _skip_spark_sql_trivia
+
+    body = body[_skip_spark_sql_trivia(body, 0) :]
     if not body.strip():
         return None
 

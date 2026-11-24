@@ -169,7 +169,7 @@ def _sql_udf_arg_is_simple(arg: str) -> bool:
     if re.fullmatch(r"-?\d+(\.\d+)?([eE][+-]?\d+)?", arg):
         return True
 
-    if arg.startswith("'"):
+    if arg.startswith(("'", '"')):
         span_end, closed = _quoted_span_closed(arg, 0)
         if closed and span_end == len(arg):
             return True

@@ -5,6 +5,11 @@ from collections.abc import Iterator
 import pyarrow as pa
 import pytest
 
+from repark.errors import (
+    IllegalArgumentException,
+    ParseException,
+    UnsupportedOperationException,
+)
 from repark.spark import ReparkSession
 from repark.spark import functions as sf
 from repark.spark._idents import strip_sql_comments
@@ -13,14 +18,12 @@ from repark.spark.session.sql_relations import (
     _find_matching_paren,
     _sql_mask_strings_and_comments,
 )
-from repark.spark.session.sql_set_statements import (
-    _strip_sql_comments as _strip_set_comments,
-)
 from repark.spark.session.sql_udf_discovery import _sql_udf_arg_is_simple
 from repark.spark.session.sql_udf_parsing import (
     _split_sql_select_list,
     _sql_top_level_keyword_index,
 )
+from repark.spark.types import StringType
 
 
 @pytest.fixture(params=[True, False], ids=["ansi_on", "ansi_off"])
@@ -345,14 +348,16 @@ def test_red_on_main_spark_sql_from_in_escaped_literal(
     _assert_ids_arrow(ansi_spark.sql(sql_text), expected_ids)
 
 
-def test_red_on_main_using_join_escaped_literal(ansi_spark: ReparkSession) -> None:
+@pytest.mark.parametrize("how", ["inner", "left", "right", "full"])
+def test_red_on_main_using_join_escaped_literal(ansi_spark: ReparkSession, how: str) -> None:
     df = _base_frame(ansi_spark)
-    joined = df.select("id", "s").alias("a").join(df.select("id", "a").alias("b"), "id")
+    joined = df.select("id", "s").alias("a").join(df.select("id", "a").alias("b"), "id", how)
     _assert_ids_arrow(joined.filter(r"s = 'it\'b.id'").select("id"), [18])
     out = joined.selectExpr("id", r"s = 'it\'b.id' AS m")
     assert list(out.columns) == ["id", "m"]
     assert list(out.dtypes) == [("id", "bigint"), ("m", "boolean")]
     table = out.to_arrow()
+    assert table.num_rows == 19
     true_ids = sorted(
         row[0]
         for row in zip(table.column(0).to_pylist(), table.column(1).to_pylist(), strict=True)
@@ -393,10 +398,7 @@ def test_red_on_main_auxiliary_python_scanners() -> None:
     assert _sql_top_level_keyword_index(r"SELECT 'it\'s FROM x' FROM t", "FROM") == 22
     assert _split_sql_select_list(r"'a\',b', c") == [r"'a\',b'", "c"]
     assert _sql_udf_arg_is_simple(r"'it\'s'")
-    assert _strip_set_comments(r"SET k = 'it\'s -- not comment'") == (
-        r"SET k = 'it\'s -- not comment'",
-        True,
-    )
+    assert _sql_udf_arg_is_simple(r'"a\"b"')
     assert "still" not in strip_sql_comments("SELECT /* a /* b */ still */ 1")
 
 
@@ -457,3 +459,210 @@ def test_control_guards_bare_keyword_columns(ansi_spark: ReparkSession) -> None:
     _assert_ids_arrow(mc_df.filter("and = 10").select("id"), [1])
     _assert_ids_arrow(mc_df.filter("Or = 20").select("id"), [1])
     _assert_ids_arrow(mc_df.filter("Not = 30").select("id"), [1])
+
+
+class _EchoUdtf:
+    def eval(self, value: str) -> Iterator[tuple[str]]:
+        yield (value,)
+
+
+def _echo_py(value: str) -> str:
+    return f"[{value}]"
+
+
+def _a4_kw_frame(spark: ReparkSession):
+    return spark.sql(
+        "SELECT 1 AS id, 10 AS `and`, 20 AS `or`, 0 AS `not`, "
+        "1 AS `over`, 1 AS `mod`, 1 AS `div`, 1 AS `escape`, "
+        "true AS `desc`, true AS `asc`, true AS `nulls` "
+        "UNION ALL "
+        "SELECT 2 AS id, 11 AS `and`, 21 AS `or`, 1 AS `not`, "
+        "2 AS `over`, 2 AS `mod`, 2 AS `div`, 2 AS `escape`, "
+        "false AS `desc`, false AS `asc`, false AS `nulls`"
+    )
+
+
+def _a4_bkw_frame(spark: ReparkSession):
+    return spark.sql(
+        "SELECT 1 AS id, true AS `and`, false AS `or`, false AS `not`, 1 AS `desc` "
+        "UNION ALL "
+        "SELECT 2 AS id, false AS `and`, true AS `or`, true AS `not`, 2 AS `desc`"
+    )
+
+
+def test_red_on_merged_delta1_a1_select_expr_multi_comments(ansi_spark: ReparkSession) -> None:
+    df = ansi_spark.createDataFrame([(1, "it's"), (2, "ok")], ["id", "s"])
+    out1 = df.selectExpr("id -- c1", "s")
+    assert list(out1.columns) == ["id", "s"]
+    assert list(out1.dtypes) == [("id", "bigint"), ("s", "string")]
+    table1 = out1.to_arrow()
+    assert table1.schema.field("id").type in (pa.int32(), pa.int64())
+    assert table1.schema.field("s").type in (pa.string(), pa.large_string())
+    assert sorted(zip(table1.column(0).to_pylist(), table1.column(1).to_pylist(), strict=True)) == [
+        (1, "it's"),
+        (2, "ok"),
+    ]
+    out2 = df.selectExpr("id -- c1", r"s = 'it\'s' AS m -- c2")
+    assert list(out2.columns) == ["id", "m"]
+    assert list(out2.dtypes) == [("id", "bigint"), ("m", "boolean")]
+    table2 = out2.to_arrow()
+    assert table2.schema.field("m").type == pa.bool_()
+    assert sorted(zip(table2.column(0).to_pylist(), table2.column(1).to_pylist(), strict=True)) == [
+        (1, True),
+        (2, False),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("case_id", "stmt", "expected"),
+    [
+        ("set_win_sq", r"SET spark.test.p1 = 'C:\path\'", [("spark.test.p1", r"'C:\path\'")]),
+        ("set_win_dq", r'SET spark.test.p2 = "C:\path\"', [("spark.test.p2", r'"C:\path\"')]),
+    ],
+    ids=["set_win_sq", "set_win_dq"],
+)
+def test_red_on_merged_delta1_a2_set_answers(
+    ansi_spark: ReparkSession,
+    case_id: str,
+    stmt: str,
+    expected: list[tuple[str, str]],
+) -> None:
+    _ = case_id
+    rows = [(row[0], row[1]) for row in ansi_spark.sql(stmt).collect()]
+    assert rows == expected
+
+
+@pytest.mark.parametrize(
+    ("case_id", "stmt"),
+    [
+        ("set_bs_semi", r"SET spark.test.p4 = 'it\'s; still value'"),
+        ("set_win_semi_pair", r"SET spark.test.p7 = 'C:\path\'; 'y'"),
+        ("reset_nested_comment", "RESET spark.test.p1 /* a /* it's */ b */"),
+    ],
+    ids=["set_bs_semi", "set_win_semi_pair", "reset_nested_comment"],
+)
+def test_red_on_merged_delta1_a2_set_reset_refusals(
+    ansi_spark: ReparkSession,
+    case_id: str,
+    stmt: str,
+) -> None:
+    _ = case_id
+    with pytest.raises(IllegalArgumentException):
+        ansi_spark.sql(stmt).collect()
+
+
+@pytest.mark.parametrize(
+    ("case_id", "query", "expected"),
+    [
+        ("udtf_bs_n", r"SELECT * FROM echo_udtf('a\nb')", r"a\nb"),
+        ("udtf_bs_t", r"SELECT * FROM echo_udtf('a\tb')", r"a\tb"),
+        ("udtf_bs_r", r"SELECT * FROM echo_udtf('a\rb')", r"a\rb"),
+        ("udtf_unicode", r"SELECT * FROM echo_udtf('\u0041')", r"\u0041"),
+        ("udtf_nested_comment", "/* a /* it's */ b */ SELECT * FROM echo_udtf('ok')", "ok"),
+    ],
+    ids=["bs_n", "bs_t", "bs_r", "unicode", "nested_comment"],
+)
+def test_red_on_merged_delta1_a3_udtf_literals_and_comment(
+    ansi_spark: ReparkSession,
+    case_id: str,
+    query: str,
+    expected: str,
+) -> None:
+    _ = case_id
+    ansi_spark.udtf.register("echo_udtf", sf.udtf(_EchoUdtf, returnType="v string"))
+    table = ansi_spark.sql(query).to_arrow()
+    assert table.column(0).to_pylist() == [expected]
+
+
+@pytest.mark.parametrize(
+    ("case_id", "frame_kind", "predicate"),
+    [
+        ("kw_not_in_1_2", "kw", "not NOT IN (1, 2)"),
+        ("kw_not_not_in_1_2", "kw", "NOT not IN (1, 2)"),
+        ("bkw_not_or_not", "bkw", "not OR not"),
+    ],
+    ids=["kw_not_in_1_2", "kw_not_not_in_1_2", "bkw_not_or_not"],
+)
+def test_red_on_merged_delta1_a4_refuses_ambiguous_not_chains(
+    ansi_spark: ReparkSession,
+    case_id: str,
+    frame_kind: str,
+    predicate: str,
+) -> None:
+    _ = case_id
+    df = _a4_kw_frame(ansi_spark) if frame_kind == "kw" else _a4_bkw_frame(ansi_spark)
+    with pytest.raises(ParseException):
+        df.filter(predicate).select("id").collect()
+
+
+@pytest.mark.parametrize(
+    ("case_id", "frame_kind", "predicate", "expected_ids"),
+    [
+        ("kw_over_and", "kw", "id = over AND id = 1", [1]),
+        ("kw_mod_and", "kw", "id = mod AND id = 1", [1]),
+        ("kw_div_and", "kw", "id = div AND id = 1", [1]),
+        ("kw_escape_and", "kw", "id = escape AND id = 1", [1]),
+        ("kw_not_desc", "kw", "NOT desc", [2]),
+        ("kw_not_asc", "kw", "NOT asc", [2]),
+        ("kw_not_nulls", "kw", "NOT nulls", [2]),
+        ("bkw_not_and_desc_eq", "bkw", "not AND desc = 2", [2]),
+    ],
+    ids=[
+        "kw_over_and",
+        "kw_mod_and",
+        "kw_div_and",
+        "kw_escape_and",
+        "kw_not_desc",
+        "kw_not_asc",
+        "kw_not_nulls",
+        "bkw_not_and_desc_eq",
+    ],
+)
+def test_red_on_merged_delta1_a4_nonreserved_kw_columns(
+    ansi_spark: ReparkSession,
+    case_id: str,
+    frame_kind: str,
+    predicate: str,
+    expected_ids: list[int],
+) -> None:
+    _ = case_id
+    df = _a4_kw_frame(ansi_spark) if frame_kind == "kw" else _a4_bkw_frame(ansi_spark)
+    _assert_ids_arrow(df.filter(predicate).select("id"), expected_ids)
+
+
+@pytest.mark.parametrize(
+    ("case_id", "sql_text", "marker"),
+    [
+        ("describe_utf8_sq", "DESCRIBE café 'unclosed", "'''"),
+        ("describe_utf8_bt", "DESCRIBE café `unclosed", "'`'"),
+    ],
+    ids=["utf8_sq", "utf8_bt"],
+)
+def test_red_on_merged_delta1_a6_describe_utf8(
+    ansi_spark: ReparkSession,
+    case_id: str,
+    sql_text: str,
+    marker: str,
+) -> None:
+    _ = case_id
+    with pytest.raises(ParseException) as exc_info:
+        ansi_spark.sql(sql_text).collect()
+    assert marker in str(exc_info.value)
+
+
+def test_red_on_merged_delta1_a7_udf_double_quoted_escaped(ansi_spark: ReparkSession) -> None:
+    ansi_spark.udf.register("echo_py", _echo_py, StringType())
+    table = ansi_spark.sql(r"""SELECT echo_py("a\"b") AS v""").to_arrow()
+    assert table.column("v").to_pylist() == ['[a"b]']
+
+
+@pytest.mark.parametrize("how", ["left", "right", "full"])
+def test_control_guards_outer_using_join_refusals(ansi_spark: ReparkSession, how: str) -> None:
+    df = _base_frame(ansi_spark)
+    joined = df.select("id", "s").alias("a").join(df.select("id", "a").alias("b"), "id", how)
+    with pytest.raises(UnsupportedOperationException):
+        joined.filter(r"s = 'a\\' AND b.id = 2").collect()
+    with pytest.raises(UnsupportedOperationException):
+        joined.filter(r"s = r'a\' AND b.id = 2").collect()
+    with pytest.raises(UnsupportedOperationException):
+        joined.selectExpr("b.id").collect()

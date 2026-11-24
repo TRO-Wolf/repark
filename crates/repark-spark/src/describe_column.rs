@@ -174,7 +174,13 @@ pub(crate) fn unclosed_describe_quote(sql: &str) -> Option<char> {
             let mut closed = false;
             while position < bytes.len() {
                 if bytes[position] == b'\\' && delimiter != b'`' {
-                    position = (position + 2).min(bytes.len());
+                    if let Some(escaped) =
+                        sql.get(position + 1..).and_then(|rest| rest.chars().next())
+                    {
+                        position += 1 + escaped.len_utf8();
+                    } else {
+                        position = bytes.len();
+                    }
                     continue;
                 }
                 if bytes[position] == delimiter {
@@ -193,7 +199,7 @@ pub(crate) fn unclosed_describe_quote(sql: &str) -> Option<char> {
             }
             continue;
         }
-        position += 1;
+        position += tail.chars().next()?.len_utf8();
     }
     None
 }
@@ -471,5 +477,30 @@ mod tests {
         assert_eq!(unclosed_describe_quote(r"DESCRIBE t 'it\'s"), Some('\''));
         assert_eq!(unclosed_describe_quote(r"DESCRIBE t r'a\'"), None);
         assert_eq!(unclosed_describe_quote(r"DESCRIBE `a\`"), None);
+    }
+
+    #[test]
+    fn unclosed_describe_quote_advances_across_multibyte_utf8() {
+        assert_eq!(
+            unclosed_describe_quote("DESCRIBE café 'unclosed"),
+            Some('\'')
+        );
+        assert_eq!(
+            unclosed_describe_quote("DESCRIBE café `unclosed"),
+            Some('`')
+        );
+        assert_eq!(
+            unclosed_describe_quote("DESCRIBE café \"unclosed"),
+            Some('"')
+        );
+        assert_eq!(
+            unclosed_describe_quote(r"DESCRIBE 'a\é' 'unclosed"),
+            Some('\'')
+        );
+        assert_eq!(
+            unclosed_describe_quote("DESCRIBE 日本語 /* it's */ 'ok'"),
+            None
+        );
+        assert_eq!(unclosed_describe_quote("DESCRIBE 日本語 'ok'"), None);
     }
 }
