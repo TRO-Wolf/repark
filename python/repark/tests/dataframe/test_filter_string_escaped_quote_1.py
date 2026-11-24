@@ -389,7 +389,7 @@ def test_red_on_main_auxiliary_python_scanners() -> None:
     assert _qualifiers("/* fake.x */ target.id = src.id") == {"target", "src"}
     masked = _sql_mask_strings_and_comments(r"SELECT 'it\'s; FROM t'")
     assert ";" not in masked and "FROM" not in masked
-    assert _find_matching_paren(r"(s = 'it\'s)' AND id = 1)", 0) == 23
+    assert _find_matching_paren(r"(s = 'it\'s)' AND id = 1)", 0) == 24
     assert _sql_top_level_keyword_index(r"SELECT 'it\'s FROM x' FROM t", "FROM") == 22
     assert _split_sql_select_list(r"'a\',b', c") == [r"'a\',b'", "c"]
     assert _sql_udf_arg_is_simple(r"'it\'s'")

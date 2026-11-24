@@ -2,7 +2,7 @@
 
 Cards filed by the orchestrator on 2026-11-23 and 2026-11-24, from the verifiers and builders of PRs #1411 and
 #1413 and the outside reviews of 2026-11-23 and 2026-11-24. A severity marked proposed awaits the owner's rating.
-None is dispatched.
+`FILTER-STRING-ESCAPED-QUOTE-1` is fixed on `fix/filter-string-escaped-quote-1` (2026-11-24); the rest are not dispatched.
 
 ## Cards
 
@@ -16,8 +16,9 @@ None is dispatched.
 - [SETOP-MIXED-TYPE-COERCION-1](setop-mixed-type-coercion-1-card-2026-11-23.md) (S3 proposed) — **card:** mixed-type set operations keep left schemas and refuse lossy multiset round-trips (`STRING` vs numeric/`DATE`/`TIMESTAMP`, lossy int/float, nested containers).
 - [SCALAR-SUBQUERY-EMPTY-NULL-1](scalar-subquery-empty-null-1-card-2026-11-23.md) (S1) — **card:** an empty scalar
   subquery over a NOT NULL column folds `IS NULL` to false, so a filter on it drops every row.
-- [FILTER-STRING-ESCAPED-QUOTE-1](filter-string-escaped-quote-1-card-2026-11-24.md) (S1) — **card:**
-  `filter("s = 'it\\'s'")` drops the matching rows; SQL with the same predicate answers.
+- [FILTER-STRING-ESCAPED-QUOTE-1](filter-string-escaped-quote-1-card-2026-11-24.md) (S1) — **fixed (2026-11-24):**
+  aligned Python and Rust SQL string/raw/backtick/comment scanners with Spark 4.1.2 across all text doors;
+  evidence in [task/wo/filter-string-escaped-quote-1/evidence/](../../../wo/filter-string-escaped-quote-1/evidence/).
 - [TRY-CAST-NONNULL-FIELD-1](try-cast-nonnull-field-1-card-2026-11-24.md) (S2) — **card:** 87 cells crash where a
   function consumes `TRY_CAST` of a NOT NULL column.
 - [CAST-SHIELD-INT-DECIMAL-OVERFLOW-1](cast-shield-int-decimal-overflow-1-card-2026-11-24.md) (S2) — **card:** an
