@@ -143,6 +143,35 @@ NAMED: dict[str, str] = {
     "r2-explode-map-col-after": "SELECT explode(m), col FROM " + _COL_SOURCE,
     "r2-qualified-col-explode-map": "SELECT s.col, explode(s.m) FROM " + _COL_SOURCE,
     "r2-alias-col-explode-map": "SELECT tag AS col, explode(m) FROM {t}",
+    "r2-index-col-explode-map": "SELECT arr[0] col, explode(m) FROM {t}",
+    "r2-string-col-explode-map": 'SELECT "hello" col, explode(m) FROM {t}',
+    "r2-cte-col-explode-map": (
+        "WITH c AS (SELECT col, explode(m) FROM " + _COL_SOURCE + ") SELECT * FROM c"
+    ),
+    "d2-not-col": (
+        "SELECT col FROM (SELECT NOT col, explode(arr) "
+        "FROM (SELECT id > 1 AS col, arr FROM {t}) AS s) AS g"
+    ),
+    "d2-and-col": (
+        "SELECT col FROM (SELECT id > 0 AND col, explode(arr) "
+        "FROM (SELECT id, id > 1 AS col, arr FROM {t}) AS s) AS g"
+    ),
+    "d2-or-col": (
+        "SELECT col FROM (SELECT id > 2 OR col, explode(arr) "
+        "FROM (SELECT id, id > 1 AS col, arr FROM {t}) AS s) AS g"
+    ),
+    "d2-between-col": (
+        "SELECT col FROM (SELECT id BETWEEN 0 AND col, explode(arr) "
+        "FROM (SELECT id, id AS col, arr FROM {t}) AS s) AS g"
+    ),
+    "d2-like-col": (
+        "SELECT col FROM (SELECT tag LIKE col, explode(arr) "
+        "FROM (SELECT tag, tag AS col, arr FROM {t}) AS s) AS g"
+    ),
+    "d2-rlike-col": (
+        "SELECT col FROM (SELECT tag RLIKE col, explode(arr) "
+        "FROM (SELECT tag, tag AS col, arr FROM {t}) AS s) AS g"
+    ),
     "r4-array-repeat-explode-outer": "SELECT explode_outer(array_repeat(sequence(1, 2), 0)) AS a",
     "r4-array-repeat-alone": "SELECT array_repeat(array(1, 2), 2) AS a",
 }
@@ -324,6 +353,41 @@ def frame_ops(session: Any, functions: Any, table: str) -> dict[str, Callable[[]
     }
 
 
+def chained_aliases(session: Any, functions: Any, table: str) -> dict[str, Callable[[], Any]]:
+    def base() -> Any:
+        return session.sql(
+            "SELECT id, arr, m, array(named_struct('a', id, 'b', tag)) AS s, "
+            f"to_json(named_struct('a', id, 'b', tag)) AS j FROM {table}"
+        )
+
+    return {
+        "d1-posexplode": lambda: base().select(
+            "id", functions.posexplode("arr").alias("p", "c").alias("x", "y")
+        ),
+        "d1-posexplode-outer": lambda: base().select(
+            "id", functions.posexplode_outer("arr").alias("p", "c").alias("x", "y")
+        ),
+        "d1-inline": lambda: base().select(
+            "id", functions.inline("s").alias("a1", "b1").alias("x", "y")
+        ),
+        "d1-inline-outer": lambda: base().select(
+            "id", functions.inline_outer("s").alias("a1", "b1").alias("x", "y")
+        ),
+        "d1-json-tuple": lambda: base().select(
+            "id", functions.json_tuple("j", "a", "b").alias("u", "v").alias("x", "y")
+        ),
+        "d1-posexplode-map": lambda: base().select(
+            "id", functions.posexplode("m").alias("p", "k", "v").alias("a", "b", "c")
+        ),
+        "d1-explode": lambda: base().select("id", functions.explode("arr").alias("a").alias("b")),
+        "r2-frame-col-explode-map": lambda: (
+            session.table(table)
+            .select(functions.col("tag").alias("col"), "m")
+            .select("col", functions.expr("explode(m)"))
+        ),
+    }
+
+
 def seed(session: Any, catalog: str, zone: str, ansi: str) -> str:
     frame = session.createDataFrame(list(FRAME_ROWS), FRAME_SCHEMA)
     frame.createOrReplaceTempView(VIEW)
@@ -359,6 +423,8 @@ def seat_answers(session: Any, functions: Any, table: str) -> dict[str, dict[str
         answers[f"{name}|named"] = guarded(lambda text=text: session.sql(text.format(t=table)))
     for name, build in frame_ops(session, functions, table).items():
         answers[f"{name}|frame"] = guarded(build)
+    for name, build in chained_aliases(session, functions, table).items():
+        answers[f"{name}|chained"] = guarded(build)
     answers["inline-alias|expr"] = guarded(
         lambda: session.range(1).select(functions.expr("explode(array(1, 2)) AS x"))
     )

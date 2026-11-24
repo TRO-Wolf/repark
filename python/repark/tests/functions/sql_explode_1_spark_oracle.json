@@ -579,6 +579,488 @@
      ]
     ]
    },
+   "d1-explode|chained": {
+    "columns": [
+     "id",
+     "b"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "b",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d1-inline-outer|chained": {
+    "columns": [
+     "id",
+     "x",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      2,
+      2,
+      "b"
+     ],
+     [
+      3,
+      3,
+      "c"
+     ],
+     [
+      4,
+      4,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "y",
+      "string",
+      true
+     ]
+    ]
+   },
+   "d1-inline|chained": {
+    "columns": [
+     "id",
+     "x",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      2,
+      2,
+      "b"
+     ],
+     [
+      3,
+      3,
+      "c"
+     ],
+     [
+      4,
+      4,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "y",
+      "string",
+      true
+     ]
+    ]
+   },
+   "d1-json-tuple|chained": {
+    "columns": [
+     "id",
+     "x",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      "1",
+      "a"
+     ],
+     [
+      2,
+      "2",
+      "b"
+     ],
+     [
+      3,
+      "3",
+      "c"
+     ],
+     [
+      4,
+      "4",
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "string",
+      true
+     ],
+     [
+      "y",
+      "string",
+      true
+     ]
+    ]
+   },
+   "d1-posexplode-map|chained": {
+    "columns": [
+     "id",
+     "a",
+     "b",
+     "c"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      "k1",
+      1
+     ],
+     [
+      1,
+      1,
+      "k2",
+      2
+     ],
+     [
+      4,
+      0,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "a",
+      "int",
+      false
+     ],
+     [
+      "b",
+      "string",
+      false
+     ],
+     [
+      "c",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d1-posexplode-outer|chained": {
+    "columns": [
+     "id",
+     "x",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      0,
+      null
+     ],
+     [
+      4,
+      1,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "y",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d1-posexplode|chained": {
+    "columns": [
+     "id",
+     "x",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      2
+     ],
+     [
+      4,
+      0,
+      null
+     ],
+     [
+      4,
+      1,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      false
+     ],
+     [
+      "y",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-and-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-between-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-like-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-not-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-or-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-rlike-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
    "empty-outer|expr": {
     "columns": [
      "x"
@@ -2714,6 +3196,47 @@
      ]
     ]
    },
+   "r2-cte-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
    "r2-explode-map-col-after|named": {
     "columns": [
      "key",
@@ -2755,6 +3278,88 @@
      ]
     ]
    },
+   "r2-frame-col-explode-map|chained": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-index-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      null,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
    "r2-qualified-col-explode-map|named": {
     "columns": [
      "col",
@@ -2783,6 +3388,47 @@
       "col",
       "string",
       true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-string-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "hello",
+      "k1",
+      1
+     ],
+     [
+      "hello",
+      "k2",
+      2
+     ],
+     [
+      "hello",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      false
      ],
      [
       "key",
@@ -6200,6 +6846,488 @@
      ]
     ]
    },
+   "d1-explode|chained": {
+    "columns": [
+     "id",
+     "b"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "b",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d1-inline-outer|chained": {
+    "columns": [
+     "id",
+     "x",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      2,
+      2,
+      "b"
+     ],
+     [
+      3,
+      3,
+      "c"
+     ],
+     [
+      4,
+      4,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "y",
+      "string",
+      true
+     ]
+    ]
+   },
+   "d1-inline|chained": {
+    "columns": [
+     "id",
+     "x",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      2,
+      2,
+      "b"
+     ],
+     [
+      3,
+      3,
+      "c"
+     ],
+     [
+      4,
+      4,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "y",
+      "string",
+      true
+     ]
+    ]
+   },
+   "d1-json-tuple|chained": {
+    "columns": [
+     "id",
+     "x",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      "1",
+      "a"
+     ],
+     [
+      2,
+      "2",
+      "b"
+     ],
+     [
+      3,
+      "3",
+      "c"
+     ],
+     [
+      4,
+      "4",
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "string",
+      true
+     ],
+     [
+      "y",
+      "string",
+      true
+     ]
+    ]
+   },
+   "d1-posexplode-map|chained": {
+    "columns": [
+     "id",
+     "a",
+     "b",
+     "c"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      "k1",
+      1
+     ],
+     [
+      1,
+      1,
+      "k2",
+      2
+     ],
+     [
+      4,
+      0,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "a",
+      "int",
+      false
+     ],
+     [
+      "b",
+      "string",
+      false
+     ],
+     [
+      "c",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d1-posexplode-outer|chained": {
+    "columns": [
+     "id",
+     "x",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      0,
+      null
+     ],
+     [
+      4,
+      1,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "y",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d1-posexplode|chained": {
+    "columns": [
+     "id",
+     "x",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      2
+     ],
+     [
+      4,
+      0,
+      null
+     ],
+     [
+      4,
+      1,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      false
+     ],
+     [
+      "y",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-and-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-between-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-like-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-not-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-or-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-rlike-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
    "empty-outer|expr": {
     "columns": [
      "x"
@@ -8335,6 +9463,47 @@
      ]
     ]
    },
+   "r2-cte-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
    "r2-explode-map-col-after|named": {
     "columns": [
      "key",
@@ -8376,6 +9545,88 @@
      ]
     ]
    },
+   "r2-frame-col-explode-map|chained": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-index-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      null,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
    "r2-qualified-col-explode-map|named": {
     "columns": [
      "col",
@@ -8404,6 +9655,47 @@
       "col",
       "string",
       true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-string-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "hello",
+      "k1",
+      1
+     ],
+     [
+      "hello",
+      "k2",
+      2
+     ],
+     [
+      "hello",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      false
      ],
      [
       "key",
@@ -11821,6 +13113,488 @@
      ]
     ]
    },
+   "d1-explode|chained": {
+    "columns": [
+     "id",
+     "b"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "b",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d1-inline-outer|chained": {
+    "columns": [
+     "id",
+     "x",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      2,
+      2,
+      "b"
+     ],
+     [
+      3,
+      3,
+      "c"
+     ],
+     [
+      4,
+      4,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "y",
+      "string",
+      true
+     ]
+    ]
+   },
+   "d1-inline|chained": {
+    "columns": [
+     "id",
+     "x",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      2,
+      2,
+      "b"
+     ],
+     [
+      3,
+      3,
+      "c"
+     ],
+     [
+      4,
+      4,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "y",
+      "string",
+      true
+     ]
+    ]
+   },
+   "d1-json-tuple|chained": {
+    "columns": [
+     "id",
+     "x",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      "1",
+      "a"
+     ],
+     [
+      2,
+      "2",
+      "b"
+     ],
+     [
+      3,
+      "3",
+      "c"
+     ],
+     [
+      4,
+      "4",
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "string",
+      true
+     ],
+     [
+      "y",
+      "string",
+      true
+     ]
+    ]
+   },
+   "d1-posexplode-map|chained": {
+    "columns": [
+     "id",
+     "a",
+     "b",
+     "c"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      "k1",
+      1
+     ],
+     [
+      1,
+      1,
+      "k2",
+      2
+     ],
+     [
+      4,
+      0,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "a",
+      "int",
+      false
+     ],
+     [
+      "b",
+      "string",
+      false
+     ],
+     [
+      "c",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d1-posexplode-outer|chained": {
+    "columns": [
+     "id",
+     "x",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      0,
+      null
+     ],
+     [
+      4,
+      1,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "y",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d1-posexplode|chained": {
+    "columns": [
+     "id",
+     "x",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      2
+     ],
+     [
+      4,
+      0,
+      null
+     ],
+     [
+      4,
+      1,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      false
+     ],
+     [
+      "y",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-and-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-between-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-like-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-not-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-or-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-rlike-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
    "empty-outer|expr": {
     "columns": [
      "x"
@@ -13956,6 +15730,47 @@
      ]
     ]
    },
+   "r2-cte-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
    "r2-explode-map-col-after|named": {
     "columns": [
      "key",
@@ -13997,6 +15812,88 @@
      ]
     ]
    },
+   "r2-frame-col-explode-map|chained": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-index-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      null,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
    "r2-qualified-col-explode-map|named": {
     "columns": [
      "col",
@@ -14025,6 +15922,47 @@
       "col",
       "string",
       true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-string-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "hello",
+      "k1",
+      1
+     ],
+     [
+      "hello",
+      "k2",
+      2
+     ],
+     [
+      "hello",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      false
      ],
      [
       "key",
@@ -17442,6 +19380,488 @@
      ]
     ]
    },
+   "d1-explode|chained": {
+    "columns": [
+     "id",
+     "b"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "b",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d1-inline-outer|chained": {
+    "columns": [
+     "id",
+     "x",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      2,
+      2,
+      "b"
+     ],
+     [
+      3,
+      3,
+      "c"
+     ],
+     [
+      4,
+      4,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "y",
+      "string",
+      true
+     ]
+    ]
+   },
+   "d1-inline|chained": {
+    "columns": [
+     "id",
+     "x",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      2,
+      2,
+      "b"
+     ],
+     [
+      3,
+      3,
+      "c"
+     ],
+     [
+      4,
+      4,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "y",
+      "string",
+      true
+     ]
+    ]
+   },
+   "d1-json-tuple|chained": {
+    "columns": [
+     "id",
+     "x",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      "1",
+      "a"
+     ],
+     [
+      2,
+      "2",
+      "b"
+     ],
+     [
+      3,
+      "3",
+      "c"
+     ],
+     [
+      4,
+      "4",
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "string",
+      true
+     ],
+     [
+      "y",
+      "string",
+      true
+     ]
+    ]
+   },
+   "d1-posexplode-map|chained": {
+    "columns": [
+     "id",
+     "a",
+     "b",
+     "c"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      "k1",
+      1
+     ],
+     [
+      1,
+      1,
+      "k2",
+      2
+     ],
+     [
+      4,
+      0,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "a",
+      "int",
+      false
+     ],
+     [
+      "b",
+      "string",
+      false
+     ],
+     [
+      "c",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d1-posexplode-outer|chained": {
+    "columns": [
+     "id",
+     "x",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      0,
+      null
+     ],
+     [
+      4,
+      1,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "y",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d1-posexplode|chained": {
+    "columns": [
+     "id",
+     "x",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      2
+     ],
+     [
+      4,
+      0,
+      null
+     ],
+     [
+      4,
+      1,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      false
+     ],
+     [
+      "y",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-and-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-between-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-like-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-not-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-or-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "d2-rlike-col|named": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
    "empty-outer|expr": {
     "columns": [
      "x"
@@ -19577,6 +21997,47 @@
      ]
     ]
    },
+   "r2-cte-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
    "r2-explode-map-col-after|named": {
     "columns": [
      "key",
@@ -19618,6 +22079,88 @@
      ]
     ]
    },
+   "r2-frame-col-explode-map|chained": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-index-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      null,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
    "r2-qualified-col-explode-map|named": {
     "columns": [
      "col",
@@ -19646,6 +22189,47 @@
       "col",
       "string",
       true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-string-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "hello",
+      "k1",
+      1
+     ],
+     [
+      "hello",
+      "k2",
+      2
+     ],
+     [
+      "hello",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      false
      ],
      [
       "key",

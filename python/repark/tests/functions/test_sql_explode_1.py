@@ -309,12 +309,50 @@ def test_a_coerced_generator_argument_keeps_spark_names_and_aliases(
 
 @pytest.mark.parametrize("ansi", ANSI_MODES)
 @pytest.mark.parametrize("zone", ZONES)
-def test_a_map_explode_beside_a_col_sibling_answers_key_value(
+def test_a_map_explode_beside_a_col_sibling_is_a_declared_loud_refusal(
     measured: dict[str, dict[str, Any]], zone: str, ansi: str
 ) -> None:
-    keys = [f"{name}|named" for name in NAMED if name.startswith("r2-")]
-    misses = _shape_misses(measured, zone, ansi, keys)
-    assert not misses, "\n".join(misses)
+    expected = _ORACLE["modes"][mode_key(zone, ansi)]
+    got = measured[mode_key(zone, ansi)]
+    keys = [key for key in expected if key.startswith("r2-")]
+    assert len(keys) == 9
+    for key in keys:
+        assert "error" not in expected[key], key
+        assert "error" in got[key], f"{key}: {got[key]}"
+
+
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+@pytest.mark.parametrize("zone", ZONES)
+def test_a_keyword_operator_on_a_col_item_beside_an_explode_answers_as_spark(
+    measured: dict[str, dict[str, Any]], zone: str, ansi: str
+) -> None:
+    expected = _ORACLE["modes"][mode_key(zone, ansi)]
+    got = measured[mode_key(zone, ansi)]
+    keys = [f"{name}|named" for name in NAMED if name.startswith("d2-")]
+    assert len(keys) == 6
+    for key in keys:
+        assert "error" not in expected[key], key
+        assert _normal(got[key], False) == _normal(expected[key], False), key
+
+
+def _schema_rows(cell: dict[str, Any]) -> dict[str, Any]:
+    if "error" in cell:
+        return {"error": True}
+    return {"schema": cell["schema"], "rows": sorted(cell["rows"], key=json.dumps)}
+
+
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+@pytest.mark.parametrize("zone", ZONES)
+def test_a_chained_alias_on_a_generator_takes_the_outer_names_as_spark(
+    measured: dict[str, dict[str, Any]], zone: str, ansi: str
+) -> None:
+    expected = _ORACLE["modes"][mode_key(zone, ansi)]
+    got = measured[mode_key(zone, ansi)]
+    keys = [key for key in expected if key.startswith("d1-") and key.endswith("|chained")]
+    assert len(keys) == 7
+    for key in keys:
+        assert "error" not in expected[key], key
+        assert _schema_rows(got[key]) == _schema_rows(expected[key]), f"{key}: {got[key]}"
 
 
 @pytest.mark.parametrize("ansi", ANSI_MODES)
