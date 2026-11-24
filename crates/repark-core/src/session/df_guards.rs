@@ -206,6 +206,7 @@ pub(super) fn context_with_df_54_1_rule_guards(
     signed_zero::register_normalize_zero(&context);
     context.register_udf(cast_shield::cast_shield_udf().as_ref().clone());
     context.register_udf(cast_shield::stats_barrier_udf().as_ref().clone());
+    context.register_udf(crate::stack::nullable_field_udf().as_ref().clone());
     context.register_udf(scalar_nullable::udf().as_ref().clone());
     subquery::register_single_row_guard(&context);
     Ok(context)
