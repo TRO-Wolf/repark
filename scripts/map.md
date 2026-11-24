@@ -71,9 +71,8 @@ repark-parity slice.
   fork changelog URL for the PR body. Wrapped by `make bump-fork-pin REV=<sha|branch>`;
   contract in [../docs/fork-sync.md](../docs/fork-sync.md).
 - `check_map_md.sh` — the map.md **lockstep** advisory (MAP-PR-GATE-1; a warning since MAP-GOVERNANCE-1). Bare mode reads `git diff --cached`; `--base <ref>` reads `<ref>...HEAD`, so a map that lands in any commit of the branch satisfies it. An added or renamed `.rs`, `.py`, `Cargo.toml` or `pyproject.toml` outside `task/wo/` (lockfiles excluded; root-level manifests map to `map.md`) whose directory's `map.md` does not change in the same diff prints a `WARNING:` line. Both modes exit 0; the map gates are `check_map_size.py` and `sync_map_md.py --check`. Invoked by `.pre-commit-config.yaml`, the hook `make install-hooks` writes, `make check-map-md` and ci.yml's `map.md guard` step. Proofs: `python/repark-parity/tests/test_map_pr_gate_1.py`, `test_map_governance_1.py`.
-- `sync_map_md.py` — the map.md **content** guard, companion to `check_map_md.sh` (that one
-  prints a warning when code changes without its map; this one checks what the map actually
-  says) and the SSOT for its rules.
+- `sync_map_md.py` — the map.md **content** guard, companion to the `check_map_md.sh` warning
+  and the SSOT for its rules.
   Over every tracked `map.md` (`git ls-files`, so untracked build trees are never walked):
   (1) **link validity** — every relative markdown link resolves to an existing file or directory
   (`http(s)`/`mailto` links and bare `#anchors` are out of scope, nothing local can check them;
@@ -96,15 +95,16 @@ repark-parity slice.
   following indented line, ending at the first blank line, the first unindented line, or the first
   nested list item (which refuses the deletion outright) — and appends a
   `- [name](name) — TODO(describe)` stub
-  for an unmentioned file. It refuses to delete a row carrying a nested sub-list (the children
-  would be orphaned) and never deletes an absolute-target row (repointing it is the repair),
-  reporting both for a hand edit. It never writes a description —
-  the description is the whole value of a map, and a generated one would be a lie with a link on
-  it. Exit 0 clean / 1 findings / 2 usage or environment error; fail-closed when the tree has no
+  for an unmentioned file. It never deletes an absolute-target row (repointing it is the repair),
+  reporting both refusals for a hand edit, and never writes a description.
+  (4) **`task/wo` maps**, unconditional (NO-MAPS-UNDER-TASK-WO-1, owner ruling 2026-11-23) — a
+  tracked `map.md` under `task/wo/` that `TASK_WO_MAPS` does not list is a finding: delete it. The
+  list is `task/wo/map.md` and the 73 order maps of that day and only shrinks: a row leaves when
+  its order is archived or its map deleted, none is added, and a row with no tracked map reds.
+  Exit 0 clean / 1 findings / 2 usage or environment error; fail-closed when the tree has no
   tracked `map.md` at all. Wired into `make check-map-sync`, `.pre-commit-config.yaml`
-  (`map-sync-guard`) and the hook `make install-hooks` writes — measured n=5 **median 0.08 s**
-  over 143 maps, well inside the sub-second hook budget. Wired at every path
-  `check_map_md.sh` uses, including ci.yml's guards job (owner-granted wiring, 2026-08-23). The
+  (`map-sync-guard`), the hook `make install-hooks` writes and ci.yml's guards job (owner-granted
+  wiring, 2026-08-23) — measured n=5 **median 0.08 s** over 143 maps. The
   document-lifecycle rules it serves are [../AGENTS.md](../AGENTS.md) "Markdown document lifecycle".
 - `check_map_size.py` — the **size ratchet** (MAP-GOVERNANCE-1): a `map.md` stays within 200 lines and 16 KiB. An over-ceiling map has a ceiling row in `EXCEPTIONS`: growth past it fails, shrinkage passes; `--update-baselines` (the release clerk sweep) lowers rows, raises one only by main's growth since the row was set (never above merge base), and refuses other growth or new violators. On `main` it reds on any run. `EXEMPT` and `EXEMPT_PATTERNS` name lifecycle inventories. RP-64 (2026-11-01) and DOUBLE-DECIMAL-STORE-ROUND-1 cut rows by `--update-baselines`. In `make ci`. Proofs: `python/repark-parity/tests/test_map_governance_1.py`, `test_map_governance_1_lifecycle.py`.
 - `check_ledger_grammar.py` — the ledger **grammar** guard (DL-2; pin binding moved to sidecars by MAP-GOVERNANCE-1), over the live bins `task/ledgers/staging/` and `completed/`; the archive is read for clause ids and its sidecars for bindings. Three rules, shape only (the meanings stay in `.agents/skills/sepmo/`). **(A)** every clause row (`| C-NNN |`) has a unique id, exactly one verdict cell (`PROVEN` / `OPEN` / `REJECTED`) and an evidence cell. **(B)** a clause is bound by its unit's sidecar `task/ledgers/<bin>/<unit>-pins.md`, which counts only beside its own `<unit>-ledger.md`: one line `C-NNN: <path>[::<name>], ...`, or `C-NNN: none (records)`, which the gate counts and lists. A path is a tracked test file or a file under `scripts/`; a `::name` is a fn, type, module, constant or class that file defines, so a renamed or deleted test goes red. A `pins: <unit>/C-NNN` citation in a source file under `crates/`, `python/` or `scripts/` still binds; one in a `map.md` does not. Every `PROVEN` clause of a staging or completed ledger must be bound at least once; the measured floor per ledger is in `EXCEPTIONS` and ratchets down only. A staging or completed ledger whose first 40 lines carry `**Path:**` valued `READING` outside a code span is a reading unit: rule B does not apply to it. **(C)** the `COVERAGE_ATTESTATION:` block lists `AT-1`..`AT-10` once each, `ATTACKED` with artifacts or `N/A` with a justification, and is required once a governed ledger has no `OPEN` clause; `FINDING:` records carry the ref 05 fields. Two sub-rules were measured and declined (an `OPEN` row carries a `?`; a quantified clause names its enumeration). Exit 0 / 1 / 2. Wired as `make check-ledger-grammar` in the `make ci` chain and as ci.yml's `ledger grammar guard` step. Proofs: `python/repark-parity/tests/test_dl_2_ledger_grammar.py`, `test_map_governance_1.py`.

@@ -4,6 +4,6 @@ The builder's records for card [ZERO-PARTITION-MERGE-1](../../roadmap/mid-term/z
 (S1, label-blocking for ICE-V2-FLAT-AWS-LABEL-1): step 0's table against Spark 4.1.2, the cause to the line, the
 write-path inventory for the inventory critic, the seat intended, and the fix.
 
-- [evidence/](evidence/map.md) — step 0 on main's build, then the fix and its runs.
+- [evidence/](evidence/) — step 0 on main's build, then the fix and its runs.
 
 Up: [../map.md](../map.md).

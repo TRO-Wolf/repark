@@ -23,6 +23,6 @@ both fences. Fifth, ADR 0004 records the allowed class of environment read.
 What the measurements say: the armed facade suite finished twice with no failure caused by a panic, and with the
 skipped and xfailed sets identical to main's. One failure on main and one in the second armed run are wall-clock tests
 that pass alone under load; the first armed run stalled at 99 % for a cause that is not identified. The numbers, the
-two mutation checks, the child output and the Rust runs are in [evidence/](evidence/map.md).
+two mutation checks, the child output and the Rust runs are in [evidence/](evidence/).
 
 Up: [../map.md](../map.md).

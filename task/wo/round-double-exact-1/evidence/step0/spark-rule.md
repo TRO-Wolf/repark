@@ -73,5 +73,3 @@ conversion back goes straight to `f32` (R9). An `f64` first and then an `f32` wo
 
 **Zero sign (R10):** K1 already returns `Some(0)` for a zero result, so the back conversion yields `+0.0`.
 On main, 1,709 DOUBLE cells per door answer `-0.0` where Spark answers `0.0`; this fixes them too.
-
-Up: [map.md](map.md).

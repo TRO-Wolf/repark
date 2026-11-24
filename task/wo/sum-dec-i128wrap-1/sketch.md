@@ -8,7 +8,7 @@ not the owner's words. Owner, 2026-11-17, verbatim "Defaults, merge 1355": AVG-D
 running sum, which this unit builds on. The label ICE-V2-FLAT-AWS-LABEL-1 is scoped to ANSI on (ruling A1).
 Registry row: `### SUM-DEC-I128WRAP-1` in [docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md)
 (backlog since 2026-09-10). Measured on main `6f80793b` against Spark 4.1.2:
-[domain-table.md](domain-table.md); seats: [inventory.md](inventory.md); raw: [evidence/](evidence/map.md).
+[domain-table.md](domain-table.md); seats: [inventory.md](inventory.md); raw: [evidence/](evidence/).
 
 **Revised 2026-11-17** by a fresh builder (Claude Opus 5.5, `claude-opus-5-5`) after the critic's verdict (Opus 5.5
 medium, GAPS), every claim re-measured on the same main and Spark: the writer's bounds-only precision check (§1,

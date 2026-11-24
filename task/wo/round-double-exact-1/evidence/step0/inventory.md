@@ -26,7 +26,7 @@ copies the lock pins: `datafusion-functions-54.1.0`, `datafusion-spark-54.1.0` a
 5. **DataFusion:** `grep -rn '"round"'` over `datafusion-functions-54.1.0/src` and
    `datafusion-spark-54.1.0/src`; `grep -n 'make_udf_function!(round'` in each `math/mod.rs`; `grep -n
    'struct ConstEvaluator\|fn volatility_ok'` in `simplify_expressions/expr_simplifier.rs`.
-6. **Measured confirmation of which kernel a door reaches**, from [raw/](raw/map.md) and
+6. **Measured confirmation of which kernel a door reaches**, from [raw/](raw/) and
    [domain-table.md](domain-table.md):
    - an INT argument stays INT on the SQL door (datafusion-spark) and becomes DOUBLE on the native door
      (DataFusion core);
@@ -107,5 +107,3 @@ file count and the open questions.
 **Literal spellings (critic M8).** A bare `1.005` in Spark-door SQL is a DECIMAL literal, so it reaches the
 DECIMAL arm. Only a `CAST('…' AS DOUBLE)` or `CAST('…' AS FLOAT)` spelling reaches the float arms, and every
 pin uses those spellings.
-
-Up: [map.md](map.md).

@@ -36,5 +36,3 @@ the DOUBLE and widened-FLOAT texts round half-up (`1.255` → `1.26`; FLOAT `1.2
 `1.2549999952316284` → `1.25`, and `(38,18)` stores `1.254999995231628400`), non-finite values are NULL, and
 overflow raises on every store door in both modes. The rule is not contradicted by any cell, so the
 "Spark's rule is not what the table shows" halt does not fire.
-
-Up: [map.md](map.md).

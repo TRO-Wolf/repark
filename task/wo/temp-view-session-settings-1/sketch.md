@@ -18,7 +18,7 @@ Design reading under test: Fable's reply of 2026-11-17 ("plan the view's body un
 settings captured at creation"). Cards:
 [temp-view-session-settings-1](../../roadmap/mid-term/temp-view-session-settings-1-card-2026-11-02.md),
 [view-ansi-capture-1](../../roadmap/mid-term/view-ansi-capture-1-card-2026-10-01.md). Measured:
-[domain-table.md](domain-table.md); seats: [inventory.md](inventory.md); raw: [evidence/](evidence/map.md).
+[domain-table.md](domain-table.md); seats: [inventory.md](inventory.md); raw: [evidence/](evidence/).
 
 ## 1. Findings in short
 
@@ -49,7 +49,7 @@ settings captured at creation"). Cards:
 ## 2. Spark's rule, read from the 4.1.2 jar and measured
 
 Read with `javap -c -p` from `spark-catalyst_2.13-4.1.2.jar` and `spark-sql_2.13-4.1.2.jar` (excerpts:
-[evidence/jar/](evidence/jar/map.md)):
+[evidence/jar/](evidence/jar/)):
 
 - **`CapturesConfig.sqlConfigsToProps(conf, prefix)`** = `getModifiedConf(conf)` (every entry of
   `SQLConf.getAllConfs` with `isModifiable` and `shouldCaptureConfig`) plus `SESSION_LOCAL_TIMEZONE` and
@@ -72,7 +72,7 @@ Read with `javap -c -p` from `spark-catalyst_2.13-4.1.2.jar` and `spark-sql_2.13
 inlines the analysed body into the reader's plan, so whatever reads `SQLConf.get` later follows the reader:
 - `current_timezone()`: **`ComputeCurrentTime`** (optimizer) replaces `CurrentTimeZone` with a literal of the
   optimizer's `conf.sessionLocalTimeZone` (`ComputeCurrentTime$.apply`; the `timezone$1` field;
-  [evidence/jar/javap-current-time.txt](evidence/jar/map.md)). Step 0 credited `ReplaceCurrentLike`; its match arms
+  [evidence/jar/javap-current-time.txt](evidence/jar/)). Step 0 credited `ReplaceCurrentLike`; its match arms
   are `CurrentDatabase`, `CurrentCatalog` and `CurrentUser` only. **Corrected.**
 - The same rule folds `CurrentDate` and `LocalTimestamp` with the **expression's** `zoneId`, which analysis fixed under
   the captured zone, so `current_date()`, `localtimestamp()` and the zone of `hour(now())` follow **creation** in a

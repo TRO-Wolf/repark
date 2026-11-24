@@ -17,11 +17,11 @@ against Spark 4.1.2; documents and probes only, no product code. Card:
 - After the inventory critic (`GAPS`, no cell contradicted; revision 2026-11-17): `mean` is DataFusion's `Avg`
   (seat A1 takes the alias), the native door is outside A1, `mod`/`pmod` need a call arm in A2, `try_*` covers all
   five functions, Spark's sum is not sticky; the cells are in the domain table's revision section and
-  [evidence/raw/rev/](evidence/raw/rev/map.md); the owner questions restated (ten).
-- [evidence/](evidence/map.md) — the probes, the raw cells, the verdicts and grids, the `javap` excerpts and the
+  [evidence/raw/rev/](evidence/raw/rev/); the owner questions restated (ten).
+- [evidence/](evidence/) — the probes, the raw cells, the verdicts and grids, the `javap` excerpts and the
   provenance.
 - **Built (2026-11-17, seat A1 with the `mean` alias, branch `fix/avg-decimal-round-1`, `27d6149f`):**
-  [evidence/built/](evidence/built/map.md) — the bar against main and Spark (`bar.md`), the cost (`cost.md`) and the
+  [evidence/built/](evidence/built/) — the bar against main and Spark (`bar.md`), the cost (`cost.md`) and the
   raw data. Spark's sum is not sticky ungrouped in one partition, but is per row in a grouped hash aggregate and per
   partial across partitions (measured).
 

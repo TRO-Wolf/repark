@@ -4,7 +4,7 @@ Card: TEMP-VIEW-FRAME-READER-PARSE-1, S1 by class, label-blocking for ICE-V2-FLA
 14:30 UTC: "We better go with B to be safe"); `smartCsv` keeps the creation zone (owner, about 15:00 UTC: "Defaults on
 all three"). Measured on main `4c365814` and on `6286ba19` (part 1 only) against Spark 4.1.2. The table:
 [domain-table.md](domain-table.md); the insertion inventory: [inventory.md](inventory.md); the cells:
-[evidence/](evidence/map.md).
+[evidence/](evidence/).
 
 ## 1. Findings in short
 
@@ -37,7 +37,7 @@ all three"). Measured on main `4c365814` and on `6286ba19` (part 1 only) against
 
 ## 2. Spark's rule, read from the 4.1.2 jars and measured
 
-Excerpts: [evidence/jar/javap-file-source.txt](evidence/jar/map.md). The view-capture side was read by part 1's step 0
+Excerpts: [evidence/jar/javap-file-source.txt](evidence/jar/). The view-capture side was read by part 1's step 0
 (`CapturesConfig.sqlConfigsToProps`, `View$.effectiveSQLConf`, `Analyzer$.retainResolutionConfigsForAnalysis`:
 [part 1's sketch §2](../temp-view-session-settings-1/sketch.md)).
 
@@ -289,7 +289,7 @@ midnight recount keeps D1 as found (§8.1). Q3 holds, and Q10 joins it. Q4 holds
 **The critic's verdict** (Opus 5.5 medium, 2026-11-19): `VERDICT: GAPS`. Its reading of Spark, the inventory and the
 table reproduced (587 of 594 shared cells agree; the 7 others are `CAST(ts AS DATE)` cells this sketch's data could
 not see); seat (a) was the right direction with two mechanical holes and a missing door. A copy:
-[evidence/raw-r1/critic-verdict.md](evidence/raw-r1/map.md). Its §8 work list, each item closed with evidence:
+[evidence/raw-r1/critic-verdict.md](evidence/raw-r1/). Its §8 work list, each item closed with evidence:
 
 1. **Seat (a), amended** (§4). *Where the marker goes:* it survives analysis and is decided by the first optimizer
    rule, because RePark keeps analysed plans (E5's joined frame, `FrameView::closed`; inventory §4, A1–A12) and a
@@ -309,7 +309,7 @@ not see); seat (a) was the right direction with two mechanical holes and a missi
 5. **Narrowed:** "part 2 moved nothing" holds for step 0's doors (and on the midnight data); part 2 moved the 4
    `sql_join` cells from one WRONG to another (part 1 WRONG in `b` and `ph`, main in `b` only; §1, domain table §1).
 6. **The records:** this section; domain table §8; inventory §3 (E5 and E11 re-read, E12–E17, the non-doors) and §4
-   (the analysed-plan seats); raw cells, verdicts and the summary in [evidence/raw-r1/](evidence/raw-r1/map.md).
+   (the analysed-plan seats); raw cells, verdicts and the summary in [evidence/raw-r1/](evidence/raw-r1/).
 
 ## 10. Fable's guidance (2026-11-19)
 

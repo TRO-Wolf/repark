@@ -68,5 +68,3 @@ mutex per inline of a frame view.
 **Held rows (1.05x):** all seven within the bar (0.972x to 1.037x). The cost cases' plans (`cost/delta3/explain-base.json`, `cost/delta3/explain-head.json`): 6 of 6 identical to main now's, scratch paths aside.
 
 The series ran from 2026-11-18 at about 22:47 UTC to 2026-11-19 at 00:25 UTC on lane A, run by the orchestrator, because the builder's own series got only 2 of 105 samples under the exclusive measure lock before its turn budget ran out. The first attempt was stopped at 23:43 by another lane's process cleanup, so runs 3 to 5 were re-run. All 105 samples exit 0.
-
-Up: [map.md](map.md).

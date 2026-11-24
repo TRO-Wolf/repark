@@ -6336,7 +6336,7 @@ still open is `isModifiable`.
   Dataset's own plan (`collectToPython`, `tailToPython`, `collectAsArrowToPython`, `toPythonIterator` and `javaToPython`
   behind `rdd`, `foreach`, `foreachPartition`, `checkpoint`) fixes it for that Dataset; `count` (`groupBy().count()`),
   `isEmpty`, `head` and `take` (`limit`) and `show` (`getRows`) build a new one. `toLocalIterator` fixes it at the call,
-  not at the first pull. *(matrix: [built/evidence/cmp/delta/](../task/wo/temp-view-frame-reader-parse-1/built/evidence/cmp/delta/map.md),
+  not at the first pull. *(matrix: [built/evidence/cmp/delta/](../task/wo/temp-view-frame-reader-parse-1/built/evidence/cmp/delta/),
   1,435 cells, measured 2026-11-19; the call sites are from the 4.1.2 bytecode.)* *(oracle: step 0's recorded cells, Fable's probes and
   `python/repark/tests/session/temp_view_frame_reader_parse_1_spark_oracle.json`, measured 2026-11-19.)*
 - **Still unlike Spark:** a view made under ANSI off over JSON or CSV timestamp text, read under ANSI on, raises
@@ -6365,7 +6365,7 @@ still open is `isModifiable`.
   [built/cost.md](../task/wo/temp-view-frame-reader-parse-1/built/cost.md).
 - **Rationale** — the owner's ruling of 2026-11-18 ("We better go with B to be safe"); Fable's guidance under the
   owner's delegation of 2026-11-19, not an owner ruling (seat (a) amended with G1 to G4, the held-frame family in the
-  bar, the Q9 stop rule, Q11 disclosed); [work order](../task/wo/temp-view-frame-reader-parse-1/built/map.md).
+  bar, the Q9 stop rule, Q11 disclosed); [work order](../task/wo/temp-view-frame-reader-parse-1/built/).
 
 ### TEMP-VIEW-CACHE-LAZY-PARSE-1 A1 — a lazy `cache()` fills at its first use, under the live settings — **FIXED 2026-11-20 on the DataFrame doors (branch `fix/temp-view-cache-lazy-a1`)**
 
@@ -6412,7 +6412,7 @@ still open is `isModifiable`.
 - **Rationale** — the owner's ruling of 2026-11-18 ("We better go with B to be safe"); the owner's "Let's go with
   defaults across the board" (2026-11-20); Fable's guidance under that delegation, not an owner ruling (Q1 rule (a)
   with two additions, the 188 and 128 bar split, Q6's verbs, §14's twelve items);
-  [work order](../task/wo/temp-view-cache-lazy-parse-1/built/map.md).
+  [work order](../task/wo/temp-view-cache-lazy-parse-1/built/).
 - **Release note (v1.5.7, owner 2026-11-20)** — "A child of a cached DataFrame (for example `df.cache()`, then
   `df.filter(...).count()`) now fills the whole cache on its first action, as Spark does. That first action can take
   several times as long as before (about 5x on a 2M-row JSON read). Later actions on the cache, other children

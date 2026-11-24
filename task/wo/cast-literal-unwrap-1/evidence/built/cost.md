@@ -109,5 +109,3 @@ with `1.00`); the `BIGINT`→`INT` cast is cheap.
 | del_mor_eq | head | 1.4524 | 1.4351 | 1.012 (per run 0.946 to 1.047) | 5 |
 | del_mor_eq | main | 1.4017 | 1.3930 | 1.006 (per run 0.906 to 1.074) | 5 |
 | del_mor_eq | main-aa | 1.4109 | 1.3561 | 1.040 (per run 0.976 to 1.107) | 5 |
-
-Up: [map.md](map.md).

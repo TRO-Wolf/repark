@@ -262,7 +262,7 @@ amended, what retires it, and where its record goes afterwards.
 |---|---|---|
 | **contract** | [AGENTS.md](AGENTS.md), [docs/testing.md](docs/testing.md), [PROJECT.md](PROJECT.md) | permanent; amended deliberately, never as a passenger |
 | **state** | [STATUS.md](STATUS.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DEVELOPMENT.md](DEVELOPMENT.md) | trued up at every unit close **and** at pickup; git is their history, so no changelog section |
-| **navigation**|a `map.md` where the architecture needs one|the sync and size gates, not lockstep |
+| **navigation**|a `map.md` where the architecture needs one; no new one under `task/wo`|the sync and size gates, not lockstep |
 | **campaign** | [briefs/](briefs/map.md), [docs/design/](docs/design/map.md) | amended in place, dated; frozen and archived to [docs/history/](docs/history/map.md) at close |
 | **ledger** | [task/ledgers/](task/ledgers/map.md): `staging/<unit>-ledger.md` → `completed/` → `archive/yyyy-mm/yyyy-mm-dd-<unit>-ledger.md` | the directory is the status. Append-only in `staging/`; `move`d to `completed/` in the unit's last commit and frozen; filed to `archive/` by `make ledger-archive` at the next pickup, immutable. A campaign's `docs/history/` folder links to its ledgers in the monthly archive; pre-2026-08-23 folders keep theirs |
 | **skill** | [.agents/skills/](.agents/skills/map.md) | versioned with the procedure it records; a measured-and-**declined** rule is written down so nobody re-litigates it |
