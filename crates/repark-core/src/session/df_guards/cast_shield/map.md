@@ -30,16 +30,27 @@ statistics barrier lives here too, beside the shield it shares `node_schema` and
   its min and max (`projection.rs` `project_column_statistics_through_expr`, `cast.rs` `evaluate_bounds`), so STRING
   ids `'10'` and `'7'` became the INT range `[10, 7]` (a filter above it failed on `Interval::try_new`) and `max`/`min`
   of the cast answered from the footer (`7`, `10` for `25`, `3`). Behind the barrier the cast's bounds are unknown.
-  `keeps_order` is DataFusion's own order family (`is_order_preserving_cast_family`: numeric or BOOLEAN to numeric,
-  the same type), with a FLOAT or DOUBLE source kept only to the same or a wider float type (delta 1 and 2: the footer leaves NaN out
-  and a cast to an integer, a DECIMAL or a narrower float compares it inside the range, so pruning through the cast dropped the NaN row),
-  plus text to text and binary to binary, narrowed on time: DATE to DATE, DATE to and from a zone-less
-  TIMESTAMP, TIMESTAMP to TIMESTAMP with the zone kept or kept absent; dictionaries read as their values. Every other
+  `keeps_order` is DataFusion's own order family (`is_order_preserving_cast_family`), tightened for
+  CAST-STATS-INTERVAL-1 (2026-11-22) and ANSI-OFF-NARROWING-OVERFLOW-1 (2026-11-23): a numeric or BOOLEAN to numeric
+  cast keeps order only when the cast cannot overflow — a FLOAT/DOUBLE source only to the same or a wider float type
+  (the footer leaves NaN out), non-float to Float64 always, to Float32 when decimal integer digits <= 38, to Float16
+  only from BOOLEAN/Int8/UInt8, integer/BOOLEAN to integer only when `[from_low, from_high] ⊆ [to_low, to_high]`,
+  DECIMAL to signed integer only when `10^(p-s)-1` fits the target, DECIMAL to DECIMAL only when `to_int > from_int`
+  (when `to_scale < from_scale`) or `to_int >= from_int` (when `to_scale >= from_scale`), and integer/BOOLEAN to
+  DECIMAL only when `to_scale >= 0` and max magnitude fits `10^(to_p - to_s) - 1`. Every narrowing numeric cast that
+  can wrap or overflow to NULL is barred, preventing silent footer folding and pruning across row groups.
+  Text to text, binary to binary, and time casts (DATE to DATE, DATE to and from a zone-less TIMESTAMP, TIMESTAMP to
+  TIMESTAMP with the zone kept or kept absent; dictionaries read as their values) keep order. Every other
   cast (STRING to anything else, anything to STRING, numeric to BOOLEAN, a zoned TIMESTAMP to DATE or to a zone-less
   one) is barred. A cast of a constant, a `TRY_CAST` (DataFusion carries no statistics through it) and an operand
   already behind the barrier are left alone; names are kept by `NamePreserver`, so the select list does not change.
-- [stats_barrier_tests.rs](stats_barrier_tests.rs) — the order table (float to integer, DECIMAL and a narrower float barred, FLOAT to DOUBLE kept), the four inverted-range shapes (`max`/`min` direct
-  and through a projection, `BETWEEN` over a projection, the `row_number` dedup) on a core session, an INT to BIGINT
-  cast whose `max`/`min` still fold from the footer (no `AggregateExec`, no barrier), and the names and idempotence.
+  `barrier_cast` computes logical operand nullability at rewrite time (`force_nullable`) and combines it with physical
+  field nullability so `StatsBarrier` never narrows nullability for `TRY_CAST` / `-TRY_CAST` operands over `NOT NULL`
+  inputs.
+- [stats_barrier_tests.rs](stats_barrier_tests.rs) — the order table (narrowing integer, decimal, and float casts
+  barred; lossless widenings kept), the four inverted-range shapes (`max`/`min` direct and through a projection,
+  `BETWEEN` over a projection, the `row_number` dedup) on a core session, an INT to BIGINT cast whose `max`/`min` still
+  fold from the footer (no `AggregateExec`, no barrier), the multi-row-group Parquet narrowing barrier pin (`min`/`max`/`=`
+  over `[1, 2]` and `[100, 300]`), `TRY_CAST` / `-TRY_CAST` logical nullability preservation, and the names and idempotence.
 
 Up: [../map.md](../map.md).

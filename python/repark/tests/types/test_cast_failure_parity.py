@@ -234,7 +234,7 @@ ROWS: list[CastRow] = [
         family="numeric_overflow",
         sql="SELECT CAST(a AS TINYINT) AS n FROM (VALUES (200)) AS t(a)",
         spark_error_needle="CAST_OVERFLOW",
-        repark_error_needle="Cast error",
+        repark_error_needle="CAST_OVERFLOW",
         note=(
             "ANSI ON equality: INT 200 → TINYINT overflows on both engines (Spark CAST_OVERFLOW / "
             f"ArithmeticException; repark Arrow Cast error). {FIX_G6}."
@@ -247,7 +247,7 @@ ROWS: list[CastRow] = [
         family="numeric_overflow",
         sql="SELECT CAST(a AS DECIMAL(3,2)) AS n FROM (VALUES (123.45)) AS t(a)",
         spark_error_needle="NUMERIC_VALUE_OUT_OF_RANGE",
-        repark_error_needle="too large to store",
+        repark_error_needle="NUMERIC_VALUE_OUT_OF_RANGE",
         note=(
             "ANSI ON equality: decimal narrowing that cannot fit DECIMAL(3,2) raises on both "
             "(Spark NUMERIC_VALUE_OUT_OF_RANGE; repark Arrow 'too large to store'). Distinct from "

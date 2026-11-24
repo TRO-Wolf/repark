@@ -52,6 +52,11 @@ An outside review wrote a 121-cell probe; it was run here against Spark 4.1.2 an
 
 So the S1 writes wrong data through `INSERT` and `CTAS`, and `MERGE` runs a condition Spark refuses.
 
+**Suffixed literals (PR #1417).** Before that PR, every suffixed literal such as `1L` was declared nullable. That hid
+the defect in `(subquery) + 1L` while `(subquery) + 1` already showed it. Now both spellings declare the field
+non-null, where Spark declares it nullable. The rows are right (NULL) and no export path crashes (measured on
+`collect`, `toArrow` and `toPandas`).
+
 **Not affected:** `WHERE (id IN (SELECT v …)) IS NULL` over a list that holds NULL. Spark and RePark both answer no
 rows, so the review's IN-subquery claim does not hold.
 

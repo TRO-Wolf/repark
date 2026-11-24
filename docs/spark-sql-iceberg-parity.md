@@ -5784,7 +5784,7 @@ still open is `isModifiable`.
 - **Still unlike Spark:**
   - **with ANSI off, a narrowing cast that overflows refuses** in the kernel where Spark wraps or answers NULL
     (named class EQUAL→REFUSE (Q2), 122 cells that main answered right by luck, and WRONG→REFUSE (Q2), 648 cells);
-    [ANSI-OFF-NARROWING-OVERFLOW-1](../task/roadmap/mid-term/ansi-off-narrowing-overflow-1-card-2026-11-16.md), S2;
+    [ANSI-OFF-NARROWING-OVERFLOW-1](../task/roadmap/mid-term/ansi-off-narrowing-overflow-1-card-2026-11-16.md), S2 (fixed 2026-11-23);
   - **a comparison with the target type's top or bottom** (`CAST(c AS TINYINT) > 127`) refuses per row where Spark
     answers no rows without casting (WRONG→REFUSE (Q4), 33 cells);
     [CAST-TOP-OF-TYPE-FOLD-1](../task/roadmap/mid-term/cast-top-of-type-fold-1-card-2026-11-16.md), S3;
@@ -9447,6 +9447,58 @@ the pin rather than obeying it.
 - **Rationale** — the INT-family slice of S2 card
   [STRING-CAST-LENIENT-1](../task/roadmap/mid-term/string-cast-lenient-1-card-2026-11-16.md); it also closes the
   INT-family half of SET-ANSI-RUNTIME-3.
+
+### ANSI-OFF-NARROWING-OVERFLOW-1 — narrowing numeric casts wrap or answer NULL with ANSI off, raise Spark's conditions with ANSI on, and bar footer stats
+
+- **Status** — **fixed** on `fix/ansi-off-narrowing-overflow-1` (2026-11-23).
+- **repark** — reuses the pre-`TypeCoercion` `SparkStringIntegralCast` / post-coercion `SparkCoercionCastMark` seam in
+  `crates/repark-functions/src/cast_map/string_integral.rs` (no second pair of rules) and `narrow_numeric` in
+  `crates/repark-functions/src/cast_map/leaf.rs`. User-written explicit `CAST`s from signed integers (`BIGINT`, `INT`,
+  `SMALLINT`) and overflowing `DECIMAL` to narrower signed integers, overflowing `DECIMAL` to narrower `DECIMAL`, and
+  `FLOAT`/`DOUBLE` to `TINYINT`/`SMALLINT`/`INT`/`BIGINT` rewrite to `__repark_narrow_to_{tinyint,smallint,int,bigint}__`
+  and `__repark_narrow_to_decimal_<p>_<s>__`, reading `spark.sql.ansi.enabled` at invoke:
+  - **ANSI off (`false`):** signed integer and decimal-to-integer targets keep the low bits (`CAST(4294967297 AS INT)` =
+    1; `CAST(128.00 AS TINYINT)` = -128); `FLOAT`/`DOUBLE` follow JVM narrowing (saturate to `i32` then wrap for
+    TINYINT/SMALLINT, saturate to `i64` for BIGINT, `NaN -> 0`; `CAST(1e10F AS TINYINT)` = -1,
+    `CAST(9007199254740992.0D AS INT)` = 2147483647); overflowing `DECIMAL` targets round `HALF_UP` and answer `NULL`.
+  - **ANSI on (`true`):** integer targets raise `[CAST_OVERFLOW]` (`SQLSTATE: 22003`) with Spark 4.1.2's exact literal
+    rendering (`S`/`L`/`BD` suffixes, FLOAT without `F`, DOUBLE with `D` for finite values only, `2^63` accepted as
+    `9223372036854775807` for BIGINT); decimal targets raise `[NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION]`
+    (`SQLSTATE: 22003`).
+  - **Seats:** SQL `CAST` (literal including unary-plus suffixed literals like `+4294967297L` / `+128S`, column, view
+    body), `.cast`, `F.expr`, `selectExpr`, subquery/key seats (`GROUP BY`, `JOIN ON`, `UNION`/`INTERSECT`), and
+    cold-read Iceberg writes (CTAS, `INSERT INTO ... SELECT`, `INSERT OVERWRITE` with `expr_has_unsafe_cast` recognizing
+    `narrow_cast_parts`, `UPDATE ... SET`, `MERGE ... SET`, `writeTo().append()`). Top-level user `CAST`s in
+    `UPDATE ... SET` are marked by `crates/repark-spark/src/update_cast.rs` (only when the session installs the Spark
+    cast seam) so uncast `update_to_plan` store casts remain on `StoreOverflowCast` (`CAST_OVERFLOW_IN_TABLE_INSERT`).
+    Integer-to-integer narrowing casts preserve logical operand nullability (computed at rewrite time so nullable
+    operands such as `TRY_CAST`, `-TRY_CAST`, `CASE` without `ELSE`, `NULLIF`, outer-join columns, and scalar
+    subqueries never narrow at the physical layer).
+  - **Statistics barrier (`CAST-STATS-SILENT-1`):** `crates/repark-core/src/session/df_guards/cast_shield/stats_barrier.rs`
+    (`keeps_order`) bars every numeric cast that can wrap or overflow to NULL unless provably non-overflowing, preventing
+    silent footer `min`/`max` folding and row-group pruning across Parquet row groups. Non-overflowing casts
+    (`DECIMAL(10,2) -> INT`, `DECIMAL(10,2) -> DECIMAL(10,1)`) stay `Expr::Cast` so `CastShieldRule` + `preimage` keep
+    range pushdown.
+  - **Out of scope / excluded (kept as on main):** explicit user `CAST` inside SQL `VALUES` / `INSERT ... VALUES`
+    (inherited from PR #1413's `LogicalPlan::Values` guard; tracked by
+    [VALUES-EXPLICIT-CAST-1](../task/roadmap/mid-term/cards-2026-11-23/values-explicit-cast-1-card-2026-11-23.md)),
+    uncast store assignment (`INSERT`, `UPDATE`), reader schema casts (`DecimalType` added beside integer types in
+    `reader_support._schema_cast`), `TRY_CAST` (stays `Expr::TryCast`; note Spark 4.1.2 answers `9223372036854775807`
+    for `TRY_CAST(9223372036854775808.0 AS BIGINT)` while Arrow answers `NULL`), native `repark.sql()`,
+    `FLOAT`/`DOUBLE -> DECIMAL` (`CAST-FLOAT-DECIMAL-OVERFLOW-NULL-1`), and `INT`/`BIGINT -> DECIMAL`.
+- **Apache Spark** — Spark 4.1.2 with `iceberg-spark-runtime-4.1_2.13-1.11.0`, measured live 2026-11-23 in both ANSI
+  modes; fixture `python/repark/tests/types/ansi_off_narrowing_overflow_1_spark_oracle.json`.
+- **Pin** — `python/repark/tests/types/test_ansi_off_narrowing_overflow_1.py` (all 21 kinds × 6 user seats + `TRY_CAST`,
+  6 card comparison families, multi-row-group Parquet stats barrier, reach queries, 6 cold-read Iceberg write seats,
+  empty `INSERT OVERWRITE` guard, and out-of-scope guards including native-door barrier pin);
+  `crates/repark-functions/src/cast_map/narrow_tests.rs`;
+  `crates/repark-core/src/session/df_guards/cast_shield/stats_barrier_tests.rs`.
+  Also converged existing pins to Spark 4.1.2: `test_cast_stats_interval_1.py` (removed strict xfail on ANSI-off
+  float-to-integer NaN-to-0), `test_decimal_divide_literal_1.py` (closed 9 `pmod` `NUMERIC_VALUE_OUT_OF_RANGE` strict
+  xfails), `test_temp_view_session_settings_1.py` / `2` (closed `filter/numcast/off_on` and `filter/df/numcast/off_on`
+  standing gaps), `test_cast_literal_unwrap_1.py`, `test_cast_failure_parity.py`, and `test_a3_cast_vocab.py`.
+- **Rationale** — S2 card
+  [ANSI-OFF-NARROWING-OVERFLOW-1](../task/roadmap/mid-term/ansi-off-narrowing-overflow-1-card-2026-11-16.md).
 
 ### SET-ANSI-RUNTIME-4 — sub-minute fixed offsets: Spark accepts, RePark refuses
 

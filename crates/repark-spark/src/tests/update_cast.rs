@@ -155,3 +155,89 @@ async fn insert_string_into_bigint_keeps_the_insert_path() {
         "{text}"
     );
 }
+
+#[tokio::test]
+async fn update_marks_user_casts_only_when_spark_cast_seam_is_installed() {
+    use std::sync::Arc;
+
+    use repark_core::ReparkSession;
+
+    let warehouse = TempDir::new().unwrap();
+    let session = ReparkSession::builder()
+        .with_extension(Arc::new(crate::SparkExtension))
+        .with_sql_dialect(Arc::new(crate::SparkDialect))
+        .config("spark.sql.ansi.enabled", "false")
+        .build()
+        .unwrap();
+    session
+        .register_memory_catalog("ice", warehouse.path().to_str().unwrap())
+        .await
+        .unwrap();
+    session
+        .sql("CREATE NAMESPACE ice.sales")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    session
+        .sql("CREATE TABLE ice.sales.narrow_u (id INT, n INT, v BIGINT) USING iceberg")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    session
+        .sql("INSERT INTO ice.sales.narrow_u VALUES (1, 0, 0), (2, 0, 0)")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    session
+        .sql("UPDATE ice.sales.narrow_u SET n = CAST(4294967297 AS INT) WHERE id = 1")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    session
+        .sql("UPDATE ice.sales.narrow_u SET n = CAST(' 7 ' AS INT) WHERE id = 2")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    let batches = session
+        .sql("SELECT id, n FROM ice.sales.narrow_u ORDER BY id")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    let values: Vec<(i32, i32)> = batches
+        .iter()
+        .flat_map(|batch| {
+            let ids = batch
+                .column(0)
+                .as_any()
+                .downcast_ref::<datafusion::arrow::array::Int32Array>()
+                .unwrap();
+            let ns = batch
+                .column(1)
+                .as_any()
+                .downcast_ref::<datafusion::arrow::array::Int32Array>()
+                .unwrap();
+            (0..batch.num_rows()).map(move |row| (ids.value(row), ns.value(row)))
+        })
+        .collect();
+    assert_eq!(values, vec![(1, 1), (2, 7)]);
+    let err = match session
+        .sql("UPDATE ice.sales.narrow_u SET v = 1e19 WHERE id = 1")
+        .await
+    {
+        Ok(frame) => frame.collect().await.unwrap_err().to_string(),
+        Err(error) => error.to_string(),
+    };
+    assert!(err.contains("CAST_OVERFLOW_IN_TABLE_INSERT"), "{err}");
+}
