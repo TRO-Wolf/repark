@@ -214,6 +214,51 @@ pub fn session_time_zone_display_from_options(options: &ConfigOptions) -> &str {
         .map_or(DEFAULT_EXTRACTION_TIME_ZONE, SessionTimeZoneConfig::display)
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct DeferredSessionTimeZoneConfig;
+
+impl ConfigExtension for DeferredSessionTimeZoneConfig {
+    const PREFIX: &'static str = "repark.deferred_session_tz";
+}
+
+impl ExtensionOptions for DeferredSessionTimeZoneConfig {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn cloned(&self) -> Box<dyn ExtensionOptions> {
+        Box::new(*self)
+    }
+
+    fn set(&mut self, key: &str, _value: &str) -> Result<()> {
+        Err(DataFusionError::Configuration(format!(
+            "`{}.{key}` is not a settable option",
+            Self::PREFIX
+        )))
+    }
+
+    fn entries(&self) -> Vec<ConfigEntry> {
+        Vec::new()
+    }
+}
+
+#[must_use]
+pub fn with_deferred_session_time_zone(config: SessionConfig) -> SessionConfig {
+    config.with_option_extension(DeferredSessionTimeZoneConfig)
+}
+
+#[must_use]
+pub fn is_session_time_zone_deferred(options: &ConfigOptions) -> bool {
+    options
+        .extensions
+        .get::<DeferredSessionTimeZoneConfig>()
+        .is_some()
+}
+
 #[derive(Debug)]
 struct CurrentTimezone {
     signature: Signature,

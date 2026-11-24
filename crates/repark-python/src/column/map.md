@@ -288,8 +288,7 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   keeps it as a `sequence` alias on `SparkSequence` while the SQL door keeps DataFusion's
   native spelling for its table-function callers — C-003's reroute exposed the split,
   overwriting the door would break `FROM generate_series` users.
-  **ABS-EXPR-1 (2026-09-13):** `EXPECTED_DIVERGENCES` gains `abs` (`SparkAbs` wraps on integer-min), pinned by `test_abs_door_parity_integer_min`. Table 21 → 22.
-  **TYPES-1 (2026-09-05):** `from_unixtime` left EXPECTED_DIVERGENCES (ratchet 22 → 21).
+  **ABS-EXPR-1:** +`abs` (21→22). **TYPES-1:** −`from_unixtime` (22→21). **DATE-PART-SESSION-ZONE-1 (2026-11-23):** `facade_date_part_udf` (14); `expr_build.rs` seats `spark_extract_date_part`.
   **CASESENS-1 S3 (2026-09-27):** `column_keeps_the_written_spelling` pins
   `written_column` (`ID` bare, `t.ID` qualified, `` `a.b` `` dotted).
   **CASESENS-1 final fold (2026-09-28):** `exact_predicate_refuses_a_case_only_match` pins
@@ -362,4 +361,4 @@ sync after changes.
 - Crate: [repark-python map](../../map.md)
 - **FNP-4B (2026-09-15):** `expr_build.rs` / `mod.rs` comments removed (2026-08-26); `mod.rs` adds `is_bare_generator` (SQL-EXPLODE-1, 2026-11-23) so the facade keeps unaliased generator calls bare.
 - **FNP-AGG-1 slice (d) (2026-09-21):** `function_dispatch.rs` renames `binary_aggregate_udaf` to `nary_aggregate_udaf` (value column plus N args; arity from the built args) and adds the `grouping_id` arm (n-ary, maybe zero columns); `expr_build.rs` gains the `grouping_id_column` binding behind the unsigned-to-signed cast; `mod.rs` `aggregate_binary` takes trailing columns as a vector (exact baseline 1012).
-- **`build_expr_context`:** ICE-TSNS-TYPE-PLANNER-1 (`SparkTypePlanner`), STRUCT-SETOP-REORDER-REFUSAL-1 (`struct_setop_names` after `type_coercion`), STRUCT-COMPARE-BY-POSITION-1 (before), FEXPR-WINDOW-NULL-ORDER-1 (`nulls_min`), FILTER-STRING-NULL-ORDER-1 (`predicate_state`), SCALAR-SUBQUERY-EMPTY-NULL-1 (2026-11-23; Delta 1 2026-11-24: seats `repark_scalar_subquery_nullability` before `type_coercion` and again at the end after `spark_door_post_coercion_rules`, and registers `__repark_scalar_nullable__`, pinned in `expr_build.rs`). All pinned (`expr_tests.rs`).
+- **`build_expr_context`:** ICE-TSNS-TYPE-PLANNER-1 (`SparkTypePlanner`), STRUCT-SETOP-REORDER-REFUSAL-1 (`struct_setop_names` after `type_coercion`), STRUCT-COMPARE-BY-POSITION-1 (before), FEXPR-WINDOW-NULL-ORDER-1 (`nulls_min`), FILTER-STRING-NULL-ORDER-1 (`predicate_state`), DATE-PART-SESSION-ZONE-1 (11-24: `with_deferred_session_time_zone`, so zoneless `TIMESTAMP` literals defer to runtime), SCALAR-SUBQUERY-EMPTY-NULL-1 (2026-11-23; Delta 1 2026-11-24: seats `repark_scalar_subquery_nullability` before `type_coercion` and again at the end after `spark_door_post_coercion_rules`, and registers `__repark_scalar_nullable__`, pinned in `expr_build.rs`). All pinned (`expr_tests.rs`).

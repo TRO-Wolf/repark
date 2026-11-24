@@ -323,7 +323,8 @@ pub(super) fn sql_context(
 }
 
 pub(super) fn build_expr_context() -> datafusion::error::Result<SessionContext> {
-    let mut config = SessionConfig::new();
+    let mut config =
+        repark_functions::session_time_zone::with_deferred_session_time_zone(SessionConfig::new());
     config.options_mut().sql_parser.dialect = datafusion::config::Dialect::Databricks;
     config.options_mut().sql_parser.enable_ident_normalization = false;
     config.options_mut().sql_parser.default_null_ordering = SPARK_NULL_ORDERING.to_string();
@@ -339,6 +340,10 @@ pub(super) fn build_expr_context() -> datafusion::error::Result<SessionContext> 
             rules,
         )?;
     let rules = repark_functions::cast_map::insert_string_integral_before_coercion(rules)?;
+    let rules =
+        repark_functions::datetime::spark_date_part::insert_extract_date_part_before_coercion(
+            rules,
+        )?;
     let mut rules = repark_core::scalar_nullable::insert_before_coercion(rules)?;
     rules.push(std::sync::Arc::new(repark_spark::FoldSparkNumericCasts));
     rules.push(std::sync::Arc::new(repark_spark::SparkProjectionDisplay));
@@ -963,9 +968,10 @@ mod tests {
             .iter()
             .position(|name| name == "type_coercion")
             .unwrap();
-        assert_eq!(seat + 3, coercion);
+        assert_eq!(seat + 4, coercion);
         assert_eq!(names[seat + 1], "spark_string_integral_cast");
-        assert_eq!(names[seat + 2], "repark_scalar_subquery_nullability");
+        assert_eq!(names[seat + 2], "spark_extract_date_part");
+        assert_eq!(names[seat + 3], "repark_scalar_subquery_nullability");
         assert_eq!(names[seat - 1], "spark_map_subscript");
         assert_eq!(
             names.last().map(String::as_str),
