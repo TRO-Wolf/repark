@@ -192,8 +192,13 @@ def _join_frame_qualifiers(child: Any, left: Any, right: Any) -> dict[str, froze
 
 def _rewrap_rebound_column(column: Any, rebound: Any) -> Any:
     from repark.spark.column import Column
+    from repark.spark.functions_generators import _GeneratorColumn
 
-    return Column(
+    bare_generator = isinstance(column, _GeneratorColumn) or (
+        not column._stable_name and rebound.is_bare_generator()
+    )
+    column_cls = _GeneratorColumn if bare_generator else Column
+    return column_cls(
         rebound,
         sort_ascending=column._sort_ascending,
         sort_nulls_first=column._sort_nulls_first,

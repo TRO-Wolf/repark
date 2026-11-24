@@ -1,8 +1,8 @@
 # DECIMAL-DOUBLE-UNION-COERCION-1 step 0′ on main `dc6b4c94` — the table
 
-Rendered by `probes/render_step0b.py` from [cells/](cells/map.md). Spark 4.1.2 on Zulu JDK 17 against main
+Rendered by `probes/render_step0b.py` from [cells/](cells/). Spark 4.1.2 on Zulu JDK 17 against main
 `dc6b4c94`, both ANSI modes. Every joined cell also carries the recorded `ff34baf5` answer and the step-0 main
-(`6f9f2aaa`) answer. The provenance is in [map.md](map.md).
+(`6f9f2aaa`) answer. The provenance is in [map.md](./).
 
 ## 1. The joined cells per section
 
@@ -279,5 +279,3 @@ Held on the `seat_e` head (Spark door), which K1 and K2 remove:
 The one fuzz cell is `eq_round_d5_0` / `eqf_round_d5_0` with ANSI on: a whole-shape overflow whose message names a
 different first value on each Spark run (`local[2]` partition order). Spark's fresh fuzz run differs from its
 2026-11-14 recording in that cell only.
-
-Up: [map.md](map.md).

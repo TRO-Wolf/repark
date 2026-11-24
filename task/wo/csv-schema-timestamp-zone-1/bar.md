@@ -3,7 +3,7 @@
 **Builds.** Main: package `S/ddu-work/pkg-main-4c365814` (main `6903fb48` has the same product tree). Head: package
 `S/ddu-work/pkg-csvts-186c34b0` (`BUILT_FROM` `186c34b005acce5605a02929a4c1f6ba6853eb3e`). Spark 4.1.2: step 0's
 recorded cells (PR #1364) for the table; the extra shapes were measured live. Every RePark run printed
-`repark._native.__file__` from its package. Raw cells and verdicts: [evidence/raw/](evidence/raw/map.md).
+`repark._native.__file__` from its package. Raw cells and verdicts: [evidence/raw/](evidence/raw/).
 
 ## The bar, line by line
 

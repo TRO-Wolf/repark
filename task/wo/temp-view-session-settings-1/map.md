@@ -19,7 +19,7 @@ blocks ICE-V2-FLAT-AWS-LABEL-1 (scoped to ANSI on); only the matching path is he
   follows grid, every wrong write, and the direct gaps seen in passing.
 - [inventory.md](inventory.md) — every answer-changing session key with its readers by phase and Spark's capture,
   the ANSI reader counts, and the 23-row insertion inventory ("seen at a seat: yes / no, because").
-- [evidence/](evidence/map.md) — probes, raw cells, verdicts, headline and summary, plans, `javap` excerpts,
+- [evidence/](evidence/) — probes, raw cells, verdicts, headline and summary, plans, `javap` excerpts,
   provenance.
 
 Up: [../map.md](../map.md).

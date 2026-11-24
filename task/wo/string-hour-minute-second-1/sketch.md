@@ -39,7 +39,7 @@ Read with `javap -c -p` from `spark-catalyst_2.13-4.1.2.jar` ([evidence/javap.md
 
 - `hour` / `minute` / `second` are `DatePartWithoutTime` around `DatePartUdf`, whose `coerce_types` sends every
   string to `Date32` (`coerce_date_arg`, `datetime.rs:176-178`). `TypeCoercion` writes `hour(CAST(c AS Date32))`
-  (`EXPLAIN`, [evidence/raw/map.md](evidence/raw/map.md)), and arrow's `date_part(Date32, Hour)` is `0` for every
+  (`EXPLAIN`, [evidence/raw/map.md](evidence/raw/)), and arrow's `date_part(Date32, Hour)` is `0` for every
   date. That is Spark's rule for `year`, not for `hour`.
 - The written `hour(CAST(c AS TIMESTAMP))` plans as `hour(to_timestamp(c))`: on the Spark door the LTZ cast rule
   (`SparkLtzTimestampCast`) runs after DataFusion's own `type_coercion` (inventory C4) and turns any cast of a

@@ -58,7 +58,7 @@ The test runs 18 doors x `PARTITIONED BY (d)` / `(f)` x `spark.sql.shuffle.parti
 
 ## The step-0 matrix on the fixed build
 
-The fixed build ran on 1 CPU and on 10 CPUs with 16 partitions ([raw/](raw/map.md)).
+The fixed build ran on 1 CPU and on 10 CPUs with 16 partitions ([raw/](raw/)).
 - All 288 Spark-door tables are `ok` against Spark's answer. Step 0 found 237 non-ok on 1 CPU: 189 merged, 24 lost, 18 mixed, 6 with a merged delete file.
 - The two overwrite spellings still refuse, as on main; they are outside this card.
 - Stored bits: 832 Parquet/ORC data files read, the same count as Spark's own run; 0 rows changed; 0 files hold both

@@ -1,7 +1,7 @@
 # Part 2 step 0 — the measured table (main `a06c1088`, Spark 4.1.2, both ANSI modes)
 
 Every cell below has the same verdict, and the same answers, in both ANSI modes. Provenance and commands are in
-[map.md](map.md). "dc6b" is main `dc6b4c94`, the main before part 1.
+[map.md](./). "dc6b" is main `dc6b4c94`, the main before part 1.
 
 ## 1. The sketch's joined cells (6,855), re-joined on `a06c1088`
 
@@ -63,5 +63,3 @@ planner's truncated `VALUES`. Seat V fixes the `VALUES`, so all three return to 
 Answers are equal on both builds in every row. The `OR` cost grows by about 4.5 ms per range per 100M rows; it stays
 under the per-row form up to about 32 ranges at `d10` and 64 at `d38`, and at or under 1.05x of dc6b's `IN` only up
 to 4 ranges.
-
-Up: [map.md](map.md).

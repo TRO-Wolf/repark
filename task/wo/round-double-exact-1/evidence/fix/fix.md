@@ -137,5 +137,3 @@ cores and verifier 2 on 10. The ratio is the median of the per-run head/base rat
 **A tried and dropped optimisation.** `#[inline]` and `#[cold]` hints on the kernel changed nothing beyond
 noise: 1.50x, 2.17x and 1.67x on the same three rows ([raw/cost-inline-samples.jsonl](raw/cost-inline-samples.jsonl),
 [raw/cost-inline-round.jsonl](raw/cost-inline-round.jsonl)). They are not in the commit.
-
-Up: [map.md](map.md).

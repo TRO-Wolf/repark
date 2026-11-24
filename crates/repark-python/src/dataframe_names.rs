@@ -514,7 +514,9 @@ pub fn stamp_attribute_ids(frame: Py<PyDataFrame>) -> PyResult<Py<PyDataFrame>> 
                 return Ok(frame.clone_ref(py));
             }
             let (restamped, ()) = grown_plan_rewrite(&borrowed, |plan| {
-                repark_core::frame_names::stamp(plan).map(|plan| (plan, ()))
+                repark_functions::generator::mark_generator_aliases(plan)
+                    .and_then(repark_core::frame_names::stamp)
+                    .map(|plan| (plan, ()))
             })?;
             Py::new(py, restamped)
         })

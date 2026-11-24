@@ -8,7 +8,7 @@ build, one critique, one delta and one delta re-check. The scoped-review rule (2
 **Split (sketch §11, adopted):** part A (literals) is this order and its PR. Part B (keys, perf-gated) gets its own
 order after A merges, on the same lane.
 
-**Design source.** [sketch.md](sketch.md) of 2026-11-08 and its domain table, [evidence/](evidence/map.md) (#1278).
+**Design source.** [sketch.md](sketch.md) of 2026-11-08 and its domain table, [evidence/](evidence/) (#1278).
 The sketch applies **as amended below**. Where they disagree, this order governs.
 
 ## Rulings this order carries (owner, verbatim)

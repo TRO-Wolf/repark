@@ -316,10 +316,8 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   facade shares the SQL door's array-aware kernel instead of the string-only lowering.
 - `sequence` routes through `function_dispatch/dispatch_spark.rs` (DOOR-CONVERGE-2): the
   facade shares the SQL door's kernel with the literal-expansion ceiling kept.
-- `split` routes through `function_dispatch/dispatch_spark.rs` (DOOR-CONVERGE-2): the Rust
-  arm is ready, but Python `F.split` raises before reaching it (run 16a owns that half).
-- `split` answers through the same arm (FNP-MATH-1 step 6, run 18a, D-8): `F.split` binds the kernel
-  with Spark names, and the door-converge-2 guard pin flips to answer-compare.
+- `split` routes through `function_dispatch/dispatch_spark.rs` (DOOR-CONVERGE-2; FNP-MATH-1 step 6):
+  `F.split` binds the kernel with Spark names on both doors.
 - `bround` routes through `function_dispatch/dispatch_spark.rs` (FNP-MATH-1 run 18a): the
   name joins the door-converged list (one line — the parent file sits at its ceiling) and the
   arm builds `spark_math::call_bround` over 1–2 args.
@@ -362,6 +360,6 @@ sync after changes.
 
 - Up: [src map](../map.md)
 - Crate: [repark-python map](../../map.md)
-- **FNP-4B (2026-09-15):** `expr_build.rs` / `mod.rs` comments removed (2026-08-26); `mod.rs` ceiling 1038.
+- **FNP-4B (2026-09-15):** `expr_build.rs` / `mod.rs` comments removed (2026-08-26); `mod.rs` adds `is_bare_generator` (SQL-EXPLODE-1, 2026-11-23) so the facade keeps unaliased generator calls bare.
 - **FNP-AGG-1 slice (d) (2026-09-21):** `function_dispatch.rs` renames `binary_aggregate_udaf` to `nary_aggregate_udaf` (value column plus N args; arity from the built args) and adds the `grouping_id` arm (n-ary, maybe zero columns); `expr_build.rs` gains the `grouping_id_column` binding behind the unsigned-to-signed cast; `mod.rs` `aggregate_binary` takes trailing columns as a vector (exact baseline 1012).
 - **`build_expr_context`:** ICE-TSNS-TYPE-PLANNER-1 (`SparkTypePlanner`), STRUCT-SETOP-REORDER-REFUSAL-1 (`struct_setop_names` after `type_coercion`), STRUCT-COMPARE-BY-POSITION-1 (before), FEXPR-WINDOW-NULL-ORDER-1 (`nulls_min`), FILTER-STRING-NULL-ORDER-1 (`predicate_state`), SCALAR-SUBQUERY-EMPTY-NULL-1 (2026-11-23: seats `repark_scalar_subquery_nullability` before `type_coercion` and registers `__repark_scalar_nullable__`, pinned in `expr_build.rs`). All pinned (`expr_tests.rs`).

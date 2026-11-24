@@ -22,9 +22,9 @@ conformance it calls before staging.
   empty-OW assignment type matrix from the parent (file-size gate): identity, UTF-8
   aliasing, safe widenings and NULL/total-text casts are total, everything else fails
   closed, with the two unit pins moved alongside.
-  **STRING-CAST-LENIENT-1 (2026-11-22):** the parent's `expr_has_unsafe_cast` judges the analyzer's
-  `__repark_string_to_{tinyint,smallint,int,bigint}__(x)` (`repark_functions::cast_map::string_integral_cast_parts`)
-  as the `CAST(x AS T)` it replaced, so a laundered empty overwrite still refuses (pins: the `*_cast_launder_*` tests).
+  **STRING-CAST-LENIENT-1 (2026-11-22) + ANSI-OFF-NARROWING-OVERFLOW-1 (2026-11-23):** `expr_has_unsafe_cast` judges
+  `__repark_string_to_*__` (`string_integral_cast_parts`) and `__repark_narrow_to_*__` (`narrow_cast_parts`) as the
+  `CAST(x AS T)` they replaced, so a laundered empty overwrite still refuses.
 
 ## Pointers
 

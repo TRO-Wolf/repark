@@ -102,10 +102,6 @@ _FLOAT_PUSHDOWN_CONTROLS = {
     ("nan_dictionary", "d > 100"): [],
     ("nan_null", "d > 100"): [],
 }
-_NAN_TO_ZERO = (
-    "Spark's ANSI-off cast of NaN to an integer type answers 0; RePark refuses the NaN row "
-    "(a separate cast gap), and only the silent footer drop is fixed here"
-)
 
 
 def _ids_table(ids: list[str]) -> pa.Table:
@@ -332,7 +328,7 @@ def _nan_frame(spark: ReparkSession, folder: Path, query: str) -> DataFrame:
     return spark.sql(_NAN_QUERIES[query])
 
 
-@pytest.mark.parametrize("ansi", _ANSI)
+@pytest.mark.parametrize("ansi", ("true",))
 @pytest.mark.parametrize("query", _NAN_CELLS)
 def test_a_float_cast_to_an_integer_reads_the_nan_row_its_footer_leaves_out(
     spark: ReparkSession, sources: dict[str, Path], query: str, ansi: str
@@ -342,7 +338,6 @@ def test_a_float_cast_to_an_integer_reads_the_nan_row_its_footer_leaves_out(
         _nan_frame(spark, sources["nan"], query).toArrow()
 
 
-@pytest.mark.xfail(strict=True, reason=_NAN_TO_ZERO)
 @pytest.mark.parametrize("query", _NAN_CELLS)
 def test_an_ansi_off_float_cast_to_an_integer_answers_spark_rows(
     spark: ReparkSession, sources: dict[str, Path], query: str

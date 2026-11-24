@@ -18,6 +18,6 @@ Spark parses a JSON or CSV source under the reader's settings and decides everyt
 
 **2026-11-19, step 0 (Fable's guidance).** Step 0 is PR #1364. The critic (Opus 5.5 medium) returned GAPS. The revision amended seat (a): the first optimizer rule decides, under the live session at every depth, with a cap of nine files. Fable's guidance accepted it with no second critic round. The split: unit 0 is CSV-SCHEMA-TIMESTAMP-ZONE-1, then unit 1 is seat (a), stacked on it. This is Fable's guidance under the owner's delegation of 2026-11-19, not an owner ruling; see [sketch §10](../../../wo/temp-view-frame-reader-parse-1/sketch.md).
 
-- **2026-11-19 — built.** Unit 1 rebuilt on main `8bc26cba` (after #1367 and #1370): every bar count holds, 0 EQUAL cells lost, C-012 1.002x; record [built/](../../../wo/temp-view-frame-reader-parse-1/built/map.md).
+- **2026-11-19 — built.** Unit 1 rebuilt on main `8bc26cba` (after #1367 and #1370): every bar count holds, 0 EQUAL cells lost, C-012 1.002x; record [built/](../../../wo/temp-view-frame-reader-parse-1/built/).
 
 Up: [map.md](map.md).

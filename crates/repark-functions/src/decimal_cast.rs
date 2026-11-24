@@ -21,6 +21,9 @@ pub(crate) fn nullable_spark_cast(cast: &Cast, schema: &DFSchema) -> Option<Expr
     if datafusion_nullable(&Expr::Cast(cast.clone()), schema) != Some(false) {
         return None;
     }
+    if suffix_literal_fits(cast.expr.as_ref(), cast.field.data_type()) {
+        return None;
+    }
     if !spark_cast_nullable_from_nonnull_child(
         cast.expr.as_ref(),
         child.data_type(),
@@ -53,6 +56,19 @@ pub(crate) fn nonnull_spark_cast(cast: &Cast, schema: &DFSchema) -> Option<Expr>
         spark_nonnull_udf(),
         vec![Expr::Cast(cast.clone())],
     )))
+}
+
+fn suffix_literal_fits(operand: &Expr, target: &DataType) -> bool {
+    let Expr::ScalarFunction(function) = operand else {
+        return false;
+    };
+    if function.func.name() != crate::java_double::SUFFIX_LITERAL_NAME {
+        return false;
+    }
+    let [Expr::Literal(scalar, _)] = function.args.as_slice() else {
+        return false;
+    };
+    scalar.cast_to(target).is_ok_and(|folded| !folded.is_null())
 }
 
 pub(crate) fn datafusion_nullable(expr: &Expr, schema: &DFSchema) -> Option<bool> {

@@ -63,4 +63,36 @@ Implemented refined Option A+ in `crates/repark-core/src/session/df_guards/scala
 7. **Related, separate family:** `TRY_CAST` over a NOT NULL column crashing a function whose output nullability follows
    its input (`abs(TRY_CAST(s AS INT))`).
 
+## Reach on main before the fix (measured 2026-11-24)
+
+An outside review wrote a 121-cell probe; it was run here against Spark 4.1.2 and main `e80e6bc8`.
+
+**Reads.** In each ANSI mode, 60 of the 121 cells answer in both engines but differ.
+- **Shapes:**
+  - an inline empty subquery (23 cells);
+  - a subquery over an empty table (14);
+  - an aggregate whose `HAVING`, `GROUP BY`, `LIMIT 0`, `OFFSET`, `ROLLUP`, `CUBE` or `GROUPING SETS` leaves no rows
+    (14);
+  - a correlated subquery with no row for some outer row (9).
+- **Functions:** `IS NULL`, `IS NOT NULL`, `coalesce`, `ifnull`, `nvl`, `nvl2`, `CASE`, `x = x` and `LIKE '%'`.
+
+**Writes**, Iceberg hadoop catalog, ANSI off:
+
+| Statement shape | Spark 4.1.2 | RePark main |
+|---|---|---|
+| `INSERT INTO … SELECT … WHERE (subquery) IS NULL` | inserts 2 rows | **inserts none** |
+| `CREATE TABLE … AS SELECT id, coalesce((subquery), 42) … WHERE (subquery) IS NULL` | 2 rows, both 42 | **an empty table** |
+| `DELETE` / `UPDATE … WHERE (subquery) IS NULL` | answers | refuses (a subquery in DML) |
+| `MERGE … ON` / `WHEN … (subquery) IS NULL` | `[UNSUPPORTED_MERGE_CONDITION.SUBQUERY]` | **runs** |
+
+So the S1 writes wrong data through `INSERT` and `CTAS`, and `MERGE` runs a condition Spark refuses.
+
+**Suffixed literals (PR #1417).** Before that PR, every suffixed literal such as `1L` was declared nullable. That hid
+the defect in `(subquery) + 1L` while `(subquery) + 1` already showed it. Now both spellings declare the field
+non-null, where Spark declares it nullable. The rows are right (NULL) and no export path crashes (measured on
+`collect`, `toArrow` and `toPandas`).
+
+**Not affected:** `WHERE (id IN (SELECT v …)) IS NULL` over a list that holds NULL. Spark and RePark both answer no
+rows, so the review's IN-subquery claim does not hold.
+
 Up: [map.md](map.md).

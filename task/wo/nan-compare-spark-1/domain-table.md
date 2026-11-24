@@ -4,7 +4,7 @@
 `±Infinity`-only groups inside the label's scope; plain-Parquet reads replace NaN by a constant from statistics.
 
 Measured 2026-11-13 on three RePark builds against Spark 4.1.2 with Iceberg 1.11.0, in both ANSI modes. The
-builds, commands and locks are in [evidence/](evidence/map.md); every cell's answers are in
+builds, commands and locks are in [evidence/](evidence/); every cell's answers are in
 [evidence/raw/cells.tsv](evidence/raw/cells.tsv).
 
 - **Builds:** **base** = main's product (`1d9d2808`, product-identical to `2707924e`); **1325** =
@@ -23,7 +23,7 @@ builds, commands and locks are in [evidence/](evidence/map.md); every cell's ans
     holds canonical, sign-set and payload NaNs, `v` the same values unpartitioned); plain Parquet files from
     pyarrow (`pq_pa_*`), RePark (`pq_rb_*`) and Spark (`pq_sp_*`); and `nat_parquet_l5`, an Iceberg table each
     build writes with native `INSERT`.
-- **Operations:** 53 SQL templates (the [probes](evidence/probes/map.md)): `max`/`min` ungrouped, grouped and as
+- **Operations:** 53 SQL templates (the [probes](evidence/probes/)): `max`/`min` ungrouped, grouped and as
   windows (whole, running, sliding); `greatest`/`least`; `ORDER BY` in four null placements, TopK, `rank()`;
   `=`, `<>`, `<`, `<=`, `>`, `>=`, `<=>`, `IN`, `NOT IN`, `BETWEEN` against `NaN`, `±Infinity`, `0.5` and `0`;
   the same comparisons in projections, in `CASE`, and against another column; `array_sort`, `sort_array`,

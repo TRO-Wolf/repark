@@ -20,5 +20,3 @@ The label text names `PREPARE` as outside the label until the card refuses it. U
 - **Condition class:** 27 cells per build and mode, of which 4 store old rows; silent, S2, not on the label-blocking list.
 - **Card:** [ICE-HELD-PATH-READ-1](../../../roadmap/mid-term/cards-2026-11-19/ice-held-path-read-1-card-2026-11-20.md), filed 2026-11-20, not dispatched.
 - **Ruling:** [rulings-2026-11-20-am.md](rulings-2026-11-20-am.md), Q4 (b): the label's kept-divergences file names this path read before the label is declared.
-
-Up: [map.md](map.md).

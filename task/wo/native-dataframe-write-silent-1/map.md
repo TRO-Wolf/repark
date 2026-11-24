@@ -8,7 +8,7 @@ write either stores its rows or refuses before any effect. The card is
 
 ## Contents
 
-- [evidence/](evidence/map.md) — step 0 on main and the cause.
+- [evidence/](evidence/) — step 0 on main and the cause.
 
 ## Pointers
 

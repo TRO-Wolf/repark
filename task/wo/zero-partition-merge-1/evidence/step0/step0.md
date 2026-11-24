@@ -20,7 +20,7 @@ Model `claude-opus-5-5`, 2026-11-13. Measurement and inventory only; no product 
     partitions, the 16-core plan shape). Sixteen physical CPUs are outside lane 2.
   - Spark: `local[1]`, `local[2]`, `local[16]`.
 
-The rendered cells are in [table.md](table.md), the raw legs in [raw/](raw/map.md), the probes in [probe/](probe/map.md).
+The rendered cells are in [table.md](table.md), the raw legs in [raw/](raw/), the probes in [probe/](probe/).
 
 ## 1. The table
 
@@ -73,7 +73,7 @@ What the words mean (the renderer's statuses, [probe/render_step0.py](probe/rend
 ### 1.3 The stored bits
 
 The data files keep every row's own zero; only the partition value is wrong. This was read with pyarrow from every
-Parquet and ORC data file the `.files` table lists ([raw/disk-*.jsonl](raw/map.md),
+Parquet and ORC data file the `.files` table lists ([raw/disk-*.jsonl](raw/),
 [probe/render_disk.py](probe/render_disk.py)):
 
 | run | data files read | rows whose stored bits differ from the row's own zero | files holding both zeros |

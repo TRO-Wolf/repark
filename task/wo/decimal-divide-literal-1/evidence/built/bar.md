@@ -2,7 +2,7 @@
 
 Head: package `pkg-ddl-a30a8d60` (`BUILT_FROM` `a30a8d60`, the product commit, built from a clean worktree). Main:
 `pkg-avg-27d6149f` (main `cd3d9ac3`'s product tree). Spark: PySpark 4.1.2, `local[1]`, the session zone UTC, Iceberg
-1.11.0. Every run printed `repark._native.__file__` and named the package it meant. Raw data: [raw/](raw/map.md).
+1.11.0. Every run printed `repark._native.__file__` and named the package it meant. Raw data: [raw/](raw/).
 
 > **Delta 1 (2026-11-18).** The delta's head is package `pkg-ddl-8efe8e69` (`BUILT_FROM` `8efe8e69`, product commit
 > `8efe8e69` over `a30a8d60`): a decimal `mod()` takes the `%` path. It carries Fable's guidance under the owner's
@@ -462,5 +462,3 @@ The full facade suite on the first product commit (`02a79edf`, release build, `-
   dropped).
 - On `a30a8d60` those files, this unit's pins and AVG-DECIMAL-ROUND-1's pins pass (809 passed). DECIMAL-COMMON-TYPE-1,
   CAST-LITERAL-UNWRAP-1, DECIMAL-DOUBLE, the signed-zero files and the INTDIV-1 pins passed in the full run.
-
-Up: [map.md](map.md).

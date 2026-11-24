@@ -579,5 +579,3 @@ answers the input (or `+0.0` for `-0.0`); otherwise it is a *rounding* cell.
   it equals Spark). 24,891 rows. The `lit` context's non-EQUAL cells are exactly these per door;
   a DOUBLE store is wrong exactly where its SELECT cell is; a FLOAT or DECIMAL store is never wrong where
   its SELECT cell is right.
-
-Up: [map.md](map.md).

@@ -174,7 +174,7 @@ No cell outside the two allowed classes moved. **No finding.**
 
 The first run (head `f9cc698e` on unit 0's head `aa9fd178`) measured the left-hand column of the table above; this rebuild supersedes it.
 
-The comparison and probe scripts of this rebuild are not committed; step 0's probes under [../evidence/probes/](../evidence/probes/map.md) replay its cell sets, and the path and user-`CAST` cells are pinned in the test files.
+The comparison and probe scripts of this rebuild are not committed; step 0's probes under [../evidence/probes/](../evidence/probes/) replay its cell sets, and the path and user-`CAST` cells are pinned in the test files.
 
 ## Delta F1
 

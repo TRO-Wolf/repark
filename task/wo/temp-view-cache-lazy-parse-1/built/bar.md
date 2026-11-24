@@ -2,9 +2,9 @@
 
 **Builds.** Main: `S/ddu-work/pkg-rp1d-52f468ce` (`BUILT_FROM` `52f468ce`, main's product tree), label `main`. Head:
 `S/ddu-work/pkg-a1-<sha>` (`BUILT_FROM` the head's product commit), label `head`; the bar ran on the first head
-package `pkg-a1-a55e6a5f` and the pins again on the final one (see [map.md](map.md)). Spark 4.1.2 with Iceberg
+package `pkg-a1-a55e6a5f` and the pins again on the final one (see [map.md](./)). Spark 4.1.2 with Iceberg
 1.11.0: step 0's recordings, Fable's recordings (`fable-cl`, outside the repository) and two new recordings
-([evidence/](evidence/map.md)). Every RePark run printed `repark._native.__file__` from its package.
+([evidence/](evidence/)). Every RePark run printed `repark._native.__file__` from its package.
 
 **Verdicts** as step 0's (EQUAL, WRONG, RAISE; a cell where both engines raise is EQUAL by class). The revision
 round's `M` cells keep step 0's verdict where the head's output is byte-identical to main's and are judged afresh
@@ -90,7 +90,7 @@ the V2 writer's registration (`writer_layout.run_through_temp_view`, the `_repar
   table; a released table passes through and keeps nothing; `LIMIT 1` fills the whole table; the session's state
   frees with a filled table registered.
 - **Unit 1's pins** (`test_temp_view_frame_reader_parse_1.py`) and **the session-settings pins**
-  (`test_temp_view_session_settings_1.py`, `_2.py`): green in the full facade run (see [map.md](map.md), gates).
+  (`test_temp_view_session_settings_1.py`, `_2.py`): green in the full facade run (see [map.md](./), gates).
 - **The reader sweep** (`view2-delta3-work/p1probes/readers.py`, outside the repository; 1,176 cells over every reader and view door): main and the head differ in 2 cells, both a snapshot time inside an Iceberg error message (the clock); 950 cells EQUAL to Spark's recording on both builds; **0 lost**.
 
 ## 7. What stays WRONG or RAISE on the head, and where it belongs
@@ -117,5 +117,3 @@ it, where main showed the lineage before materialisation and a `MemTable` scan a
 - **C-007 of EAGER-BUDGET-1** (`test_eager_budget_1.py:218` and `:237`): the "before" snapshot now comes after `cache()`, so the armed lazy table counts as present. A refused or failed fill still adds no table, temp name or handle beyond it, and keeps no batches. `:309`'s table count moves from 1 to 2, and `test_cache_persist.py`'s `_cache_view is None` checks become `lazy_cache_filled` checks. The ledger carries a dated note.
 - **C-006 of EAGER-BUDGET-1:** the bound is now 60% of the 48 MB cached result (`54ec22b5`): 0.464 on the head and 0.442 on main, over five runs each. A refusal after the collection (a 47 MB budget) reads 1.29x of the cached size and fails the bound (the verifier's mutation run, 2026-11-20).
 - **`_bind_lazy`'s fallback** (`cache_handle.py`, the `except` that logs "lazy cache registration fell back to the action") is not covered by any cell. It is reached when the lazy registration raises: the parse memo, plan depth over the maximum, the strip, re-analysis, the stored schema, or `replace_view`. The frame then takes main's eager cache at its first own action. None of the verifier's 26 cached frame shapes took it.
-
-Up: [map.md](map.md).
