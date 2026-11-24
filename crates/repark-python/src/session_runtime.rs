@@ -298,20 +298,32 @@ fn refused_boolean_knob(refusal: BooleanConfRefusal) -> Error {
 fn write_ansi_flag(session: &ReparkSession, enabled: bool) -> Result<()> {
     let state_lock = session.context().state_ref();
     let mut state = state_lock.write();
-    let carrier = state
-        .config_mut()
-        .options_mut()
-        .extensions
-        .get_mut::<SparkAnsiConfig>();
-    match carrier {
-        Some(carrier) => {
-            carrier.enabled = enabled;
-            Ok(())
+    let has_carrier = {
+        let carrier = state
+            .config_mut()
+            .options_mut()
+            .extensions
+            .get_mut::<SparkAnsiConfig>();
+        match carrier {
+            Some(carrier) => {
+                carrier.enabled = enabled;
+                true
+            }
+            None => false,
         }
-        None => Err(Error::IllegalArgument(format!(
+    };
+    if has_carrier {
+        state
+            .config_mut()
+            .options_mut()
+            .extensions
+            .insert(repark_core::spark_nullable::PartitionPruningAnsiConfig { enabled });
+        Ok(())
+    } else {
+        Err(Error::IllegalArgument(format!(
             "set_runtime_config refuses {SPARK_SQL_ANSI_ENABLED_KEY:?}: \
              the live session has no Spark ANSI carrier"
-        ))),
+        )))
     }
 }
 

@@ -72,8 +72,11 @@ class DataFrameReader:
         try:
             return self._session.read_parquet(path)
         except PySparkException as error:
-            if str(error).startswith("[CONFLICTING_PARTITION_COLUMN_NAMES]"):
+            message = str(error)
+            if message.startswith("[CONFLICTING_PARTITION_COLUMN_NAMES]"):
                 attach_error_condition(error, "CONFLICTING_PARTITION_COLUMN_NAMES", "KD009")
+            elif message.startswith("[FAILED_READ_FILE.CANNOT_READ_FILE_FOOTER]"):
+                attach_error_condition(error, "FAILED_READ_FILE.CANNOT_READ_FILE_FOOTER", "KD001")
             raise
 
     def csv(

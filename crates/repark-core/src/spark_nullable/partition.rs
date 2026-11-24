@@ -6,9 +6,8 @@ use std::sync::Arc;
 
 use arrow::array::timezone::Tz;
 use arrow::array::{Array, ArrayRef, BooleanArray, RecordBatch};
-use arrow::datatypes::{DataType, Field, FieldRef, Schema, SchemaRef, TimeUnit};
+use arrow::datatypes::{Field, FieldRef, Schema, SchemaRef};
 use async_trait::async_trait;
-use chrono::{NaiveDate, NaiveDateTime};
 use datafusion::catalog::Session;
 use datafusion::common::config::{ConfigEntry, ConfigExtension, ConfigOptions, ExtensionOptions};
 use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
@@ -20,8 +19,10 @@ use datafusion::datasource::physical_plan::{FileGroup, FileScanConfigBuilder};
 use datafusion::datasource::table_schema::TableSchema;
 use datafusion::datasource::{TableProvider, TableType};
 use datafusion::error::{DataFusionError, Result as DataFusionResult};
-use datafusion::logical_expr::utils::conjunction;
-use datafusion::logical_expr::{Expr, TableProviderFilterPushDown, Volatility};
+use datafusion::logical_expr::{
+    BinaryExpr, Expr, Operator, TableProviderFilterPushDown, Volatility,
+};
+use datafusion::physical_expr::PhysicalExpr;
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::physical_plan::empty::EmptyExec;
 use datafusion::prelude::{DataFrame, ParquetReadOptions, SessionConfig, SessionContext};
@@ -33,12 +34,12 @@ use url::Url;
 
 use crate::engine_err;
 use crate::object_store_s3;
-use crate::partition_discovery::{
-    HIVE_DEFAULT_PARTITION, conflicting_names_message, parse_decimal_scaled,
-    parse_timestamp_micros_zone, unescape_partition_value,
-};
+use crate::partition_discovery::{HIVE_DEFAULT_PARTITION, conflicting_names_message};
 use crate::session::ReparkSession;
 
+use super::partition_infer::{
+    infer_column_data_type, scalar_from_partition_text, unescape_spark_path_name,
+};
 use super::{
     FloatBoundsInexactFormat, promote_parquet_null_types, read_parquet_float_bounds_inexact,
     relax_schema_to_nullable,
@@ -63,7 +64,7 @@ impl Default for PartitionColumnTypeInferenceConfig {
 }
 
 impl ConfigExtension for PartitionColumnTypeInferenceConfig {
-    const PREFIX: &'static str = "repark.partition-type-inference";
+    const PREFIX: &'static str = "repark.part_infer";
 }
 
 impl ExtensionOptions for PartitionColumnTypeInferenceConfig {
@@ -81,7 +82,7 @@ impl ExtensionOptions for PartitionColumnTypeInferenceConfig {
 
     fn set(&mut self, key: &str, _value: &str) -> DataFusionResult<()> {
         Err(DataFusionError::Configuration(format!(
-            "`{}.{key}` is not a settable option: use `{PARTITION_COLUMN_TYPE_INFERENCE_KEY}`",
+            "`{}.{key}` is not a settable option; use `{PARTITION_COLUMN_TYPE_INFERENCE_KEY}`",
             Self::PREFIX
         )))
     }
@@ -91,48 +92,95 @@ impl ExtensionOptions for PartitionColumnTypeInferenceConfig {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PartitionPruningAnsiConfig {
+    pub enabled: bool,
+}
+
+impl Default for PartitionPruningAnsiConfig {
+    fn default() -> Self {
+        Self { enabled: true }
+    }
+}
+
+impl ConfigExtension for PartitionPruningAnsiConfig {
+    const PREFIX: &'static str = "repark.part_ansi";
+}
+
+impl ExtensionOptions for PartitionPruningAnsiConfig {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn cloned(&self) -> Box<dyn ExtensionOptions> {
+        Box::new(self.clone())
+    }
+
+    fn set(&mut self, key: &str, _value: &str) -> DataFusionResult<()> {
+        Err(DataFusionError::Configuration(format!(
+            "`{}.{key}` is not a settable option; use `spark.sql.ansi.enabled`",
+            Self::PREFIX
+        )))
+    }
+
+    fn entries(&self) -> Vec<ConfigEntry> {
+        Vec::new()
+    }
+}
+
+#[must_use]
+pub fn with_partition_pruning_ansi(config: SessionConfig, enabled: bool) -> SessionConfig {
+    config.with_option_extension(PartitionPruningAnsiConfig { enabled })
+}
+
+#[must_use]
+pub fn partition_pruning_ansi_from_options(options: &ConfigOptions) -> bool {
+    options
+        .extensions
+        .get::<PartitionPruningAnsiConfig>()
+        .is_none_or(|carrier| carrier.enabled)
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub fn parse_partition_column_type_inference(raw: &str) -> DataFusionResult<bool> {
     match raw.trim().to_ascii_lowercase().as_str() {
         "true" | "1" | "yes" => Ok(true),
         "false" | "0" | "no" => Ok(false),
+        _ => Err(DataFusionError::Configuration(format!(
+            "The value '{raw}' in the config \"{PARTITION_COLUMN_TYPE_INFERENCE_KEY}\" is invalid. \
+             {PARTITION_COLUMN_TYPE_INFERENCE_KEY} should be boolean, but was {raw}"
+        ))),
+    }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn parse_runtime_partition_column_type_inference(raw: &str) -> Result<bool> {
+    match raw.to_ascii_lowercase().as_str() {
+        "true" => Ok(true),
+        "false" => Ok(false),
         _ => {
-            let masked = repark_common::redaction::mask_value_credentials(raw);
-            Err(DataFusionError::Configuration(format!(
-                "[INVALID_CONF_VALUE.TYPE] The value '{masked}' in the config \
-                 \"{PARTITION_COLUMN_TYPE_INFERENCE_KEY}\" is invalid. It should be a/an \
-                 'boolean' value. SQLSTATE: 22022"
+            let masked = crate::redaction::mask_value_credentials(raw);
+            Err(Error::IllegalArgument(format!(
+                "[INVALID_CONF_VALUE.TYPE_MISMATCH] The value '{masked}' in the config \
+                 \"{PARTITION_COLUMN_TYPE_INFERENCE_KEY}\" is invalid. \
+                 {PARTITION_COLUMN_TYPE_INFERENCE_KEY} should be boolean, but was {masked}. \
+                 SQLSTATE: 22022"
             )))
         }
     }
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub fn parse_runtime_partition_column_type_inference(raw: &str) -> Result<bool> {
-    if raw.eq_ignore_ascii_case("true") {
-        Ok(true)
-    } else if raw.eq_ignore_ascii_case("false") {
-        Ok(false)
-    } else {
-        let masked = repark_common::redaction::mask_value_credentials(raw);
-        Err(Error::IllegalArgument(format!(
-            "[INVALID_CONF_VALUE.TYPE] The value '{masked}' in the config \
-             \"{PARTITION_COLUMN_TYPE_INFERENCE_KEY}\" is invalid. It should be a/an \
-             'boolean' value. SQLSTATE: 22022"
-        )))
-    }
-}
-
-#[allow(clippy::missing_errors_doc)]
-pub fn partition_column_type_inference_from_config_map<S>(
-    config: &HashMap<String, String, S>,
-) -> DataFusionResult<bool>
-where
-    S: BuildHasher,
-{
-    match config.get(PARTITION_COLUMN_TYPE_INFERENCE_KEY) {
-        Some(raw) => parse_partition_column_type_inference(raw),
+pub fn partition_column_type_inference_from_config_map<S: BuildHasher>(
+    conf: &HashMap<String, String, S>,
+) -> DataFusionResult<bool> {
+    match conf.get(PARTITION_COLUMN_TYPE_INFERENCE_KEY) {
         None => Ok(DEFAULT_PARTITION_COLUMN_TYPE_INFERENCE),
+        Some(raw) => parse_partition_column_type_inference(raw),
     }
 }
 
@@ -146,14 +194,15 @@ pub fn partition_column_type_inference_from_options(options: &ConfigOptions) -> 
     options
         .extensions
         .get::<PartitionColumnTypeInferenceConfig>()
-        .map_or(DEFAULT_PARTITION_COLUMN_TYPE_INFERENCE, |extension| {
-            extension.enabled
+        .map_or(DEFAULT_PARTITION_COLUMN_TYPE_INFERENCE, |carrier| {
+            carrier.enabled
         })
 }
 
 #[must_use]
 pub fn partition_column_type_inference_from_ctx(ctx: &SessionContext) -> bool {
-    partition_column_type_inference_from_options(ctx.copied_config().options())
+    let state = ctx.state();
+    partition_column_type_inference_from_options(state.config_options())
 }
 
 impl ReparkSession {
@@ -204,249 +253,6 @@ impl ReparkSession {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum InferredPartType {
-    Null,
-    Int32,
-    Int64,
-    Decimal(u8),
-    Float64,
-    Date32,
-    Timestamp,
-    Utf8,
-}
-
-fn parse_java_integral_decimal(text: &str) -> Option<(i128, u8)> {
-    if text.is_empty() || text.bytes().any(|byte| byte <= b' ') {
-        return None;
-    }
-    let (neg, rest) = if let Some(tail) = text.strip_prefix('-') {
-        (true, tail)
-    } else if let Some(tail) = text.strip_prefix('+') {
-        (false, tail)
-    } else {
-        (false, text)
-    };
-    let (mantissa, exp) = if let Some(pos) = rest.find(['e', 'E']) {
-        let exp_str = &rest[pos + 1..];
-        if exp_str.is_empty()
-            || !exp_str
-                .strip_prefix(['+', '-'])
-                .unwrap_or(exp_str)
-                .bytes()
-                .all(|byte| byte.is_ascii_digit())
-        {
-            return None;
-        }
-        let exp_val = exp_str.parse::<i64>().ok()?;
-        (&rest[..pos], exp_val)
-    } else {
-        (rest, 0_i64)
-    };
-    let (int_part, frac_part) = match mantissa.split_once('.') {
-        Some((left, right)) => (left, right),
-        None => (mantissa, ""),
-    };
-    if (int_part.is_empty() && frac_part.is_empty())
-        || !int_part.bytes().all(|byte| byte.is_ascii_digit())
-        || !frac_part.bytes().all(|byte| byte.is_ascii_digit())
-    {
-        return None;
-    }
-    let frac_len = i64::try_from(frac_part.len()).ok()?;
-    let raw_scale = frac_len.checked_sub(exp)?;
-    if raw_scale > 0 {
-        return None;
-    }
-    let zeros = usize::try_from(raw_scale.checked_neg()?).ok()?;
-    let mut digits = String::with_capacity(int_part.len() + frac_part.len() + zeros.min(40));
-    digits.push_str(int_part);
-    digits.push_str(frac_part);
-    let trimmed = digits.trim_start_matches('0');
-    if trimmed.is_empty() {
-        return Some((0, 1));
-    }
-    let precision = trimmed.len().checked_add(zeros)?;
-    if precision > 38 {
-        return None;
-    }
-    let mut scaled = String::with_capacity(precision + usize::from(neg));
-    if neg {
-        scaled.push('-');
-    }
-    scaled.push_str(trimmed);
-    for _ in 0..zeros {
-        scaled.push('0');
-    }
-    let value = scaled.parse::<i128>().ok()?;
-    let prec_u8 = u8::try_from(precision).ok()?;
-    Some((value, prec_u8))
-}
-
-fn parse_java_double(text: &str) -> Option<f64> {
-    let trimmed = text.trim_matches(|ch: char| (ch as u32) <= 0x20);
-    if trimmed.is_empty() {
-        return None;
-    }
-    match trimmed {
-        "NaN" => return Some(f64::NAN),
-        "Infinity" | "+Infinity" => return Some(f64::INFINITY),
-        "-Infinity" => return Some(f64::NEG_INFINITY),
-        _ => {}
-    }
-    let lower_unsigned = trimmed
-        .strip_prefix(['+', '-'])
-        .unwrap_or(trimmed)
-        .to_ascii_lowercase();
-    if matches!(lower_unsigned.as_str(), "nan" | "inf" | "infinity") {
-        return None;
-    }
-    let body = trimmed
-        .strip_suffix(['d', 'D', 'f', 'F'])
-        .unwrap_or(trimmed);
-    if body.is_empty()
-        || !body.bytes().any(|byte| byte.is_ascii_digit())
-        || body.bytes().any(|byte| byte == b'_' || byte <= b' ')
-    {
-        return None;
-    }
-    body.parse::<f64>().ok()
-}
-
-fn looks_like_spark_partition_date(text: &str) -> bool {
-    text.len() == 10 && NaiveDate::parse_from_str(text, "%Y-%m-%d").is_ok()
-}
-
-fn looks_like_spark_partition_timestamp(text: &str) -> bool {
-    if text.len() == 19 {
-        return NaiveDateTime::parse_from_str(text, "%Y-%m-%d %H:%M:%S").is_ok();
-    }
-    if text.len() == 21 {
-        let bytes = text.as_bytes();
-        return bytes[19] == b'.'
-            && bytes[20].is_ascii_digit()
-            && NaiveDateTime::parse_from_str(&text[..19], "%Y-%m-%d %H:%M:%S").is_ok();
-    }
-    false
-}
-
-fn infer_single_part_value(text: &str) -> InferredPartType {
-    if text.parse::<i32>().is_ok() {
-        InferredPartType::Int32
-    } else if text.parse::<i64>().is_ok() {
-        InferredPartType::Int64
-    } else if let Some((_, precision)) = parse_java_integral_decimal(text) {
-        InferredPartType::Decimal(precision)
-    } else if parse_java_double(text).is_some() {
-        InferredPartType::Float64
-    } else if looks_like_spark_partition_date(text) {
-        InferredPartType::Date32
-    } else if looks_like_spark_partition_timestamp(text) {
-        InferredPartType::Timestamp
-    } else {
-        InferredPartType::Utf8
-    }
-}
-
-fn unify_part_type(left: InferredPartType, right: InferredPartType) -> InferredPartType {
-    match (left, right) {
-        (InferredPartType::Null, other) | (other, InferredPartType::Null) => other,
-        (a, b) if a == b => a,
-        (InferredPartType::Int32, InferredPartType::Int64)
-        | (InferredPartType::Int64, InferredPartType::Int32) => InferredPartType::Int64,
-        (InferredPartType::Int32 | InferredPartType::Int64, InferredPartType::Float64)
-        | (InferredPartType::Float64, InferredPartType::Int32 | InferredPartType::Int64) => {
-            InferredPartType::Float64
-        }
-        (InferredPartType::Decimal(p1), InferredPartType::Decimal(p2)) => {
-            InferredPartType::Decimal(p1.max(p2))
-        }
-        (InferredPartType::Int32, InferredPartType::Decimal(precision))
-        | (InferredPartType::Decimal(precision), InferredPartType::Int32) => {
-            InferredPartType::Decimal(precision.max(10))
-        }
-        (InferredPartType::Int64, InferredPartType::Decimal(precision))
-        | (InferredPartType::Decimal(precision), InferredPartType::Int64) => {
-            InferredPartType::Decimal(precision.max(20))
-        }
-        _ => InferredPartType::Utf8,
-    }
-}
-
-fn infer_column_data_type(
-    values: &[Option<&str>],
-    session_zone: &str,
-    type_inference: bool,
-) -> DataType {
-    let mut has_non_null = false;
-    let mut acc = InferredPartType::Null;
-    for candidate in values {
-        let Some(text) = candidate else {
-            continue;
-        };
-        has_non_null = true;
-        if !type_inference {
-            return DataType::Utf8;
-        }
-        acc = unify_part_type(acc, infer_single_part_value(text));
-        if acc == InferredPartType::Utf8 {
-            return DataType::Utf8;
-        }
-    }
-    if !has_non_null {
-        return DataType::Null;
-    }
-    match acc {
-        InferredPartType::Null => DataType::Null,
-        InferredPartType::Int32 => DataType::Int32,
-        InferredPartType::Int64 => DataType::Int64,
-        InferredPartType::Decimal(precision) => DataType::Decimal128(precision, 0),
-        InferredPartType::Float64 => DataType::Float64,
-        InferredPartType::Date32 => DataType::Date32,
-        InferredPartType::Timestamp => {
-            DataType::Timestamp(TimeUnit::Microsecond, Some(session_zone.into()))
-        }
-        InferredPartType::Utf8 => DataType::Utf8,
-    }
-}
-
-fn parse_date32(text: &str) -> Option<i32> {
-    let date = NaiveDate::parse_from_str(text, "%Y-%m-%d").ok()?;
-    let epoch = NaiveDate::from_ymd_opt(1970, 1, 1)?;
-    i32::try_from(date.signed_duration_since(epoch).num_days()).ok()
-}
-
-fn typed_null_scalar(data_type: &DataType) -> ScalarValue {
-    ScalarValue::try_from(data_type).unwrap_or(ScalarValue::Null)
-}
-
-fn scalar_from_partition_text(raw: Option<&str>, data_type: &DataType, zone: Tz) -> ScalarValue {
-    let Some(text) = raw else {
-        return typed_null_scalar(data_type);
-    };
-    match data_type {
-        DataType::Null => ScalarValue::Null,
-        DataType::Int32 => ScalarValue::Int32(text.parse::<i32>().ok()),
-        DataType::Int64 => ScalarValue::Int64(text.parse::<i64>().ok()),
-        DataType::Decimal128(precision, scale) => {
-            let value = if *scale == 0 {
-                parse_java_integral_decimal(text)
-                    .map(|(val, _)| val)
-                    .or_else(|| parse_decimal_scaled(text, *precision, *scale))
-            } else {
-                parse_decimal_scaled(text, *precision, *scale)
-            };
-            ScalarValue::Decimal128(value, *precision, *scale)
-        }
-        DataType::Float64 => ScalarValue::Float64(parse_java_double(text)),
-        DataType::Date32 => ScalarValue::Date32(parse_date32(text)),
-        DataType::Timestamp(TimeUnit::Microsecond, tz) => {
-            ScalarValue::TimestampMicrosecond(parse_timestamp_micros_zone(text, zone), tz.clone())
-        }
-        _ => ScalarValue::Utf8(Some(text.to_string())),
-    }
-}
-
 fn names_match(left: &str, right: &str, case_sensitive: bool) -> bool {
     if case_sensitive {
         left == right
@@ -467,13 +273,21 @@ fn parent_display_path(table_url: &ListingTableUrl, meta: &ObjectMeta) -> PathBu
     }
 }
 
+fn is_hidden_directory_segment(segment: &str) -> bool {
+    segment.starts_with('.') || (segment.starts_with('_') && !segment.contains('='))
+}
+
+fn is_hidden_file_name(name: &str) -> bool {
+    name.starts_with('.') || name.starts_with('_')
+}
+
 fn parse_relative_specs(
     relative: &[&str],
     location: &str,
 ) -> Result<Vec<(String, Option<String>)>> {
     let dirs = &relative[..relative.len().saturating_sub(1)];
     let mut specs = Vec::new();
-    for segment in dirs {
+    for segment in dirs.iter().rev() {
         if let Some((key, raw)) = segment.split_once('=') {
             if key.is_empty() {
                 return Err(Error::Iceberg(format!(
@@ -487,14 +301,18 @@ fn parse_relative_specs(
                      '{location}'"
                 )));
             }
+            let unescaped_key = unescape_spark_path_name(key);
             let value = if raw == HIVE_DEFAULT_PARTITION {
                 None
             } else {
-                Some(unescape_partition_value(raw))
+                Some(unescape_spark_path_name(raw))
             };
-            specs.push((key.to_string(), value));
+            specs.push((unescaped_key, value));
+        } else if !specs.is_empty() {
+            break;
         }
     }
+    specs.reverse();
     Ok(specs)
 }
 
@@ -576,37 +394,62 @@ fn strip_column_qualifiers(expr: Expr) -> Expr {
     )
 }
 
+fn flatten_conjuncts(filters: &[Expr]) -> Vec<Expr> {
+    let mut out = Vec::with_capacity(filters.len());
+    let mut stack: Vec<Expr> = filters.iter().rev().cloned().collect();
+    while let Some(expr) = stack.pop() {
+        match expr {
+            Expr::BinaryExpr(BinaryExpr {
+                left,
+                op: Operator::And,
+                right,
+            }) => {
+                stack.push(*right);
+                stack.push(*left);
+            }
+            other => out.push(other),
+        }
+    }
+    out
+}
+
 fn prune_partitioned_files(
     state: &dyn Session,
     files: &[PartitionedFile],
     partition_fields: &[FieldRef],
     filters: &[Expr],
-) -> Vec<PartitionedFile> {
+) -> DataFusionResult<Vec<PartitionedFile>> {
     if partition_fields.is_empty() || filters.is_empty() {
-        return files.to_vec();
+        return Ok(files.to_vec());
     }
     let part_names: Vec<&str> = partition_fields
         .iter()
         .map(|field| field.name().as_str())
         .collect();
-    let part_filters: Vec<Expr> = filters
-        .iter()
+    let part_filters: Vec<Expr> = flatten_conjuncts(filters)
+        .into_iter()
         .filter(|expr| expr_uses_only_columns(&part_names, expr))
-        .cloned()
         .map(strip_column_qualifiers)
         .collect();
-    let Some(combined) = conjunction(part_filters) else {
-        return files.to_vec();
-    };
+    if part_filters.is_empty() {
+        return Ok(files.to_vec());
+    }
     let Ok(part_df_schema) = DFSchema::from_unqualified_fields(
         partition_fields.iter().cloned().collect(),
         HashMap::new(),
     ) else {
-        return files.to_vec();
+        return Ok(files.to_vec());
     };
-    let Ok(physical) = state.create_physical_expr(combined, &part_df_schema) else {
-        return files.to_vec();
-    };
+    let mut physicals: Vec<Arc<dyn PhysicalExpr>> = Vec::with_capacity(part_filters.len());
+    for filter in part_filters {
+        if let Ok(physical) = state.create_physical_expr(filter, &part_df_schema) {
+            physicals.push(physical);
+        }
+    }
+    if physicals.is_empty() {
+        return Ok(files.to_vec());
+    }
+    let ansi_enabled = partition_pruning_ansi_from_options(state.config_options());
     let part_arrow_schema = Arc::clone(part_df_schema.inner());
     let mut kept = Vec::with_capacity(files.len());
     for file in files {
@@ -623,22 +466,34 @@ fn prune_partitioned_files(
             kept.push(file.clone());
             continue;
         };
-        let evaluated = physical
-            .evaluate(&batch)
-            .and_then(|value| value.into_array(1));
-        let Ok(array) = evaluated else {
-            kept.push(file.clone());
-            continue;
-        };
-        if let Some(bools) = array.as_any().downcast_ref::<BooleanArray>() {
-            if bools.len() == 1 && bools.is_valid(0) && bools.value(0) {
-                kept.push(file.clone());
+        let mut keep_file = true;
+        for physical in &physicals {
+            let evaluated = physical
+                .evaluate(&batch)
+                .and_then(|value| value.into_array(1));
+            match evaluated {
+                Ok(array) => {
+                    if let Some(bools) = array.as_any().downcast_ref::<BooleanArray>()
+                        && bools.len() == 1
+                        && (!bools.is_valid(0) || !bools.value(0))
+                    {
+                        keep_file = false;
+                        break;
+                    }
+                }
+                Err(error) => {
+                    if ansi_enabled {
+                        return Err(error);
+                    }
+                    break;
+                }
             }
-        } else {
+        }
+        if keep_file {
             kept.push(file.clone());
         }
     }
-    kept
+    Ok(kept)
 }
 
 #[async_trait]
@@ -665,7 +520,7 @@ impl TableProvider for PartitionedParquetProvider {
         filters: &[Expr],
         limit: Option<usize>,
     ) -> DataFusionResult<Arc<dyn ExecutionPlan>> {
-        let kept = prune_partitioned_files(state, &self.files, &self.partition_fields, filters);
+        let kept = prune_partitioned_files(state, &self.files, &self.partition_fields, filters)?;
         if kept.is_empty() {
             let projected = match projection {
                 None => Arc::clone(&self.table_schema),
@@ -701,7 +556,18 @@ async fn read_parquet_listing_fallback(
 }
 
 type RawPartitionPairs = Vec<(String, Option<String>)>;
-type DiscoveredEntry = (ObjectMeta, RawPartitionPairs);
+type DiscoveredEntry = (ObjectMeta, RawPartitionPairs, usize);
+
+fn refuse_zero_byte_parquet(entries: &[DiscoveredEntry]) -> Result<()> {
+    if let Some((empty, _, _)) = entries.iter().find(|(meta, _, _)| meta.size == 0) {
+        return Err(Error::Iceberg(format!(
+            "[FAILED_READ_FILE.CANNOT_READ_FILE_FOOTER] Could not read footer for file: '{}' \
+             (0 bytes). SQLSTATE: KD001",
+            empty.location
+        )));
+    }
+    Ok(())
+}
 
 fn normalize_file_dir_url(path: String) -> String {
     if path.starts_with("file://")
@@ -749,45 +615,57 @@ pub(crate) async fn read_parquet_discovered(
             continue;
         };
         let relative: Vec<&str> = rel_iter.collect();
-        if relative.is_empty() {
+        let Some((&file_name, dirs)) = relative.split_last() else {
             continue;
-        }
-        let is_parquet = relative
-            .last()
-            .is_some_and(|name| name.ends_with(".parquet"));
-        let is_hidden = relative
-            .iter()
-            .any(|segment| segment.starts_with('.') || segment.starts_with('_'));
+        };
+        let is_parquet = file_name.ends_with(".parquet");
+        let is_hidden = is_hidden_file_name(file_name)
+            || dirs
+                .iter()
+                .any(|segment| is_hidden_directory_segment(segment));
         if is_hidden {
             if is_parquet {
                 had_hidden_parquet = true;
             }
             continue;
         }
-        if !is_parquet || meta.size == 0 {
+        if !is_parquet {
             continue;
         }
+        let depth = relative.len();
         let specs = parse_relative_specs(&relative, meta.location.as_ref())?;
-        visible.push((meta, specs));
+        visible.push((meta, specs, depth));
     }
     if visible.is_empty() {
         return read_parquet_listing_fallback(context, &resolved).await;
     }
-    let any_partitioned = visible.iter().any(|(_, specs)| !specs.is_empty());
-    if !any_partitioned && !had_hidden_parquet {
-        return read_parquet_listing_fallback(context, &resolved).await;
-    }
+    let any_partitioned = visible.iter().any(|(_, specs, _)| !specs.is_empty());
     let kept: Vec<DiscoveredEntry> = if any_partitioned {
-        visible
+        let partitioned: Vec<DiscoveredEntry> = visible
             .into_iter()
-            .filter(|(_, specs)| !specs.is_empty())
-            .collect()
+            .filter(|(_, specs, _)| !specs.is_empty())
+            .collect();
+        refuse_zero_byte_parquet(&partitioned)?;
+        partitioned
     } else {
-        visible
+        let root_only: Vec<DiscoveredEntry> = visible
+            .into_iter()
+            .filter(|(_, _, depth)| *depth == 1)
+            .collect();
+        refuse_zero_byte_parquet(&root_only)?;
+        if !had_hidden_parquet {
+            return read_parquet_listing_fallback(context, &resolved).await;
+        }
+        if root_only.is_empty() {
+            return Err(Error::Analysis(format!(
+                "Error during planning: No files found at {resolved}"
+            )));
+        }
+        root_only
     };
     let mut seen_norm: Vec<Vec<String>> = Vec::new();
     let mut display_by_norm: HashMap<Vec<String>, (Vec<String>, PathBuf)> = HashMap::new();
-    for (meta, specs) in &kept {
+    for (meta, specs, _) in &kept {
         let keys: Vec<String> = specs.iter().map(|(key, _)| key.clone()).collect();
         let norm: Vec<String> = if case_sensitive {
             keys.clone()
@@ -832,12 +710,12 @@ pub(crate) async fn read_parquet_discovered(
     for (col_index, name) in canonical_names.iter().enumerate() {
         let col_values: Vec<Option<&str>> = kept
             .iter()
-            .map(|(_, specs)| specs.get(col_index).and_then(|(_, val)| val.as_deref()))
+            .map(|(_, specs, _)| specs.get(col_index).and_then(|(_, val)| val.as_deref()))
             .collect();
         let data_type = infer_column_data_type(&col_values, session_zone, type_inference);
         partition_fields.push(Arc::new(Field::new(name, data_type, true)));
     }
-    let kept_metas: Vec<ObjectMeta> = kept.iter().map(|(meta, _)| meta.clone()).collect();
+    let kept_metas: Vec<ObjectMeta> = kept.iter().map(|(meta, _, _)| meta.clone()).collect();
     let listing_options = ParquetReadOptions::default()
         .to_listing_options(&context.copied_config(), context.copied_table_options());
     let format: Arc<dyn FileFormat> =
@@ -888,7 +766,7 @@ pub(crate) async fn read_parquet_discovered(
         .collect();
     let partitioned_files: Vec<PartitionedFile> = kept
         .into_iter()
-        .map(|(meta, specs)| {
+        .map(|(meta, specs, _)| {
             let values: Vec<ScalarValue> = partition_fields
                 .iter()
                 .enumerate()

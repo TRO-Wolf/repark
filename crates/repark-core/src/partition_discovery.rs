@@ -45,7 +45,7 @@ pub(crate) struct DiscoveredPartitions {
     pub(crate) raw: HashMap<PathBuf, Vec<Option<String>>>,
 }
 
-pub(crate) fn unescape_partition_value(raw: &str) -> String {
+fn unescape_partition_value(raw: &str) -> String {
     let bytes = raw.as_bytes();
     let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
     let hex_value = |digit: u8| {

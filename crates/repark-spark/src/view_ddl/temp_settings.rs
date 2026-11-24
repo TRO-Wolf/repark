@@ -77,6 +77,9 @@ impl TempViewSettings {
     pub(crate) fn apply(&self, options: &mut ConfigOptions) {
         let extensions = &mut options.extensions;
         extensions.insert(self.ansi.clone());
+        extensions.insert(repark_core::spark_nullable::PartitionPruningAnsiConfig {
+            enabled: self.ansi.enabled,
+        });
         extensions.insert(self.zone.clone());
         extensions.insert(self.decimal_legacy.clone());
         extensions.insert(self.timestamp_type.clone());

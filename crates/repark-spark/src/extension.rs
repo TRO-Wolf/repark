@@ -82,6 +82,7 @@ fn install_spark_session_conf(
     refuse_double_quoted_identifiers(session.conf)?;
     let ansi_enabled = repark_functions::ansi::spark_ansi_from_config_map(session.conf)?;
     config = repark_functions::ansi::with_spark_ansi_config(config, ansi_enabled);
+    config = repark_core::spark_nullable::with_partition_pruning_ansi(config, ansi_enabled);
     let case_sensitive =
         repark_functions::case_sensitive::spark_case_sensitive_from_config_map(session.conf)?;
     config =

@@ -262,6 +262,62 @@ def part_fixtures(tmp_path_factory: pytest.TempPathFactory) -> Path:
         orc_dir / "part-0.orc",
     )
 
+    _write_id_s(root / "d1_f1_root_sub_temp" / "root.parquet", [(1, "r")])
+    _write_id_s(root / "d1_f1_root_sub_temp" / "sub" / "a.parquet", [(2, "s")])
+    _write_id_s(
+        root / "d1_f1_root_sub_temp" / "_temporary" / "0" / "part-tmp.parquet",
+        [(99, "tmp")],
+    )
+    _write_id_s(root / "d1_f1_nested_sub_temp" / "sub1" / "a.parquet", [(1, "a")])
+    _write_id_s(root / "d1_f1_nested_sub_temp" / "sub2" / "b.parquet", [(2, "b")])
+    _write_id_s(
+        root / "d1_f1_nested_sub_temp" / "_temporary" / "0" / "part-tmp.parquet",
+        [(99, "tmp")],
+    )
+
+    _write_id_s(root / "d1_f2_under_two" / "_p=1" / "part-0.parquet", [(1, "a")])
+    _write_id_s(root / "d1_f2_under_two" / "_p=2" / "part-0.parquet", [(2, "b")])
+    _write_id_s(root / "d1_f2_under_mix" / "_p=1" / "part-0.parquet", [(1, "a")])
+    _write_id_s(root / "d1_f2_under_mix" / "p=2" / "part-0.parquet", [(2, "b")])
+    _write_id_s(root / "d1_f2_under_hidden" / "_p=1" / "part-0.parquet", [(1, "a")])
+    _write_id_s(root / "d1_f2_under_hidden" / "_p=1" / "_hidden.parquet", [(99, "hid")])
+    _write_id_s(root / "d1_f2_under_hidden" / "_p=2" / "part-0.parquet", [(2, "b")])
+
+    _write_id_s(root / "d1_f3_key_space" / "a%20b=1" / "part-0.parquet", [(1, "a")])
+    _write_id_s(root / "d1_f3_key_slash" / "a%2Fb=10" / "part-0.parquet", [(1, "a")])
+    _write_id_s(root / "d1_f3_key_eq" / "a%3Db=1" / "part-0.parquet", [(1, "a")])
+
+    _write_id_s(root / "d1_f4_between" / "a=1" / "sub" / "b=2" / "part-0.parquet", [(1, "a")])
+    _write_id_s(root / "d1_f4_between" / "a=1" / "sub" / "b=3" / "part-0.parquet", [(2, "b")])
+    _write_id_s(root / "d1_f4_two_sub" / "a=1" / "b=2" / "sub" / "part-0.parquet", [(1, "a")])
+
+    _write_id_s(root / "d1_f5_date_ts" / "p=2024-01-02" / "part-0.parquet", [(1, "a")])
+    _write_id_s(root / "d1_f5_date_ts" / "p=2024-07-04" / "part-0.parquet", [(2, "b")])
+    _write_id_s(
+        root / "d1_f5_date_ts" / "p=2024-01-02 08%3A04%3A05" / "part-0.parquet",
+        [(3, "c")],
+    )
+
+    _write_id_s(root / "d1_f6_empty_bad" / "p=1" / "part-0.parquet", [(1, "one")])
+    _write_id_s(root / "d1_f6_empty_bad" / "p=x" / "part-0.parquet", [])
+    _write_id_s(root / "d1_f6_divzero" / "p=1" / "part-0.parquet", [(1, "one")])
+    _write_id_s(root / "d1_f6_divzero" / "p=0" / "part-0.parquet", [])
+
+    (root / "d1_f7_zero_own" / "p=1").mkdir(parents=True, exist_ok=True)
+    (root / "d1_f7_zero_own" / "p=1" / "empty.parquet").write_bytes(b"")
+    _write_id_s(root / "d1_f7_zero_own" / "p=2" / "good.parquet", [(2, "b")])
+    _write_id_s(root / "d1_f7_zero_sib" / "p=1" / "good.parquet", [(1, "a")])
+    (root / "d1_f7_zero_sib" / "p=1" / "empty.parquet").write_bytes(b"")
+    _write_id_s(root / "d1_f7_zero_sib" / "p=2" / "good.parquet", [(2, "b")])
+
+    _write_id_s(root / "d1_f8_0e5" / "p=0e5" / "part-0.parquet", [(1, "a")])
+    _write_id_s(root / "d1_f8_0dot0e5" / "p=0.0e5" / "part-0.parquet", [(1, "a")])
+    _write_id_s(root / "d1_f8_plus_nan" / "p=+NaN" / "part-0.parquet", [(1, "a")])
+    _write_id_s(root / "d1_f8_neg_nan" / "p=-NaN" / "part-0.parquet", [(1, "a")])
+    _write_id_s(root / "d1_f8_hex_float" / "p=0x1.0p0" / "part-0.parquet", [(1, "a")])
+
+    _write_id_s(root / "d1_f9_pct_utf8" / "p=tea%C3%A9" / "part-0.parquet", [(1, "a")])
+
     return root
 
 
@@ -608,3 +664,128 @@ def test_parquet_controls_leaf_equals_root_options_text_and_iceberg(
     ice_df = spark.read.table("ice.db.part_ice")
     assert ice_df.schema.simpleString() == "struct<id:bigint,s:string,p:int>"
     assert _sorted_rows(ice_df.where("p = 2")) == [(2, "b", 2)]
+
+
+DELTA1_LAYOUT_CASES = [
+    ("d1_f1_root_sub_temp", "struct<id:bigint,s:string>", [(1, "r")]),
+    ("d1_f2_under_two", "struct<id:bigint,s:string,_p:int>", [(1, "a", 1), (2, "b", 2)]),
+    ("d1_f2_under_hidden", "struct<id:bigint,s:string,_p:int>", [(1, "a", 1), (2, "b", 2)]),
+    ("d1_f3_key_space", "struct<id:bigint,s:string,a b:int>", [(1, "a", 1)]),
+    ("d1_f3_key_slash", "struct<id:bigint,s:string,a/b:int>", [(1, "a", 10)]),
+    ("d1_f3_key_eq", "struct<id:bigint,s:string,a=b:int>", [(1, "a", 1)]),
+    ("d1_f4_between", "struct<id:bigint,s:string,b:int>", [(1, "a", 2), (2, "b", 3)]),
+    ("d1_f8_0e5", "struct<id:bigint,s:string,p:decimal(6,0)>", [(1, "a", Decimal("0"))]),
+    ("d1_f8_0dot0e5", "struct<id:bigint,s:string,p:decimal(5,0)>", [(1, "a", Decimal("0"))]),
+    ("d1_f8_plus_nan", "struct<id:bigint,s:string,p:double>", [(1, "a", ("nan",))]),
+    ("d1_f8_neg_nan", "struct<id:bigint,s:string,p:double>", [(1, "a", ("nan",))]),
+    ("d1_f8_hex_float", "struct<id:bigint,s:string,p:double>", [(1, "a", 1.0)]),
+    ("d1_f9_pct_utf8", "struct<id:bigint,s:string,p:string>", [(1, "a", "tea\u00c3\u00a9")]),
+]
+
+
+@pytest.mark.parametrize("door", DOORS)
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+@pytest.mark.parametrize(("layout", "expected_schema", "expected_rows"), DELTA1_LAYOUT_CASES)
+def test_delta1_parquet_partition_discovery_layouts(
+    part_fixtures: Path,
+    spark_factory: list[ReparkSession],
+    door: str,
+    ansi: str,
+    layout: str,
+    expected_schema: str,
+    expected_rows: list[tuple[Any, ...]],
+) -> None:
+    spark = _make_session(spark_factory, f"partdisc-d1-{door}-{ansi}-{layout}", ansi=ansi)
+    df = _read_door(spark, door, str(part_fixtures / layout))
+    assert df.schema.simpleString() == expected_schema
+    assert _sorted_rows(df) == sorted(expected_rows, key=repr)
+
+
+@pytest.mark.parametrize("door", DOORS)
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+@pytest.mark.parametrize(
+    ("layout", "expected_cond"),
+    [
+        ("d1_f1_nested_sub_temp", None),
+        ("d1_f2_under_mix", "CONFLICTING_PARTITION_COLUMN_NAMES"),
+        ("d1_f7_zero_own", "FAILED_READ_FILE.CANNOT_READ_FILE_FOOTER"),
+        ("d1_f7_zero_sib", "FAILED_READ_FILE.CANNOT_READ_FILE_FOOTER"),
+    ],
+)
+def test_delta1_parquet_partition_discovery_refusals(
+    part_fixtures: Path,
+    spark_factory: list[ReparkSession],
+    door: str,
+    ansi: str,
+    layout: str,
+    expected_cond: str | None,
+) -> None:
+    spark = _make_session(spark_factory, f"partdisc-d1-ref-{door}-{ansi}-{layout}", ansi=ansi)
+    with pytest.raises(PySparkException) as exc_info:
+        _read_door(spark, door, str(part_fixtures / layout))
+    if expected_cond is not None:
+        assert exc_info.value.getCondition() == expected_cond
+
+
+@pytest.mark.parametrize("door", DOORS)
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+@pytest.mark.parametrize("zone", ZONES)
+def test_delta1_mixed_date_and_timestamp_widens_in_zones(
+    part_fixtures: Path,
+    spark_factory: list[ReparkSession],
+    door: str,
+    ansi: str,
+    zone: str,
+) -> None:
+    spark = _make_session(
+        spark_factory, f"partdisc-d1-f5-{door}-{ansi}-{zone}", ansi=ansi, zone=zone
+    )
+    df = _read_door(spark, door, str(part_fixtures / "d1_f5_date_ts"))
+    assert df.schema.simpleString() == "struct<id:bigint,s:string,p:timestamp>"
+    assert _sorted_rows(df) == [
+        (1, "a", datetime(2024, 1, 2, 0, 0, 0)),
+        (2, "b", datetime(2024, 7, 4, 0, 0, 0)),
+        (3, "c", datetime(2024, 1, 2, 8, 4, 5)),
+    ]
+
+
+@pytest.mark.parametrize("door", DOORS)
+@pytest.mark.parametrize(
+    ("layout", "predicate"),
+    [
+        ("d1_f6_empty_bad", "CAST(p AS INT) = 1"),
+        ("d1_f6_empty_bad", "CAST(p AS INT) = 99"),
+        ("d1_f6_empty_bad", "p = 1"),
+        ("d1_f6_empty_bad", "CAST(p AS INT) = 1 AND id = 1"),
+        ("d1_f6_divzero", "10 / p = 10"),
+    ],
+)
+def test_delta1_ansi_pruning_refuses_on_zero_row_partition(
+    part_fixtures: Path,
+    spark_factory: list[ReparkSession],
+    door: str,
+    layout: str,
+    predicate: str,
+) -> None:
+    spark_on = _make_session(spark_factory, f"partdisc-d1-f6-on-{door}", ansi="true")
+    with pytest.raises(PySparkException):
+        _read_door(spark_on, door, str(part_fixtures / layout)).where(predicate).collect()
+
+    spark_off = _make_session(spark_factory, f"partdisc-d1-f6-off-{door}", ansi="false")
+    rows_off = _sorted_rows(
+        _read_door(spark_off, door, str(part_fixtures / layout)).where(predicate)
+    )
+    if predicate == "CAST(p AS INT) = 99":
+        assert rows_off == []
+    elif layout == "d1_f6_divzero":
+        assert rows_off == [(1, "one", 1)]
+    else:
+        assert rows_off == [(1, "one", "1")]
+
+    spark_on2 = _make_session(spark_factory, f"partdisc-d1-f6-sc-{door}", ansi="true")
+    short_rows = _sorted_rows(
+        _read_door(spark_on2, door, str(part_fixtures / "d1_f6_empty_bad")).where(
+            "p = '1' AND CAST(p AS INT) = 1"
+        )
+    )
+    assert short_rows == [(1, "one", "1")]

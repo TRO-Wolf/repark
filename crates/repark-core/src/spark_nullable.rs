@@ -25,14 +25,16 @@ use object_store::{ObjectMeta, ObjectStore};
 
 mod extreme_bounds;
 pub mod partition;
+mod partition_infer;
 
 pub(crate) use partition::PartitionedParquetProvider;
 pub use partition::{
     DEFAULT_PARTITION_COLUMN_TYPE_INFERENCE, PARTITION_COLUMN_TYPE_INFERENCE_KEY,
-    PartitionColumnTypeInferenceConfig, parse_partition_column_type_inference,
-    parse_runtime_partition_column_type_inference, partition_column_type_inference_from_config_map,
-    partition_column_type_inference_from_ctx, partition_column_type_inference_from_options,
-    with_partition_column_type_inference,
+    PartitionColumnTypeInferenceConfig, PartitionPruningAnsiConfig,
+    parse_partition_column_type_inference, parse_runtime_partition_column_type_inference,
+    partition_column_type_inference_from_config_map, partition_column_type_inference_from_ctx,
+    partition_column_type_inference_from_options, partition_pruning_ansi_from_options,
+    with_partition_column_type_inference, with_partition_pruning_ansi,
 };
 
 const MAX_NESTED_TYPE_DEPTH: usize = 32;

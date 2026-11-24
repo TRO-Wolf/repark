@@ -588,3 +588,368 @@ async fn spark_numeric_and_uri_edge_rules() {
         &DataType::Decimal128(6, 0)
     );
 }
+
+#[tokio::test]
+async fn hidden_rule_unpart_nested_and_zero_byte_refusal() {
+    let dir = tempfile::tempdir().unwrap();
+    let session = ReparkSession::new().unwrap();
+
+    write_parquet_file(&dir.path().join("a1/root.parquet"), &id_s_batch(1, "r"));
+    write_parquet_file(&dir.path().join("a1/sub/a.parquet"), &id_s_batch(2, "s"));
+    write_parquet_file(
+        &dir.path().join("a1/_temporary/0/part-tmp.parquet"),
+        &id_s_batch(99, "t"),
+    );
+    let a1_rows: usize = session
+        .read_parquet(dir.path().join("a1").to_str().unwrap())
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap()
+        .iter()
+        .map(RecordBatch::num_rows)
+        .sum();
+    assert_eq!(a1_rows, 1);
+
+    write_parquet_file(&dir.path().join("a2/sub1/a.parquet"), &id_s_batch(1, "a"));
+    write_parquet_file(
+        &dir.path().join("a2/_temporary/0/part-tmp.parquet"),
+        &id_s_batch(99, "t"),
+    );
+    assert!(
+        session
+            .read_parquet(dir.path().join("a2").to_str().unwrap())
+            .await
+            .is_err()
+    );
+
+    write_parquet_file(
+        &dir.path().join("under/_p=1/part-0.parquet"),
+        &id_s_batch(1, "a"),
+    );
+    write_parquet_file(
+        &dir.path().join("under/_p=1/_hidden.parquet"),
+        &id_s_batch(99, "h"),
+    );
+    write_parquet_file(
+        &dir.path().join("under/_p=2/part-0.parquet"),
+        &id_s_batch(2, "b"),
+    );
+    let under = session
+        .read_parquet(dir.path().join("under").to_str().unwrap())
+        .await
+        .unwrap();
+    assert_eq!(under.schema().field(2).name(), "_p");
+    let under_rows: usize = under
+        .collect()
+        .await
+        .unwrap()
+        .iter()
+        .map(RecordBatch::num_rows)
+        .sum();
+    assert_eq!(under_rows, 2);
+
+    write_parquet_file(
+        &dir.path().join("zero_part/p=2/good.parquet"),
+        &id_s_batch(2, "b"),
+    );
+    std::fs::create_dir_all(dir.path().join("zero_part/p=1")).unwrap();
+    std::fs::write(dir.path().join("zero_part/p=1/empty.parquet"), b"").unwrap();
+    let zero_err = session
+        .read_parquet(dir.path().join("zero_part").to_str().unwrap())
+        .await
+        .unwrap_err();
+    assert!(
+        zero_err
+            .to_string()
+            .contains("FAILED_READ_FILE.CANNOT_READ_FILE_FOOTER")
+    );
+
+    write_parquet_file(
+        &dir.path().join("hidden_zero/p=1/good.parquet"),
+        &id_s_batch(1, "a"),
+    );
+    std::fs::write(dir.path().join("hidden_zero/p=1/_zero.parquet"), b"").unwrap();
+    let hz_rows: usize = session
+        .read_parquet(dir.path().join("hidden_zero").to_str().unwrap())
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap()
+        .iter()
+        .map(RecordBatch::num_rows)
+        .sum();
+    assert_eq!(hz_rows, 1);
+}
+
+#[tokio::test]
+async fn trailing_run_spec_and_unescaped_keys_and_values() {
+    let dir = tempfile::tempdir().unwrap();
+    let session = ReparkSession::new().unwrap();
+
+    write_parquet_file(
+        &dir.path().join("between/a=1/sub/b=2/part-0.parquet"),
+        &id_s_batch(1, "a"),
+    );
+    write_parquet_file(
+        &dir.path().join("between/a=1/sub/b=3/part-0.parquet"),
+        &id_s_batch(2, "b"),
+    );
+    let between = session
+        .read_parquet(dir.path().join("between").to_str().unwrap())
+        .await
+        .unwrap();
+    let between_names: Vec<&str> = between
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().as_str())
+        .collect();
+    assert_eq!(between_names, vec!["id", "s", "b"]);
+
+    write_parquet_file(
+        &dir.path().join("two_sub/a=1/b=2/sub/part-0.parquet"),
+        &id_s_batch(1, "a"),
+    );
+    let two_sub = session
+        .read_parquet(dir.path().join("two_sub").to_str().unwrap())
+        .await
+        .unwrap();
+    let two_sub_names: Vec<&str> = two_sub
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().as_str())
+        .collect();
+    assert_eq!(two_sub_names, vec!["id", "s", "a", "b"]);
+
+    write_parquet_file(
+        &dir.path().join("esc_key/a%2Fb=10/part-0.parquet"),
+        &id_s_batch(1, "a"),
+    );
+    let esc_key = session
+        .read_parquet(dir.path().join("esc_key").to_str().unwrap())
+        .await
+        .unwrap();
+    assert_eq!(esc_key.schema().field(2).name(), "a/b");
+
+    write_parquet_file(
+        &dir.path().join("pct_utf8/p=tea%C3%A9/part-0.parquet"),
+        &id_s_batch(1, "a"),
+    );
+    let pct_batches = session
+        .read_parquet(dir.path().join("pct_utf8").to_str().unwrap())
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    let pct_col = pct_batches[0]
+        .column(2)
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .unwrap();
+    assert_eq!(pct_col.value(0), "tea\u{00c3}\u{00a9}");
+}
+
+#[tokio::test]
+async fn mixed_date_and_timestamp_widens_in_utc_and_ny() {
+    let dir = tempfile::tempdir().unwrap();
+    write_parquet_file(
+        &dir.path().join("mix/p=2024-01-02/part-0.parquet"),
+        &id_s_batch(1, "win"),
+    );
+    write_parquet_file(
+        &dir.path().join("mix/p=2024-07-04/part-0.parquet"),
+        &id_s_batch(2, "sum"),
+    );
+    write_parquet_file(
+        &dir.path()
+            .join("mix/p=2024-01-02 08%3A04%3A05/part-0.parquet"),
+        &id_s_batch(3, "ts"),
+    );
+
+    let utc_session = ReparkSession::builder()
+        .config("spark.sql.session.timeZone", "UTC")
+        .build()
+        .unwrap();
+    let utc_df = utc_session
+        .read_parquet(dir.path().join("mix").to_str().unwrap())
+        .await
+        .unwrap();
+    assert_eq!(
+        utc_df.schema().field(2).data_type(),
+        &DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into()))
+    );
+    let mut utc_vals: Vec<i64> = utc_df
+        .collect()
+        .await
+        .unwrap()
+        .iter()
+        .flat_map(|batch| {
+            let arr = batch
+                .column(2)
+                .as_any()
+                .downcast_ref::<TimestampMicrosecondArray>()
+                .unwrap();
+            (0..arr.len()).map(|idx| arr.value(idx)).collect::<Vec<_>>()
+        })
+        .collect();
+    utc_vals.sort_unstable();
+    assert_eq!(
+        utc_vals,
+        vec![
+            1_704_153_600_000_000,
+            1_704_182_645_000_000,
+            1_720_051_200_000_000,
+        ]
+    );
+
+    let ny_session = ReparkSession::builder()
+        .config("spark.sql.session.timeZone", "America/New_York")
+        .build()
+        .unwrap();
+    let ny_df = ny_session
+        .read_parquet(dir.path().join("mix").to_str().unwrap())
+        .await
+        .unwrap();
+    assert_eq!(
+        ny_df.schema().field(2).data_type(),
+        &DataType::Timestamp(TimeUnit::Microsecond, Some("America/New_York".into()))
+    );
+    let mut ny_vals: Vec<i64> = ny_df
+        .collect()
+        .await
+        .unwrap()
+        .iter()
+        .flat_map(|batch| {
+            let arr = batch
+                .column(2)
+                .as_any()
+                .downcast_ref::<TimestampMicrosecondArray>()
+                .unwrap();
+            (0..arr.len()).map(|idx| arr.value(idx)).collect::<Vec<_>>()
+        })
+        .collect();
+    ny_vals.sort_unstable();
+    assert_eq!(
+        ny_vals,
+        vec![
+            1_704_171_600_000_000,
+            1_704_200_645_000_000,
+            1_720_065_600_000_000,
+        ]
+    );
+}
+
+#[tokio::test]
+async fn java_zero_decimal_signed_nan_hex_floats_and_ansi_pruning() {
+    let dir = tempfile::tempdir().unwrap();
+    let cases = [
+        ("z0e5", "0e5", DataType::Decimal128(6, 0)),
+        ("z0dot0e5", "0.0e5", DataType::Decimal128(5, 0)),
+        ("z0e37", "0e37", DataType::Decimal128(38, 0)),
+        ("z0e38", "0e38", DataType::Float64),
+        ("pnan", "+NaN", DataType::Float64),
+        ("nnan", "-NaN", DataType::Float64),
+        ("hex1", "0x1.0p0", DataType::Float64),
+        ("hexneg", "-0x1.8p2", DataType::Float64),
+        ("hexsub", "0x1p-1074", DataType::Float64),
+        ("hexinf", "0x1p1024", DataType::Float64),
+        ("hexbad", "0x1.0", DataType::Utf8),
+    ];
+    for (folder, raw, _) in &cases {
+        write_parquet_file(
+            &dir.path().join(format!("{folder}/p={raw}/part-0.parquet")),
+            &id_s_batch(1, "a"),
+        );
+    }
+
+    let session = ReparkSession::new().unwrap();
+    for (folder, _, expected) in &cases {
+        let df = session
+            .read_parquet(dir.path().join(folder).to_str().unwrap())
+            .await
+            .unwrap();
+        assert_eq!(
+            df.schema().field(2).data_type(),
+            expected,
+            "folder={folder}"
+        );
+    }
+
+    let hex_batches = session
+        .read_parquet(dir.path().join("hexneg").to_str().unwrap())
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    let hex_val = hex_batches[0]
+        .column(2)
+        .as_any()
+        .downcast_ref::<Float64Array>()
+        .unwrap()
+        .value(0);
+    assert!((hex_val - (-6.0)).abs() < 1e-12);
+
+    let sub_batches = session
+        .read_parquet(dir.path().join("hexsub").to_str().unwrap())
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    let sub_val = sub_batches[0]
+        .column(2)
+        .as_any()
+        .downcast_ref::<Float64Array>()
+        .unwrap()
+        .value(0);
+    assert_eq!(sub_val.to_bits(), 1);
+
+    let empty_schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int64, true),
+        Field::new("s", DataType::Utf8, true),
+    ]));
+    let empty_batch = RecordBatch::new_empty(empty_schema);
+    write_parquet_file(
+        &dir.path().join("empty_bad/p=1/part-0.parquet"),
+        &id_s_batch(1, "one"),
+    );
+    write_parquet_file(
+        &dir.path().join("empty_bad/p=x/part-0.parquet"),
+        &empty_batch,
+    );
+
+    let err = session
+        .read_parquet(dir.path().join("empty_bad").to_str().unwrap())
+        .await
+        .unwrap()
+        .filter(datafusion::prelude::cast(col("p"), DataType::Int32).eq(lit(1i32)))
+        .unwrap()
+        .collect()
+        .await
+        .unwrap_err();
+    assert!(err.to_string().contains("Cast error"));
+
+    let short_rows: usize = session
+        .read_parquet(dir.path().join("empty_bad").to_str().unwrap())
+        .await
+        .unwrap()
+        .filter(
+            col("p")
+                .eq(lit("1"))
+                .and(datafusion::prelude::cast(col("p"), DataType::Int32).eq(lit(1i32))),
+        )
+        .unwrap()
+        .collect()
+        .await
+        .unwrap()
+        .iter()
+        .map(RecordBatch::num_rows)
+        .sum();
+    assert_eq!(short_rows, 1);
+}

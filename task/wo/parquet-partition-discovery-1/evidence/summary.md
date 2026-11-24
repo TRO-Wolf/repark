@@ -1,13 +1,13 @@
 # PARQUET-PARTITION-DISCOVERY-1 — Evidence Summary
 
-- **Unit:** `PARQUET-PARTITION-DISCOVERY-1` (S1, 2026-11-24).
+- **Unit:** `PARQUET-PARTITION-DISCOVERY-1` (S1, 2026-11-24; Delta 1).
 - **Card:** [parquet-partition-discovery-1-card-2026-11-23.md](../../../roadmap/mid-term/cards-2026-11-23/parquet-partition-discovery-1-card-2026-11-23.md).
 - **Base:** `514281bd4` (tree-equal to prebuilt main package `pkg-d1merged-ea94eedc`).
 - **Oracle:** live Spark 4.1.2 + Iceberg 1.11.0 (`local[2]`, Java 17), measured in both `UTC` and `America/New_York` and both ANSI modes (`true` and `false`).
 - **Full 719-cell table:** [domain-table.md](domain-table.md).
 - **Scripts:** [generate_fixtures.py](generate_fixtures.py), [generate_repark_fixtures.py](generate_repark_fixtures.py), [probe_step0.py](probe_step0.py), [render_step0.py](render_step0.py).
 
-## Parity summary (719 cells)
+## Parity summary (719 Step 0 cells)
 
 | Reader / control | Total | Main == Spark | Head == Spark | Fixed | Regressions |
 |---|---:|---:|---:|---:|---:|
@@ -38,16 +38,16 @@ Over `one_level` (`p=1/part-00000-...parquet`, `p=2/part-00000-...parquet`), `wh
 
 | Door / layer | Seat (`path:line`) | Role | Shares Parquet local seat? |
 |---|---|---|---|
-| Spark facade (`read.parquet`) | `python/repark/src/repark/spark/session/reader.py:56-75` | `DataFrameReader.parquet`: semantic/schema gates, calls `self._session.read_parquet(path)`, attaches `CONFLICTING_PARTITION_COLUMN_NAMES` (`KD009`). | Yes (entry) |
-| Spark facade (`format("parquet").load`) | `python/repark/src/repark/spark/session/reader.py:425-465` | `DataFrameReader.load`: merges kwargs, semantic gate, routes `fmt == "parquet"` to `self.parquet(effective_path)`. | Yes (entry) |
+| Spark facade (`read.parquet`) | `python/repark/src/repark/spark/session/reader.py:56-80` | `DataFrameReader.parquet`: semantic/schema gates, calls `self._session.read_parquet(path)`, attaches `CONFLICTING_PARTITION_COLUMN_NAMES` (`KD009`) and `FAILED_READ_FILE.CANNOT_READ_FILE_FOOTER` (`KD001`). | Yes (entry) |
+| Spark facade (`format("parquet").load`) | `python/repark/src/repark/spark/session/reader.py:430-470` | `DataFrameReader.load`: merges kwargs, semantic gate, routes `fmt == "parquet"` to `self.parquet(effective_path)`. | Yes (entry) |
 | Spark facade (`ReparkSession.read_parquet`) | `python/repark/src/repark/spark/session/session_core.py:892-895` | Calls `inner.read_parquet(str(path))` and wraps `DataFrame`. | Yes |
 | Spark facade session conf | `python/repark/src/repark/spark/session/session_configuration.py`, `builder_conf.py`, `sql_set_statements.py` | Default (`true`), `conf.set`/`unset`, and SQL `SET`/`RESET` forwarding for `spark.sql.sources.partitionColumnTypeInference.enabled`. | Yes |
-| PyO3 binding (`read_parquet` & runtime conf) | `crates/repark-python/src/session.rs:224-233`, `crates/repark-python/src/session_runtime.rs:412-415` | Reads live `spark.sql.caseSensitive`, calls `read_parquet_with_case_sensitivity`; routes `spark.sql.sources.partitionColumnTypeInference.enabled`. | Yes |
-| Rust core (`ReparkSession::read_parquet`) | `crates/repark-core/src/session.rs:771-775`, `crates/repark-core/src/spark_nullable/partition.rs:184-203` | Registers S3 bucket store if `s3://`/`s3a://`, reads session timezone and `PartitionColumnTypeInferenceConfig`, runs `read_parquet_discovered`. | Yes (local + S3 share this seat) |
-| Rust core Parquet discovery & scan | `crates/repark-core/src/spark_nullable/partition.rs` | Object-store listing, hidden-segment filtering, `keep_partitioned_only`, conflict checks, Spark 4.1.2 type inference, overlap resolution, `PartitionedParquetProvider` with `FloatBoundsInexactFormat` and partition-only file pruning. | Yes (fix seat) |
-| Rust core S3 path seat | `crates/repark-core/src/spark_nullable/partition.rs:189-191`, `crates/repark-core/src/object_store_s3.rs:224-272` | Resolves slashless S3 prefix and lists via the same `ObjectStore` seat; verified via in-memory object store (`s3_in_memory_partitioned_parquet_shares_discovery_and_introspection`). **Not measured on live AWS S3.** | Yes |
+| PyO3 binding (`read_parquet` & runtime conf) | `crates/repark-python/src/session.rs:225-235`, `crates/repark-python/src/session_runtime.rs:247-250,298-325` | Reads live `spark.sql.caseSensitive`, calls `read_parquet_with_case_sensitivity`; routes `spark.sql.sources.partitionColumnTypeInference.enabled` and mirrors `spark.sql.ansi.enabled` into `PartitionPruningAnsiConfig`. | Yes |
+| Rust core (`ReparkSession::read_parquet`) | `crates/repark-core/src/session.rs:771-775`, `crates/repark-core/src/spark_nullable/partition.rs:212-231` | Registers S3 bucket store if `s3://`/`s3a://`, reads session timezone and `PartitionColumnTypeInferenceConfig`, runs `read_parquet_discovered`. | Yes (local + S3 share this seat) |
+| Rust core Parquet discovery, inference & scan | `crates/repark-core/src/spark_nullable/partition.rs`, `partition_infer.rs` | Object-store listing, Spark hidden dir/file filtering, root-only unpartitioned filter, 0-byte `.parquet` refusal, trailing-run specs, per-byte `%XX` unescaping, conflict checks, Spark 4.1.2 type inference (incl. mixed `DATE`+`TIMESTAMP` and Java zero-decimal/hex-float/signed-NaN), overlap resolution, `PartitionedParquetProvider` with `FloatBoundsInexactFormat`, sequential conjunct pruning, and ANSI error propagation. | Yes (fix seat) |
+| Rust core S3 path seat | `crates/repark-core/src/spark_nullable/partition.rs:217-219`, `crates/repark-core/src/object_store_s3.rs:224-272` | Resolves slashless S3 prefix and lists via the same `ObjectStore` seat; verified via in-memory object store (`s3_in_memory_partitioned_parquet_shares_discovery_and_introspection`). **Not measured on live AWS S3.** | Yes |
 | Rust core plan introspection | `crates/repark-core/src/plan_introspect.rs:84-88`, `477-484` | Recognizes `PartitionedParquetProvider` alongside `ListingTable` in `plan_reads_s3_prefix` and `write_table_source`; `input_files` reads `FileScanConfig` directly. | Yes |
-| Rust Spark extension | `crates/repark-spark/src/extension.rs:58` | Installs `with_partition_column_type_inference` on session build. | Yes |
+| Rust Spark extension & temp views | `crates/repark-spark/src/extension.rs:85,107-112`, `crates/repark-spark/src/view_ddl/temp_settings.rs:77-86` | Installs `with_partition_pruning_ansi` and `with_partition_column_type_inference` on session build; mirrors captured ANSI setting in temp-view overlays. | Yes |
 | Rust core path-append validation | `crates/repark-core/src/session/path_write/append.rs:98-100` | Calls `read_parquet` on single part files (not directories; takes `ListingTable` fallback). | Single-file fallback |
 | CSV seat | `reader.py`, `session_core.py`, `crates/repark-core/src/session.rs`, `read_options.rs` | Separate seat (`read_csv_path` + `_apply_reader_schema_semantics`); out of narrow fix. | No |
 | JSON seat | `reader.py`, `session_core.py`, `crates/repark-core/src/session.rs` | Separate seat (`context.read_json` + `_apply_reader_schema_semantics`); out of narrow fix. | No |
@@ -56,16 +56,25 @@ Over `one_level` (`p=1/part-00000-...parquet`, `p=2/part-00000-...parquet`), `wh
 | Iceberg doors (control) | `reader.py`, `reader_iceberg_path.py`, `crates/repark-core/src/iceberg_path/` | `IcebergTableProvider` over Iceberg metadata; untouched. | No (control) |
 | Native ANSI SQL `CREATE EXTERNAL TABLE` | `crates/repark-core/src/local_fs_policy.rs`, `spark_nullable.rs` | Explicit DDL schema via `FloatBoundsInexactFactory`; no plain-path `read_parquet` SQL table function. | No |
 
-## Adversarial edge checks measured against live Spark 4.1.2
+## Adversarial edge probes & Delta 1 findings closed (measured against live Spark 4.1.2)
 
-An additional 25-case edge probe against live Spark 4.1.2 verified and closed:
-- Java `BigDecimal` integral inference (`scale <= 0`, precision <= 38): `1e5` -> `decimal(6,0)`, `1.5e2` -> `decimal(3,0)`, `5.` -> `decimal(1,0)`, `1e5` + `2.5e-2` -> `string`, 39-digit integer -> `double`.
-- Java `Double.parseDouble` inference: exact `NaN`, `Infinity`, `-Infinity`, `+Infinity` -> `double`; lowercase `nan`/`inf` -> `string`; trailing `d`/`f` and whitespace-padded numbers -> `double`.
-- Empty partition key (`=1`) and empty partition value (`p=`) both refuse loudly.
-- `file://` directory URIs without a trailing slash normalize to a collection URL.
-- Subdirectories under or above partitions (`p=1/sub`, `sub/p=1`), empty partition directories, spaces in root paths, literal `+` and `=` in values, and `%25` / dangling `%` match Spark 4.1.2.
+- **25/25 initial edge probe cells closed (including F9 `pct_utf8` in Delta 1):**
+  - Java `BigDecimal` integral inference (`scale <= 0`, precision <= 38): `1e5` -> `decimal(6,0)`, `1.5e2` -> `decimal(3,0)`, `5.` -> `decimal(1,0)`, `1e5` + `2.5e-2` -> `string`, 39-digit integer -> `double`; Delta 1 (F8) adds zero-mantissa precision (`0e5` -> `decimal(6,0)`, `0.0e5` -> `decimal(5,0)`, `0e37` -> `decimal(38,0)`, `0e38` -> `double`).
+  - Java `Double.parseDouble` inference: exact `NaN`, `+NaN`, `-NaN`, `Infinity`, `-Infinity`, `+Infinity`, and Java hex floats (`0x1.0p0`, `-0x1.8p2`, `0x1p-1074`, `0x1p1024`) -> `double`; lowercase `nan`/`inf` and `0x1.0` -> `string`; trailing `d`/`f` and whitespace-padded numbers -> `double`.
+  - Empty partition key (`=1`) and empty partition value (`p=`) both refuse loudly.
+  - `file://` directory URIs without a trailing slash normalize to a collection URL.
+  - Subdirectories under or above partitions (`p=1/sub`, `sub/p=1`), empty partition directories, spaces in root paths, literal `+` and `=` in values, `%25` / dangling `%`, and per-byte `%XX` unescaping (`p=%C3%A9` -> `Ã©`, raw `p=é` -> `é`) match Spark 4.1.2.
+- **Delta 1 verifier findings F1–F9 closed:**
+  - **F1:** unpartitioned directories with hidden `.parquet` files keep only root-level files (`depth == 1`), refusing nested-only layouts (`a2_nested_sub_temp`) and never reading nested non-`=` subdirectories (`a1_root_sub_temp`).
+  - **F2:** Spark hidden rule — directory hidden iff leading `.` or leading `_` without `=`; file hidden iff leading `.` or `_` (so `_p=1/` and Spark `partitionBy("_p")` discover `_p:int`, while `_p=1/_hidden.parquet` is hidden).
+  - **F3 & F9:** per-byte `%XX` unescaping applied to both partition column names (`a%2Fb=10` -> `a/b`) and partition values (`p=%C3%A9` -> `Ã©`) inside the Parquet seat (`partition_infer::unescape_spark_path_name`), leaving ORC and text untouched.
+  - **F4:** reverse-scan trailing contiguous run of `key=value` directories (`a=1/sub/b=2/` -> `b` only; `a=1/b=2/sub/` -> `a, b`).
+  - **F5:** mixed `DATE` + `TIMESTAMP` partition values widen to `TIMESTAMP` with dates at local midnight in the session zone (verified in both `UTC` and `America/New_York` across winter/summer/DST).
+  - **F6:** partition-only `AND` conjuncts flattened and evaluated sequentially per file (short-circuiting `p = '1' AND CAST(p AS INT) = 1`), propagating runtime errors under `spark.sql.ansi.enabled=true` even on 0-row partitions while keeping files conservatively under `ansi=false` or unlowerable expressions.
+  - **F7:** non-hidden 0-byte `.parquet` files refuse with `[FAILED_READ_FILE.CANNOT_READ_FILE_FOOTER]` (`KD001`) while hidden 0-byte files (`_zero.parquet`) remain skipped.
+  - **F8:** zero-mantissa decimal precision, `+NaN`/`-NaN`, and Java hex floats match Spark 4.1.2.
 
 ## Pins
 
-- Rust unit pins: `crates/repark-core/src/spark_nullable/partition_tests.rs` (7 async tests covering layouts, pruning, `EmptyExec`, type inference, `partitionColumnTypeInference.enabled`, overlap, hidden files, conflicts, `caseSensitive`, numeric/URI edges, and in-memory S3).
-- Facade pins: `python/repark/tests/io/test_parquet_partition_discovery_1.py` (132 test cases across `read.parquet`, `format("parquet").load`, ANSI `true`/`false`, `UTC`/`America/New_York`: 128/128 defect pins red on main `514281bd4` and green on head; 4/4 control pins green on both).
+- Rust unit pins: `crates/repark-core/src/spark_nullable/partition_tests.rs` (11 async tests covering layouts, pruning, `EmptyExec`, type inference, `partitionColumnTypeInference.enabled`, overlap, Spark hidden rules, root-only unpart filter, trailing-run specs, URL-escaped keys/values, mixed `DATE`+`TIMESTAMP` in UTC/NY, ANSI pruning error propagation/short-circuiting, 0-byte `.parquet` refusal, Java zero-decimal/signed-NaN/hex-float, conflicts, `caseSensitive`, and in-memory S3).
+- Facade pins: `python/repark/tests/io/test_parquet_partition_discovery_1.py` (218 test cases across `read.parquet`, `format("parquet").load`, ANSI `true`/`false`, `UTC`/`America/New_York`: 128 original defect pins red on main `514281bd4`; 86 Delta 1 F1–F9 pins red on `9656eec2`; all 218 green on head).
