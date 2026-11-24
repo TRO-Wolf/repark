@@ -224,8 +224,20 @@ impl PyReparkSession {
     /// Returns `RuntimeError` if the path cannot be read or planned.
     pub fn read_parquet(&self, py: Python<'_>, path: &str) -> PyResult<PyDataFrame> {
         fenced_span!("py.read", "PyReparkSession.read_parquet", {
+            let case_sensitive = {
+                let state_lock = self.session.context().state_ref();
+                let state = state_lock.read();
+                repark_functions::case_sensitive::spark_case_sensitive_from_options(
+                    state.config().options(),
+                )
+            };
             let df = py
-                .detach(|| self.runtime.block_on(self.session.read_parquet(path)))
+                .detach(|| {
+                    self.runtime.block_on(
+                        self.session
+                            .read_parquet_with_case_sensitivity(path, case_sensitive),
+                    )
+                })
                 .map_err(to_py_err)?;
             Ok(PyDataFrame::new(df, Arc::clone(&self.runtime)))
         })

@@ -101,6 +101,12 @@ fn install_spark_session_conf(
     config = repark_functions::merge_schema::with_merge_schema_config(config, merge_schema);
     let overwrite_mode = repark_core::partition_overwrite_mode_from_config_map(session.conf)?;
     config = repark_core::with_partition_overwrite_mode(config, overwrite_mode);
+    let partition_type_inference =
+        repark_core::spark_nullable::partition_column_type_inference_from_config_map(session.conf)?;
+    config = repark_core::spark_nullable::with_partition_column_type_inference(
+        config,
+        partition_type_inference,
+    );
     let wap = crate::wap::wap_from_config_map(session.conf);
     config = crate::wap::with_wap_session_config(config, wap);
     let timestamp_type =

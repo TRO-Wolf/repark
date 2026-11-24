@@ -36,6 +36,7 @@ from repark import _native
 from repark.spark.session.builder_conf import SPARK_SQL_ANSI_DOUBLE_QUOTED_IDENTIFIERS_KEY
 from repark.spark.session.create_dataframe_rows import _materialize_arrow_as_memtable_frame
 from repark.spark.session.session_configuration import (
+    PARTITION_COLUMN_TYPE_INFERENCE_KEY,
     SPARK_SQL_ANSI_ENABLED_KEY,
     SPARK_SQL_CASE_SENSITIVE_KEY,
     SPARK_SQL_FAIL_AMBIGUOUS_SELF_JOIN_KEY,
@@ -313,6 +314,7 @@ def _restore_or_unset(session: ReparkSession, key: str) -> None:
             SPARK_SQL_CASE_SENSITIVE_KEY,
             SPARK_SQL_FAIL_AMBIGUOUS_SELF_JOIN_KEY,
             SPARK_SQL_SELF_JOIN_AUTO_RESOLVE_KEY,
+            PARTITION_COLUMN_TYPE_INFERENCE_KEY,
         ):
             inner = session._ensure_alive()
             _native.restore_runtime_config(inner, key, builder_value)

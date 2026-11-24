@@ -699,10 +699,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   (DYNFLATTEN-LISTNULL-1 critic F2). CTAS still uses `relax_schema_to_nullable` only, so an actual SQL `VOID`
   column does not become int32 on write. `drop_null_lists=True` still drops `List(Null)`
   that never went through this reader.
-  **S3-PATH-WRITE-1 round 2 (2026-09-28):** `read_parquet_nullable` resolves
-  the S3 prefix once per call through `object_store_s3`, so the infer read and
-  the relaxed-schema re-read share the directory spelling. **NAN-MINMAX-1 (2026-11-13):** the
-  statistics seat: [spark_nullable/](spark_nullable/map.md).
+  **S3-PATH-WRITE-1 (2026-09-28):** resolves S3 prefix once per call. **NAN-MINMAX-1 (2026-11-13) / PARQUET-PARTITION-DISCOVERY-1 (2026-11-24):** statistics and Hive partition discovery (`partition.rs`, `PartitionedParquetProvider`, `plan_introspect.rs`, `session.rs`): [spark_nullable/](spark_nullable/map.md).
 - `column_resolution.rs` — **ICE-MIXED-CASE-1 (2026-09-17, Q-20b-2):** Spark-door
   case-insensitive column fold with normalization ON
   (`plan_statement_with_column_repair` / `sql_with_column_repair` fold the parsed

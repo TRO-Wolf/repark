@@ -24,6 +24,16 @@ use datafusion::prelude::{DataFrame, ParquetReadOptions, SessionConfig, SessionC
 use object_store::{ObjectMeta, ObjectStore};
 
 mod extreme_bounds;
+pub mod partition;
+
+pub(crate) use partition::PartitionedParquetProvider;
+pub use partition::{
+    DEFAULT_PARTITION_COLUMN_TYPE_INFERENCE, PARTITION_COLUMN_TYPE_INFERENCE_KEY,
+    PartitionColumnTypeInferenceConfig, parse_partition_column_type_inference,
+    parse_runtime_partition_column_type_inference, partition_column_type_inference_from_config_map,
+    partition_column_type_inference_from_ctx, partition_column_type_inference_from_options,
+    with_partition_column_type_inference,
+};
 
 const MAX_NESTED_TYPE_DEPTH: usize = 32;
 
@@ -37,22 +47,7 @@ pub fn relax_schema_to_nullable(schema: &Schema) -> Schema {
     Schema::new_with_metadata(fields, schema.metadata().clone())
 }
 
-pub(crate) async fn read_parquet_nullable(
-    context: &SessionContext,
-    path: &str,
-) -> DataFusionResult<DataFrame> {
-    let resolved = crate::object_store_s3::resolve_s3_prefix_for_read(context, path)
-        .await
-        .map_err(|error| datafusion::error::DataFusionError::External(error.to_string().into()))?;
-    let inferred = context
-        .read_parquet(&resolved, ParquetReadOptions::default())
-        .await?;
-    let relaxed = relax_schema_to_nullable(inferred.schema().as_arrow());
-    let sparked = promote_parquet_null_types(&relaxed);
-    read_parquet_float_bounds_inexact(context, &resolved, &sparked)
-}
-
-fn read_parquet_float_bounds_inexact(
+pub(super) fn read_parquet_float_bounds_inexact(
     context: &SessionContext,
     path: &str,
     schema: &Schema,
@@ -366,7 +361,7 @@ fn is_float_bound(bound: &Precision<ScalarValue>) -> bool {
     )
 }
 
-fn promote_parquet_null_types(schema: &Schema) -> Schema {
+pub(super) fn promote_parquet_null_types(schema: &Schema) -> Schema {
     let fields = schema
         .fields()
         .iter()
@@ -582,6 +577,9 @@ mod float_bounds_tests;
 
 #[cfg(test)]
 mod int96_tests;
+
+#[cfg(test)]
+mod partition_tests;
 
 #[cfg(test)]
 mod tests {

@@ -27,7 +27,7 @@ links its files. The pre-condensation record is
 | strings | [spark_rewrites/map.md](spark_rewrites/map.md), [collation.rs](collation.rs), [sort_order_parse.rs](sort_order_parse.rs) | string rewrites, collation, sort parse; `collation.rs` follows Spark backslash/raw/backtick/nested-comment boundaries and terminates `SELECT ({sql}\n)` before `)` (FILTER-STRING-ESCAPED-QUOTE-1, 2026-11-24) |
 | time | [time_travel/map.md](time_travel/map.md), [time_travel.rs](time_travel.rs), [time_window.rs](time_window.rs), [window_range.rs](window_range.rs) | time travel, window frames |
 | values | [values_marker/map.md](values_marker/map.md), [values_marker.rs](values_marker.rs) | VALUES markers |
-| extension | [extension/map.md](extension/map.md), [extension.rs](extension.rs), [format_version.rs](format_version.rs), [metadata_tables.rs](metadata_tables.rs) | session extension (pre-coercion Spark analyzer rules incl. `spark_extract_date_part`), format versions, metadata tables |
+| extension | [extension/map.md](extension/map.md), [extension.rs](extension.rs), [format_version.rs](format_version.rs), [metadata_tables.rs](metadata_tables.rs) | session extension (pre-coercion Spark analyzer rules incl. `spark_extract_date_part`; installs `with_partition_column_type_inference` for PARQUET-PARTITION-DISCOVERY-1), format versions, metadata tables |
 | tests | [tests/map.md](tests/map.md) | lib-root unit battery, by production module |
 
 Rules for new files: a new leaf joins the row of its area; a new area is a new row

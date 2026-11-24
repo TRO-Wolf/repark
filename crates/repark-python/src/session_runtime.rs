@@ -244,6 +244,10 @@ fn apply_runtime_config(
         session.set_time_parser_policy(value)?;
         return Ok(());
     }
+    if key == repark_core::spark_nullable::PARTITION_COLUMN_TYPE_INFERENCE_KEY {
+        session.set_partition_column_type_inference(value, strict_boolean)?;
+        return Ok(());
+    }
     if session.set_iceberg_session_write_conf(key, value) {
         return Ok(());
     }

@@ -43,6 +43,33 @@ converter reads no `INT96` bounds, so the leaf is never pruned, as before. SQL `
 unset value for the session (`conf.unset` leaves the live value)
 ([card](../../../../task/roadmap/mid-term/parquet-int96-as-ntz-1-card-2026-11-22.md)).
 
+**PARQUET-PARTITION-DISCOVERY-1 (2026-11-24):** `partition.rs` adds Spark-compatible Hive partition discovery to the
+Parquet path-read seat (`ReparkSession::read_parquet` / `read_parquet_with_case_sensitivity`) over both local paths
+and S3 prefixes (shared `ObjectStore` listing; `plan_introspect.rs` recognizes `PartitionedParquetProvider` beside
+`ListingTable`). It reuses `../partition_discovery.rs`'s `__HIVE_DEFAULT_PARTITION__`, URL unescaping, and
+`CONFLICTING_PARTITION_COLUMN_NAMES` formatter while leaving text and ORC discovery untouched. Rules pinned to live
+Spark 4.1.2:
+- Hidden path segments (leading `.` or `_` in any relative directory or filename, e.g. `_SUCCESS`, `_temporary/`,
+  `.crc`, `.hidden`, `p=1/.dot`, `p=1/_under`) and 0-byte files are skipped before discovery.
+- Root-level files alongside `k=v` subdirectories are ignored (`keep_partitioned_only`). Leaf reads (`root/p=1`) and
+  root directory names holding `=` have no relative `k=v` segments, so they yield no partition columns.
+- Empty partition values (`p=`) refuse. Mixed depths or conflicting partition column names refuse with
+  `CONFLICTING_PARTITION_COLUMN_NAMES` (`KD009`); mixed-case names unify under `caseSensitive=false` and refuse under
+  `caseSensitive=true`.
+- Type inference follows Spark 4.1.2 order: `Int32` -> `Int64` -> `Decimal128(p, 0)` (integers outside `i64`, up to
+  38 digits) -> `Float64` (decimal+float widens to `Utf8`) -> `Date32` -> `Timestamp(Microsecond, session_tz)`
+  (`yyyy-MM-dd HH:mm:ss` and single fractional digit `.S`; `.SS` and `T` stay `Utf8`) -> `Utf8`, with all-null
+  `__HIVE_DEFAULT_PARTITION__` inferring `DataType::Null` (`void`) even when
+  `spark.sql.sources.partitionColumnTypeInference.enabled=false` (`PartitionColumnTypeInferenceConfig`).
+- Non-colliding partition columns append in directory order; when a partition column matches a data-file column
+  (case-insensitively when `caseSensitive=false`, exact when `true`), the colliding file column is omitted from the
+  Parquet scan schema and a logical `Projection` places the partition column at the original file-column position
+  using the partition name, inferred type, and directory value.
+- `PartitionedParquetProvider` wraps `FileScanConfigBuilder` + `FloatBoundsInexactFormat` + `TableSchema`, sets
+  `PartitionedFile.partition_values`, supports `Inexact` filter pushdown, and prunes files soundly on partition-only
+  filters (conservatively keeping a file when filter evaluation errors, and returning `EmptyExec` when all files prune).
+([card](../../../../task/roadmap/mid-term/cards-2026-11-23/parquet-partition-discovery-1-card-2026-11-23.md)).
+
 ## Files
 
 - `extreme_bounds.rs` — `without_type_extreme_bounds`, `drop_type_extreme_bounds`, `has_type_extreme_bound`: a min at
@@ -64,5 +91,13 @@ unset value for the session (`conf.unset` leaves the live value)
   not-adjusted leaf: `read_parquet` and `CREATE EXTERNAL TABLE … STORED AS PARQUET` read `Timestamp(Microsecond,
   "UTC")` with the exact microseconds, the `INT64` leaf stays zone-less; the config sets `us`/`UTC` and keeps
   an explicit setting.
+
+- `partition.rs` — `PARTITION_COLUMN_TYPE_INFERENCE_KEY`, `PartitionColumnTypeInferenceConfig`,
+  `PartitionedParquetProvider`, `read_parquet_with_case_sensitivity`, and `set_partition_column_type_inference`.
+- `partition_tests.rs` — Rust pins for 1-level and 2-level discovery, partition-only file pruning (`p=2` scans 1 file)
+  and `EmptyExec`, leaf read, all inferred types (`Decimal128(30,0)`, decimal+float -> `Utf8`, `1.50`, `01`, `.5` vs
+  `.12` timestamps in NY, all-null `Null`, empty value refusal), `partitionColumnTypeInference.enabled=false`,
+  file/directory overlap (both `caseSensitive` modes and all-columns-shadowed), hidden-file skipping, mixed-case
+  directory names, and in-memory S3 + `plan_reads_s3_prefix`.
 
 Up: [../map.md](../map.md).

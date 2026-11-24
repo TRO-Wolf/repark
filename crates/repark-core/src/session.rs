@@ -769,12 +769,7 @@ impl ReparkSession {
     /// # Errors
     /// Returns [`Error::DataFusion`] if the S3 store cannot be built (region/credentials), or if
     pub async fn read_parquet(&self, path: &str) -> Result<DataFrame> {
-        if let Some((_scheme, bucket)) = object_store_s3::parse_s3_bucket(path) {
-            self.ensure_s3_bucket_registered(&bucket)?;
-        }
-        crate::spark_nullable::read_parquet_nullable(self.context(), path)
-            .await
-            .map_err(engine_err)
+        self.read_parquet_with_case_sensitivity(path, false).await
     }
 
     /// Read a CSV file or directory using a case-insensitive Spark option map.
@@ -937,7 +932,7 @@ impl ReparkSession {
     /// Ensure an authenticated S3 object store for `bucket` is registered on the `RuntimeEnv`.
     /// # Errors
     /// Returns `Error::DataFusion` if the session never resolved its SDK config (the E-2 gate).
-    fn ensure_s3_bucket_registered(&self, bucket: &str) -> Result<()> {
+    pub(crate) fn ensure_s3_bucket_registered(&self, bucket: &str) -> Result<()> {
         if self
             .registered_s3_buckets
             .lock()
@@ -977,7 +972,7 @@ impl ReparkSession {
 
     /// Register an object store for `bucket` under both S3 URL schemes.
     #[cfg(test)]
-    fn register_s3_bucket_store_for_test(
+    pub(crate) fn register_s3_bucket_store_for_test(
         &self,
         bucket: &str,
         store: &Arc<dyn object_store::ObjectStore>,
