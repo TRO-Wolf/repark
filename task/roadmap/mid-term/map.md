@@ -172,8 +172,8 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   Spark stores.
 - [fexpr-timestamp-zone-1-card-2026-10-01.md](fexpr-timestamp-zone-1-card-2026-10-01.md) — **card
   FEXPR-TIMESTAMP-ZONE-1 (2026-10-01, from the overnight owner-items backlog, #888 re-verify
-  10):** `F.expr` TIMESTAMP literals resolve in UTC instead of the session zone (a DataFrame
-  `F.expr` door gap; SQL resolves them in the session zone).
+  10):** `F.expr` TIMESTAMP literals resolved in UTC; fixed by #1420 (2026-11-24). Open: `F.expr`
+  still types an NTZ cast or `timestampType=TIMESTAMP_NTZ` literal as `timestamp` (S2 proposed).
 - [ml-cv-fold-test-strength-1-card-2026-10-01.md](ml-cv-fold-test-strength-1-card-2026-10-01.md) — **card
   ML-CV-FOLD-TEST-STRENGTH-1 (2026-10-01, from the overnight owner-items backlog, VE4-2):**
   `test_ml_boost_oracle.py::test_cross_validator_materializes_fold_labels` cannot tell folds that
