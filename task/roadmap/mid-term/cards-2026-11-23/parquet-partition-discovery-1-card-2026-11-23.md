@@ -51,7 +51,7 @@ paths, session zone `America/New_York`; RePark main `5caea2a5` / `514281bd4` (th
 - **S3 status:** `ReparkSession::read_parquet` shares the local `ObjectStore` discovery seat with `s3://`/`s3a://` and
   is verified locally via an in-memory object store (`s3_in_memory_partitioned_parquet_shares_discovery_and_introspection`
   in `crates/repark-core/src/spark_nullable/partition_tests.rs`). **Not measured on live AWS S3.**
-- **Pins:** Rust unit tests in `crates/repark-core/src/spark_nullable/partition_tests.rs` (5 async tests) and facade
+- **Pins:** Rust unit tests in `crates/repark-core/src/spark_nullable/partition_tests.rs` (7 async tests) and facade
   pins in `python/repark/tests/io/test_parquet_partition_discovery_1.py` (128 defect pins red on main `514281bd4` and
   green on head; 4 control pins green on both).
 

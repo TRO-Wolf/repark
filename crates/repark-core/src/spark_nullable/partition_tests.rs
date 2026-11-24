@@ -151,7 +151,7 @@ async fn one_level_and_two_level_discover_types_and_prune_files() {
 }
 
 #[tokio::test]
-async fn inference_ladder_timestamps_decimals_and_infer_off() {
+async fn inference_ladder_decimals_floats_and_leading_zeros() {
     let dir = tempfile::tempdir().unwrap();
     write_parquet_file(
         &dir.path()
@@ -175,30 +175,8 @@ async fn inference_ladder_timestamps_decimals_and_infer_off() {
         &dir.path().join("lead_zero/p=01/part-0.parquet"),
         &id_s_batch(1, "a"),
     );
-    write_parquet_file(
-        &dir.path()
-            .join("ts_frac/p=2024-01-02 03:04:05.5/part-0.parquet"),
-        &id_s_batch(1, "a"),
-    );
-    write_parquet_file(
-        &dir.path()
-            .join("ts_frac2/p=2024-01-02 03:04:05.12/part-0.parquet"),
-        &id_s_batch(1, "a"),
-    );
-    write_parquet_file(
-        &dir.path()
-            .join("hive_only/p=__HIVE_DEFAULT_PARTITION__/part-0.parquet"),
-        &id_s_batch(1, "a"),
-    );
-    write_parquet_file(
-        &dir.path().join("empty_val/p=/part-0.parquet"),
-        &id_s_batch(1, "a"),
-    );
 
-    let session = ReparkSession::builder()
-        .config("spark.sql.session.timeZone", "America/New_York")
-        .build()
-        .unwrap();
+    let session = ReparkSession::new().unwrap();
 
     let dec_only = session
         .read_parquet(dir.path().join("dec_only").to_str().unwrap())
@@ -243,6 +221,39 @@ async fn inference_ladder_timestamps_decimals_and_infer_off() {
         .await
         .unwrap();
     assert_eq!(lz.schema().field(2).data_type(), &DataType::Int32);
+}
+
+#[tokio::test]
+async fn inference_timestamps_nulls_empty_and_infer_off() {
+    let dir = tempfile::tempdir().unwrap();
+    write_parquet_file(
+        &dir.path().join("lead_zero/p=01/part-0.parquet"),
+        &id_s_batch(1, "a"),
+    );
+    write_parquet_file(
+        &dir.path()
+            .join("ts_frac/p=2024-01-02 03:04:05.5/part-0.parquet"),
+        &id_s_batch(1, "a"),
+    );
+    write_parquet_file(
+        &dir.path()
+            .join("ts_frac2/p=2024-01-02 03:04:05.12/part-0.parquet"),
+        &id_s_batch(1, "a"),
+    );
+    write_parquet_file(
+        &dir.path()
+            .join("hive_only/p=__HIVE_DEFAULT_PARTITION__/part-0.parquet"),
+        &id_s_batch(1, "a"),
+    );
+    write_parquet_file(
+        &dir.path().join("empty_val/p=/part-0.parquet"),
+        &id_s_batch(1, "a"),
+    );
+
+    let session = ReparkSession::builder()
+        .config("spark.sql.session.timeZone", "America/New_York")
+        .build()
+        .unwrap();
 
     let ts_frac = session
         .read_parquet(dir.path().join("ts_frac").to_str().unwrap())
@@ -310,7 +321,7 @@ async fn inference_ladder_timestamps_decimals_and_infer_off() {
 }
 
 #[tokio::test]
-async fn overlap_case_sensitivity_hidden_files_and_conflicts() {
+async fn overlap_and_all_columns_shadowed() {
     let dir = tempfile::tempdir().unwrap();
     let schema = Arc::new(Schema::new(vec![
         Field::new("id", DataType::Int64, true),
@@ -389,6 +400,12 @@ async fn overlap_case_sensitivity_hidden_files_and_conflicts() {
     assert_eq!(s_col.len(), 2);
     assert_eq!(s_col.value(0), 7);
     assert_eq!(s_col.value(1), 7);
+}
+
+#[tokio::test]
+async fn hidden_files_and_mixed_case_conflicts() {
+    let dir = tempfile::tempdir().unwrap();
+    let session = ReparkSession::new().unwrap();
 
     write_parquet_file(
         &dir.path().join("noise/p=1/part-0.parquet"),

@@ -67,5 +67,5 @@ An additional 25-case edge probe against live Spark 4.1.2 verified and closed:
 
 ## Pins
 
-- Rust unit pins: `crates/repark-core/src/spark_nullable/partition_tests.rs` (5 async tests covering layouts, pruning, `EmptyExec`, type inference, `partitionColumnTypeInference.enabled`, overlap, hidden files, conflicts, `caseSensitive`, numeric/URI edges, and in-memory S3).
+- Rust unit pins: `crates/repark-core/src/spark_nullable/partition_tests.rs` (7 async tests covering layouts, pruning, `EmptyExec`, type inference, `partitionColumnTypeInference.enabled`, overlap, hidden files, conflicts, `caseSensitive`, numeric/URI edges, and in-memory S3).
 - Facade pins: `python/repark/tests/io/test_parquet_partition_discovery_1.py` (132 test cases across `read.parquet`, `format("parquet").load`, ANSI `true`/`false`, `UTC`/`America/New_York`: 128/128 defect pins red on main `514281bd4` and green on head; 4/4 control pins green on both).
