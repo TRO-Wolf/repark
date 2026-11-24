@@ -225,7 +225,8 @@ pub(super) fn finish_session_build(
 pub(super) fn analyzer_rules_with_df_54_1_rule_guards()
 -> DataFusionResult<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
     let rules = window_rescan::analyzer_rules_with_sliding_rescan();
-    struct_setop::insert_struct_setop_after_coercion(rules)
+    let rules = struct_setop::insert_struct_setop_after_coercion(rules)?;
+    crate::pre_execute::insert_multiset_set_operations(rules)
 }
 
 /// DataFusion's recommended rule list with `push_down_leaf_projections` wrapped.

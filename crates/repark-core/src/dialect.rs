@@ -128,6 +128,10 @@ pub trait SqlDialect: Send + Sync {
         None
     }
 
+    fn owns_minus_all_rewrite(&self) -> bool {
+        false
+    }
+
     #[allow(clippy::missing_errors_doc)]
     fn configure_analyzer_rules(
         &self,

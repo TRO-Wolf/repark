@@ -53,14 +53,14 @@ def test_global_temp_view_divergence(spark: ReparkSession) -> None:
         frame.create_global_temp_view("gt_ex15")
 
 
-def test_except_all_divergence(spark: ReparkSession) -> None:
-    """exceptAll / except_all refuse loudly; Spark answers the multiset difference (EX-DF-3)."""
+def test_except_all_answers_the_spark_multiset_difference(spark: ReparkSession) -> None:
     left = spark.createDataFrame([(1,), (1,), (2,)], ["n"])
     right = spark.createDataFrame([(1,)], ["n"])
-    with pytest.raises(UnsupportedOperationException, match="exceptAll"):
-        left.exceptAll(right)
-    with pytest.raises(UnsupportedOperationException, match="exceptAll"):
-        left.except_all(right)
+    for method in (left.exceptAll, left.except_all):
+        frame = method(right)
+        assert frame.columns == ["n"]
+        assert sorted(row["n"] for row in frame.collect()) == [1, 2]
+    assert right.exceptAll(left).collect() == []
 
 
 def test_describe_row_order_matches_spark(spark: ReparkSession) -> None:

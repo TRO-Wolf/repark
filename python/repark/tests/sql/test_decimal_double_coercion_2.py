@@ -400,12 +400,26 @@ def test_a_set_operation_with_a_mixed_values_leg_answers_as_spark(
     assert shown(spark.sql(sql)) == expected
 
 
-@pytest.mark.parametrize("operation", ["INTERSECT ALL", "EXCEPT ALL"])
-def test_the_all_set_operations_over_a_mixed_values_leg_still_refuse(
-    spark: Any, operation: str
+@pytest.mark.parametrize(
+    ("sql", "expected"),
+    [
+        (f"SELECT c FROM VALUES {VALS} AS t(c) INTERSECT ALL SELECT {TINY} AS c", [["1e-20"]]),
+        (f"SELECT c FROM VALUES {VALS} AS t(c) EXCEPT ALL SELECT {TINY} AS c", [["0.1"]]),
+        (f"SELECT {DEC} AS c INTERSECT ALL SELECT c FROM VALUES {VALS} AS t(c)", [["0.1"]]),
+        (f"SELECT {DEC} AS c EXCEPT ALL SELECT c FROM VALUES {VALS} AS t(c)", []),
+        (
+            f"SELECT c FROM VALUES ({DEC}), ({DEC}), ({DEC}) AS t(c) EXCEPT ALL "
+            f"SELECT c FROM VALUES {VALS} AS t(c)",
+            [["0.1"], ["0.1"]],
+        ),
+    ],
+)
+def test_the_all_set_operations_over_a_mixed_values_leg_answer_as_spark(
+    spark: Any, sql: str, expected: list[list[str]]
 ) -> None:
-    with pytest.raises(Exception, match="ALL"):
-        spark.sql(f"SELECT c FROM VALUES {VALS} AS t(c) {operation} SELECT {TINY} AS c").collect()
+    frame = spark.sql(sql)
+    assert frame.schema.simpleString() == "struct<c:double>"
+    assert shown(frame) == expected
 
 
 def explained(spark: Any, sql: str) -> str:

@@ -12,6 +12,7 @@ of PRs #1411 and #1413 and the review of 2026-11-23. The owner rated each on 202
   text holding a NUL byte aborts the Python process.
 - [SQL-EXPLODE-1](sql-explode-1-card-2026-11-23.md) (S2 proposed) — **card:** `explode` / `explode_outer` in a SQL
   select list are unresolved; fixed on a branch with EXTRACT-FIELD-ALIASES-1.
+- [SETOP-MIXED-TYPE-COERCION-1](setop-mixed-type-coercion-1-card-2026-11-23.md) (S3 proposed) — **card:** mixed-type set operations keep left schemas and refuse lossy multiset round-trips (`STRING` vs numeric/`DATE`/`TIMESTAMP`, lossy int/float, nested containers).
 - [SCALAR-SUBQUERY-EMPTY-NULL-1](scalar-subquery-empty-null-1-card-2026-11-23.md) (S1) — **card:** an empty scalar
   subquery over a NOT NULL column folds `IS NULL` to false, so a filter on it drops every row.
 
