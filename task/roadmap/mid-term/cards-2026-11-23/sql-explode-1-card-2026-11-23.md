@@ -45,14 +45,18 @@ from the marker and names bare outputs from the argument type; coercion's restor
 (``AS `posexplode(arr)` ``) refuses as Spark does. `stamp_attribute_ids` marks before it stamps: a frame alias
 becomes the marker and a bare call is held in `__repark_gen_bare` (its own plan name), so a stamp, stripped or not,
 never reads as a user alias and moves onto a one-output generator's output; `.select("col")`,
-`.withColumn`, `groupBy("col")` and a self-join after `F.expr("explode(arr)")` answer as Spark. A bare `explode`
-beside a select item named `col` gets a plan name that cannot collide (`spark_rewrites/bare_explode.rs`), so a map
-there answers `key`, `value`. `PyColumn::is_bare_generator` and `_rewrap_rebound_column` keep `_GeneratorColumn` and unaliased
+`.withColumn`, `groupBy("col")` and a self-join after `F.expr("explode(arr)")` answer as Spark. Delta 3 (owner
+ruling 2026-11-24, Option A): a chained marker lets the outer names win, so `.alias("p", "c").alias("x", "y")` on
+`posexplode`, `posexplode_outer`, `inline`, `inline_outer`, `json_tuple` and a map `posexplode` answers Spark's
+schema and rows again, as on main and as `F.explode(...).alias("a").alias("b")` does; the delta-2 SQL rewrite
+`spark_rewrites/bare_explode.rs` is deleted, so `NOT col`, `x AND col`, `x OR col`, `BETWEEN … AND col`,
+`LIKE col` and `RLIKE col` beside an `explode` answer as on `442887339`, and a map `explode` beside a sibling named
+`col` is a declared loud refusal (below). `PyColumn::is_bare_generator` and `_rewrap_rebound_column` keep `_GeneratorColumn` and unaliased
 bare generator `F.expr` calls unaliased (`_projection_name=None`), so the Spark door, `selectExpr`, the write
 statements, and `F.expr` over a table or view (both aliased and unaliased) all answer as Spark. The typed path is
 unchanged.
 
-On the head every scoped cell on `spark.sql`, `selectExpr`, `F.expr` over a table or view, and the write statements
+On the head, but for that declared refusal, every scoped cell on `spark.sql`, `selectExpr`, `F.expr` over a table or view, and the write statements
 answers as Spark in the four modes (rows, names, types), including `explode_outer` / `posexplode_outer` over
 `sequence` and `split`, unaliased subqueries / `ORDER BY col` / `INSERT INTO` / `INSERT OVERWRITE` / `CTAS`,
 explicit `explode(…)` aliases, and the calendar-dimension shape: a projection of `year`, `extract(YEAROFWEEK …)`
@@ -63,10 +67,18 @@ path; the stored `SMALLINT` is an Iceberg `int`, as in Spark).
 ## Pins
 
 `python/repark/tests/functions/test_sql_explode_1.py` over the oracle, driven by the recorder
-`_record_sql_explode_1.py` (with `test_extract_field_aliases_1.py`: 94 items total, all green on the head and red
-on main, on the pre-delta PR head, and on both mutants; delta 2 adds 16: coerced arguments, `col` siblings, frame
-operations, and the `array_repeat` record, the first 12 red on the delta-1 head); Rust `repark-functions`
-`generator::tests` (35 tests), `repark-spark` `spark_rewrites::bare_explode::tests` and the extension seat pin.
+`_record_sql_explode_1.py` (with `test_extract_field_aliases_1.py`: 118 items, all green on the head). Delta 1 had
+94 and delta 2 added 16 (coerced arguments, `col` siblings, frame operations, the `array_repeat` record). Delta 3
+turns the four `col`-sibling pins into declared-refusal pins over nine cells and adds eight: chained aliases (seven
+forms) and keyword operators on a `col` item (six queries), four modes each. The twelve delta-3 pins are red on
+`4336db778`; the keyword-operator pins are red on main and on `329168482`. Rust `repark-functions`
+`generator::tests` (36 tests, with `a_chained_generator_alias_marker_lets_the_outer_names_win`) and the extension
+seat pin.
+
+Delta 3 measured: every probe of the four verifier rounds and the outside review's `probe_ws1.py` (5,610
+cell-modes), compared with their recorded Spark answers and with main, `329168482`, `442887339` and `4336db778`.
+No cell that equals Spark on any of them moves away on the head, except 48 cells (each in all four modes) of the
+declared refusal below: each is a map `explode` beside a sibling named `col`, and each raises.
 
 ## Still unlike Spark (out of this unit's seat)
 
@@ -87,8 +99,20 @@ operations, and the `array_repeat` record, the first 12 red on the delta-1 head)
 - `array_repeat` over an array argument fails in its own kernel (`ListArray expected data type … 'element'`) on
   main and on the head, with or without a generator, so `explode_outer(array_repeat(sequence(1, 2), 0))` fails
   (the seat is `array_repeat`, not the generator).
-- `SELECT col, explode(arr)` beside a `col` column refuses (two `col` fields); Spark answers both. A `*` that holds
-  a `col` column beside a bare map `explode` refuses too (the rewrite sees only named siblings).
+- **Declared refusal (delta 3):** a map `explode` / `explode_outer` beside a sibling named `col` raises: `SELECT col,
+  explode(m)`, `s.col`, `tag AS col`, `arr[0] col`, `m['k1'] col`, `"hello" col`, `'hello' AS col`, a hint, `ORDER
+  BY`, `LIMIT`, a view body, `OPTIONS` CTAS, `explode(m), col`, `WITH c AS (SELECT col, explode(m) …) SELECT * FROM
+  c`, `INSERT … PARTITION (p = 1) SELECT col, explode(m)`, `selectExpr("col", "explode(m)")` and
+  `df.select("col", F.expr("explode(m)"))`. The error is `Schema error: … ambiguous` or `Projections require unique
+  expression names`; Spark answers `col, key, value`. The placeholder names a bare `explode` `col` before the
+  argument type is known. On `4336db778` most of these answered through the deleted rewrite, and the `WITH` and
+  `INSERT … PARTITION` forms raised in `fold_spark_numeric_casts`, as on `329168482`. `SELECT col, explode(arr)`
+  beside a `col` column refuses too (two `col` fields); Spark answers both.
+- `DataFrame.columns` on a typed multi-output generator (`F.posexplode`, `F.inline`, `F.json_tuple`, a chained
+  alias, `spark.tvf.*`) is one placeholder name, wrong on main too (`posexplode(arr)`, where Spark has `pos`, `col`).
+  Since delta 1 that name is DataFusion's expression text, with the qualified table or join alias
+  (`posexplode(loc.ns.t.arr)`, `posexplode(_repark_jl_<hex>.arr)`) and `Utf8(...)` / `make_array(...)`. The schema,
+  `to_arrow()` and rows equal Spark.
 - `LATERAL VIEW [OUTER] explode(...)` refuses (`LATERAL VIEWS` not implemented, BL-19-LATERAL-1).
 - Two generators in one select list refuse; Spark 4.1.2 answers them.
 - `explode(...) + 1` and `explode(explode(...))` refuse as `UNSUPPORTED_GENERATOR`, Spark's class with its

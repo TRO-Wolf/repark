@@ -18757,17 +18757,21 @@ field NAME.
   `col` in the plan schema, so aliased and unaliased outer subqueries (`SELECT *`, `SELECT col`, `WHERE`,
   `GROUP BY`), `ORDER BY col`, `CTAS`, `INSERT INTO`, and `INSERT OVERWRITE` plan and answer as Spark. Explicit
   aliases are marked before `type_coercion` (`GeneratorAliasMark`), so coerced arguments keep `pos, col` / struct
-  fields / `c0…`, stamps survive `F.expr` frame operations, and a map beside a `col` item answers `key, value`.
+  fields / `c0…`, stamps survive `F.expr` frame operations, and a chained `.alias(...).alias(...)` takes the outer
+  names (delta 3, as on main). A map `explode` beside a sibling named `col` is a declared loud refusal (delta 3).
 - **Apache Spark** — `Explode` / `ExplodeOuter` (`col`, or `key` / `value`); the sequence form over a leap day, a
   year end, the daylight-saving changes and the ISO week-53 years answers one row per day. *(oracle: PySpark 4.1.2
   with `iceberg-spark-runtime-4.1_2.13:1.11.0`, 2026-11-23, zones `UTC` and `America/New_York`, ANSI on and off;
   the write cells read back cold.)*
 - **Still unlike Spark:** see the card's "Still unlike Spark" (`LATERAL VIEW`, the multi-alias `AS (k, v)`, two
   generators in one select list, multi-column `MAP` / `posexplode` outer subqueries, an `array(...)` literal's
-  element nullability, `F.expr` over a `range` frame and `DataFrame.columns` on unaliased map `F.expr`, an array
-  `explode` or a `*` beside a `col` item, `array_repeat` over an array, the native `repark.sql` door).
+  element nullability, `F.expr` over a `range` frame, `DataFrame.columns` on unaliased map `F.expr` and on typed
+  multi-output generators, the declared refusal of a map or array `explode` beside a `col` item (also through
+  `WITH`, `INSERT … PARTITION`, `selectExpr` and `F.expr`), `array_repeat` over an array, the native `repark.sql`
+  door).
 - **Pin** — `python/repark/tests/functions/test_sql_explode_1.py` over `sql_explode_1_spark_oracle.json`; Rust
-  `repark-functions` `generator::tests::explode_*`.
+  `repark-functions` `generator::tests::explode_*` and
+  `generator::tests::a_chained_generator_alias_marker_lets_the_outer_names_win`.
 - **Rationale** — [card](../task/roadmap/mid-term/cards-2026-11-23/sql-explode-1-card-2026-11-23.md).
 
 ### FNP9-BYNAME-1 — `call_udf` / `call_function` resolve at call time

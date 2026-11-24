@@ -27,7 +27,8 @@ type; bare frame calls are held in `__repark_gen_bare`; `is_bare_generator_expr`
   the `explode` / `explode_outer` pins (array `col`, alias, NULL and empty rows, map
   `key` / `value`, scalar and nested refusals, non-nullable-element outer lists,
   unaliased subquery / `ORDER BY col` resolution, explicit `explode(...)` aliases; delta 2:
-  coerced arguments, carried stamps, the zero-name marker, the `array_repeat` seat).
+  coerced arguments, carried stamps, the zero-name marker, the `array_repeat` seat; delta 3: a chained marker's
+  outer names win).
 - `json_tuple.rs` — **FNP-GEN-1 step 2 (2026-09-16, run 18a):** the `json_tuple`
   expansion (moved out of `generator.rs` so the parent keeps the file-size ceiling):
   string-type checks with `[DATATYPE_MISMATCH.NON_STRING_TYPE]`, the
