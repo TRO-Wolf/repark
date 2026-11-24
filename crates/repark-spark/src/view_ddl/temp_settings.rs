@@ -257,6 +257,7 @@ pub(crate) async fn plan_under_overlay(
     match conjunction(sensitive) {
         None => Ok(input),
         Some(predicate) => {
+            let predicate = repark_core::shield_try_cast_expr(predicate)?;
             let predicate = reader.create_physical_expr(predicate, below.as_ref())?;
             let kept = wanted
                 .iter()

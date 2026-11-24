@@ -138,7 +138,7 @@ pub use freq_items::{FREQ_ITEMS_OUTPUT_PREFIX, freq_items};
 pub use isnan::{register_repark_isnan, repark_isnan_call, repark_isnan_udf};
 pub use stack::{
     StackLabels, StackQueryPlanner, StackRewrite, apply_labeled_stack, apply_stack, register_stack,
-    stack_udf,
+    shield_try_cast_expr, stack_udf,
 };
 pub use transpose::{
     SparkTransposeError, TRANSPOSE_OUTPUT_PREFIX, TransposeError, TransposeOutcome, transpose_frame,

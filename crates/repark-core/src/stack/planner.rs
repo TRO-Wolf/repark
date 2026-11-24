@@ -8,6 +8,7 @@ use datafusion::physical_plan::ExecutionPlan;
 use datafusion::physical_planner::{DefaultPhysicalPlanner, ExtensionPlanner, PhysicalPlanner};
 
 use super::empty_dml::plan_empty_dml_as_no_op;
+use super::try_cast_nullable::shield_try_cast_plan;
 use super::{UnpivotExec, UnpivotNode};
 
 #[derive(Debug)]
@@ -21,10 +22,11 @@ impl QueryPlanner for StackQueryPlanner {
         session_state: &SessionState,
     ) -> Result<Arc<dyn ExecutionPlan>> {
         let guarded = plan_empty_dml_as_no_op(logical_plan)?;
+        let shielded = shield_try_cast_plan(guarded.as_ref())?;
         let planner =
             DefaultPhysicalPlanner::with_extension_planners(vec![Arc::new(StackExtensionPlanner)]);
         planner
-            .create_physical_plan(guarded.as_ref(), session_state)
+            .create_physical_plan(shielded.as_ref(), session_state)
             .await
     }
 }
