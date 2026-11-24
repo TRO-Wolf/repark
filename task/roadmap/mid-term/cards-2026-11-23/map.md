@@ -26,8 +26,10 @@ awaits the owner's rating. Each card row records its own status.
   function consumes `TRY_CAST` of a NOT NULL column.
 - [CAST-SHIELD-INT-DECIMAL-OVERFLOW-1](cast-shield-int-decimal-overflow-1-card-2026-11-24.md) (S2) — **card:** an
   integer-to-decimal overflow in a filter is silently false under ANSI.
-- [INSERT-OVERWRITE-CONST-CAST-1](insert-overwrite-const-cast-1-card-2026-11-24.md) (S2) — **card:** an empty
-  `INSERT OVERWRITE` with an invalid constant cast wipes the table where Spark refuses.
+- [INSERT-OVERWRITE-CONST-CAST-1](insert-overwrite-const-cast-1-card-2026-11-24.md) (S2) — **fixed (2026-11-24):**
+  write-door ANSI constant-cast folding guard (`const_cast_guard`) refuses invalid constant casts with Spark's error
+  class before mutating across all Spark write doors; evidence in
+  [task/wo/insert-overwrite-const-cast-1/evidence/](../../../wo/insert-overwrite-const-cast-1/evidence/).
 - [SPARK-DOOR-OVER-ACCEPT-SYNTAX-1](spark-door-over-accept-syntax-1-card-2026-11-24.md) (S3) — **card:** `1e2foo`,
   `named_struct(…).a` with a bad sibling, `* EXCLUDE` and `DELETE` without `FROM` answer where Spark refuses.
 
