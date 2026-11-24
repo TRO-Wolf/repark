@@ -18,6 +18,8 @@ wire up (with `extension.rs` itself) when the session module wires.
   core guarded baseline, including the sliding-frame rescan rule.
   **STRUCT-SETOP-REORDER-REFUSAL-1 delta #2 (2026-11-09):** the pin seats
   `struct_setop_names` immediately after `type_coercion`.
+  **SQL-SETOP-ALL-MULTISET-1 (2026-11-23):** the pin seats `setop_all_multiset` immediately after
+  `struct_setop_names`.
 
 `SessionExtension::configure_analyzer_rules` returns a DataFusion error when a door cannot place
 its required analyzer rule in the core-owned vector. Session construction maps that error through
