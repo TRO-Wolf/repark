@@ -51,7 +51,8 @@ Implemented refined Option A+ in `crates/repark-core/src/session/df_guards/scala
 3. **Catalog-table references inside `F.expr` and `filter(str)` (5 cells):** `F.expr` parses against static
    `EXPR_CONTEXT` and `filter(str)` uses DataFusion's empty-table expression provider, so catalog-table subqueries fail
    with `table not found` (inline subqueries work on both; `selectExpr` and `.scalar()` work on catalog tables).
-4. **Bare `explode(...)` in `SELECT` without `LATERAL VIEW`:** fails with `[UNRESOLVED_ROUTINE]`.
+4. **`(subquery) + 1` types `bigint` where Spark types `int`.** This was measured after merging main and is the same on
+   main; nullability now matches Spark.
 5. **Subqueries in `DELETE`, `UPDATE`, and `MERGE`:** `DELETE` and `UPDATE` keep their refusal; `MERGE` with a subquery
    in `ON`/`WHEN` (which Spark refuses with `[UNSUPPORTED_MERGE_CONDITION.SUBQUERY]`) is unchanged and out of scope
    (post-fix on Spark door: `MERGE ... ON ... (subq) IS NULL` updates rows `[[1, 99], [2, 99]]` instead of silently
@@ -61,7 +62,8 @@ Implemented refined Option A+ in `crates/repark-core/src/session/df_guards/scala
    `ScalarSubquery` outputs nullable even when provably non-null; RePark intentionally keeps provably-1-row subqueries
    non-null to preserve constant folding (never producing `NONNULL_WITH_NULLS`).
 7. **Related, separate family:** `TRY_CAST` over a NOT NULL column crashing a function whose output nullability follows
-   its input (`abs(TRY_CAST(s AS INT))`).
+   its input (`abs(TRY_CAST(s AS INT))`). Carded as TRY-CAST-NONNULL-FIELD-1
+   ([try-cast-nonnull-field-1-card-2026-11-24.md](try-cast-nonnull-field-1-card-2026-11-24.md)).
 
 ## Reach on main before the fix (measured 2026-11-24)
 
@@ -89,8 +91,9 @@ So the S1 writes wrong data through `INSERT` and `CTAS`, and `MERGE` runs a cond
 
 **Suffixed literals (PR #1417).** Before that PR, every suffixed literal such as `1L` was declared nullable. That hid
 the defect in `(subquery) + 1L` while `(subquery) + 1` already showed it. Now both spellings declare the field
-non-null, where Spark declares it nullable. The rows are right (NULL) and no export path crashes (measured on
-`collect`, `toArrow` and `toPandas`).
+non-null on main, where Spark declares it nullable. The rows are right (NULL) and no export path crashes (measured on
+`collect`, `toArrow` and `toPandas`). With this unit merged onto main, both spellings declare it nullable, as Spark
+does, in both ANSI modes.
 
 **Not affected:** `WHERE (id IN (SELECT v …)) IS NULL` over a list that holds NULL. Spark and RePark both answer no
 rows, so the review's IN-subquery claim does not hold.
