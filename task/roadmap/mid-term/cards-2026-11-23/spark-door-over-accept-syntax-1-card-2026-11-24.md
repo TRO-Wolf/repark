@@ -17,8 +17,8 @@ Measured on a build of main at `fa7d75e4` and on Spark 4.1.2, in both ANSI modes
 | `DELETE ice.ns.t WHERE a = 1L` (no `FROM`; measured by the review on `e80e6bc8`) | `ParseException` | deletes |
 
 **Also measured: one silent naming difference.** `SELECT drop temporary FROM (SELECT 1 AS drop) t` names its column
-`temporary` in Spark and `drop` in RePark, because a text rewrite drops the alias. The rating of that row is asked
-separately.
+`temporary` in Spark and `drop` in RePark, because a text rewrite drops the alias. It is S3 with the rest (owner,
+2026-11-24).
 
 ## Cause (named by the outside review)
 
