@@ -1,7 +1,8 @@
+use std::borrow::Cow;
 use std::convert::Infallible;
 use std::ops::ControlFlow;
 
-use datafusion::error::DataFusionError;
+use datafusion::error::{DataFusionError, Result};
 use datafusion::sql::sqlparser::ast::{
     DataType, Expr, Function, FunctionArg, FunctionArgExpr, FunctionArgumentList,
     FunctionArguments, Ident, ObjectName, ObjectNamePart, Query, Statement, TimezoneInfo,
@@ -171,6 +172,30 @@ impl VisitorMut for FragmentTimestampCastLower {
 
 pub fn lower_fragment_timestamp_casts<T: VisitMut>(node: &mut T) {
     let _ = node.visit(&mut FragmentTimestampCastLower);
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn canonicalize_fragment(sql: &str, keep_verbatim: bool) -> Result<Cow<'_, str>> {
+    match crate::spark_rewrites::timestamp_ltz_literal::rewrite_fragment_timestamp_ltz_literals(sql)
+    {
+        Cow::Borrowed(text) => crate::spark_literals::canonicalize_verbatim(text, keep_verbatim),
+        Cow::Owned(rewritten) => Ok(Cow::Owned(
+            crate::spark_literals::canonicalize_verbatim(&rewritten, keep_verbatim)?.into_owned(),
+        )),
+    }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn canonicalize_predicate(
+    sql: &str,
+    keep_verbatim: bool,
+    spark_door: bool,
+) -> Result<Cow<'_, str>> {
+    if spark_door {
+        canonicalize_fragment(sql, keep_verbatim)
+    } else {
+        crate::spark_literals::canonicalize_verbatim(sql, keep_verbatim)
+    }
 }
 
 struct TimestampNsCastLower {

@@ -19,7 +19,7 @@ pub mod built_fragment;
 pub(crate) use unescape::unescape_spark_literal;
 
 #[derive(Debug)]
-struct SparkLexDialect(GenericDialect);
+pub(crate) struct SparkLexDialect(pub(crate) GenericDialect);
 
 impl Dialect for SparkLexDialect {
     /// Preserve Generic identity for sqlparser's concrete-type prefix checks.

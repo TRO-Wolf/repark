@@ -48,9 +48,11 @@ pub(crate) fn parse_canonical_predicate(
     predicate: &str,
 ) -> datafusion::error::Result<Expr> {
     let verbatim = frame_verbatim(frame.inner());
-    let raw_canonical = repark_spark::spark_literals::canonicalize_verbatim(predicate, verbatim)?;
-    let schema = frame.inner().schema();
     let state = predicate_state(frame);
+    let spark_door = repark_spark::is_spark_door_session(state.config());
+    let raw_canonical =
+        repark_spark::keyword_lower::canonicalize_predicate(predicate, verbatim, spark_door)?;
+    let schema = frame.inner().schema();
     let canonical = repark_core::minus_all_as_except_all(
         state.config().options().sql_parser.dialect,
         raw_canonical.as_ref(),
@@ -140,8 +142,10 @@ pub(crate) fn parse_canonical_predicate_exact(
     predicate: &str,
 ) -> datafusion::error::Result<Expr> {
     let verbatim = frame_verbatim(frame.inner());
-    let raw_canonical = repark_spark::spark_literals::canonicalize_verbatim(predicate, verbatim)?;
     let mut state = predicate_state(frame);
+    let spark_door = repark_spark::is_spark_door_session(state.config());
+    let raw_canonical =
+        repark_spark::keyword_lower::canonicalize_predicate(predicate, verbatim, spark_door)?;
     state
         .config_mut()
         .options_mut()

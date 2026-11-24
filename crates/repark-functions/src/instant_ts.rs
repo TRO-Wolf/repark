@@ -558,8 +558,10 @@ impl AnalyzerRule for SparkLtzTimestampCast {
             },
             !defer_timestamp_type && timestamp_type.is_ntz(),
         )?;
-        let plan = if defer_timestamp_type || timestamp_type.is_ntz() {
+        let plan = if defer_timestamp_type {
             plan
+        } else if timestamp_type.is_ntz() {
+            ltz_cast::retarget_dml_ltz_store_casts(plan)?
         } else {
             crate::timestamp_ntz_cast::retarget_dml_store_casts(plan)?
         };

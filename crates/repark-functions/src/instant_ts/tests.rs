@@ -396,3 +396,59 @@ async fn ntz_opt_in_union_rebuilds_stale_schema_to_ntz() {
         .collect();
     assert_eq!(values, vec![1_704_074_400_000_000, 1_704_074_400_000_000]);
 }
+
+#[tokio::test]
+async fn ntz_opt_in_dml_into_ltz_table_preserves_ltz_store_cast() {
+    use datafusion::arrow::datatypes::{Field, Schema};
+    use datafusion::datasource::MemTable;
+
+    let ctx = ctx_ntz_at("America/New_York");
+    let target_schema = Arc::new(Schema::new(vec![Field::new(
+        "v",
+        ltz_timestamp_type(),
+        true,
+    )]));
+    let table = Arc::new(MemTable::try_new(target_schema, vec![vec![]]).expect("mem table"));
+    ctx.register_table("ltz_target", table).expect("register");
+
+    let sql = "INSERT INTO ltz_target SELECT TIMESTAMP '2024-01-01 02:00:00' AS v";
+    let logical = ctx
+        .state()
+        .create_logical_plan(sql)
+        .await
+        .expect("logical plan");
+    let analyzed = ctx
+        .state()
+        .analyzer()
+        .execute_and_check(logical, ctx.state().config_options(), |_, _| {})
+        .expect("analyzed");
+    let LogicalPlan::Dml(dml) = analyzed else {
+        panic!("expected Dml plan, got {analyzed:?}");
+    };
+    assert_eq!(
+        dml.input.schema().field(0).data_type(),
+        &ltz_timestamp_type()
+    );
+
+    ctx.sql(sql)
+        .await
+        .expect("insert")
+        .collect()
+        .await
+        .expect("run");
+    let rows = ctx
+        .sql("SELECT v FROM ltz_target")
+        .await
+        .expect("select")
+        .collect()
+        .await
+        .expect("collect");
+    assert_eq!(rows[0].schema().field(0).data_type(), &ltz_timestamp_type());
+    assert_eq!(
+        rows[0]
+            .column(0)
+            .as_primitive::<TimestampMicrosecondType>()
+            .value(0),
+        1_704_092_400_000_000
+    );
+}
