@@ -276,5 +276,3 @@ answers). Runner and analysis: [probes/run_bar.sh](probes/run_bar.sh), [probes/b
 | shapes | false | shapes | 1 |
 | shapes | true | shapes | 1 |
 
-
-Up: [map.md](map.md).

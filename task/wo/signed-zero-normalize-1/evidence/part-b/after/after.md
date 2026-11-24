@@ -3,7 +3,7 @@
 Model `claude-opus-5-5`, 2026-11-12. The head is `4f2108ae` (seat 2, the UDF and the door policy), on the frozen base
 main `276dc503`. Every RePark leg of step 0 and item 1 was re-run on the head's release build inside the build
 wrapper; the Spark legs are step 0's and item 1's, unchanged. Labels are part A's `label_of`. The base column is item 1's
-re-measure on `276dc503` ([../item1/remeasure/](../item1/remeasure/map.md)).
+re-measure on `276dc503` ([../item1/remeasure/](../item1/remeasure/)).
 
 **Result: no halt.** Every cell that moved, moved to Spark's measured outcome, or to the IEEE truth that Q1 rules for
 `NOT IN`. No control moved otherwise. The floatkeys cells are all EQUAL.

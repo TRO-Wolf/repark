@@ -78,5 +78,3 @@ rule names and order are identical on both builds; `bool_decimal_cast` keeps its
 - `stored_plans` / `df_cache`: decimal(30,15) ['0.100000000000000', '0E-15']
 - `stored_plans` / `cache_table`: UnsupportedOperationException This feature is not implemented: Unsupported SQL statement: CACHE TABLE dd_ct AS SELECT 0.1 AS c UNION ALL SELECT CAST(CAST(0.00000000000000000001 AS DOUBLE) AS DOUBLE)
 - `stored_plans` / `native_view`: double ['0.1', '1e-20']
-
-Up: [map.md](map.md).

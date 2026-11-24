@@ -1,8 +1,8 @@
 # SUM-DEC-I128WRAP-1 — the domain table (measured 2026-11-17)
 
 Main `6f80793b` (#1355 merged; its product tree equals `27d6149f`, package `pkg-avg-27d6149f`) against Spark 4.1.2,
-ANSI on and off. Every cell, its SQL or DataFrame form and both answers are in [evidence/raw/](evidence/raw/map.md);
-the probes that produced them are in [evidence/probes/](evidence/probes/map.md). Counts below come from
+ANSI on and off. Every cell, its SQL or DataFrame form and both answers are in [evidence/raw/](evidence/raw/);
+the probes that produced them are in [evidence/probes/](evidence/probes/). Counts below come from
 `tables.py` over `raw/verdicts.jsonl`; the per-group letter grids are in `raw/grids.md`. **The revision** (after the
 critic's verdict) adds §12, counted apart, and corrects §6 and §9.
 

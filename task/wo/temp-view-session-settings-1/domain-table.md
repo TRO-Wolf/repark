@@ -2,10 +2,10 @@
 
 Measured 2026-11-17 on main `c22d61a1` (package `pkg-dct-7bf32859`, product diff to `c22d61a1` empty) and, for the
 `avg` cells only, #1355's package `pkg-avg-27d6149f`, against Spark 4.1.2. Every cell, both engines, is in
-[evidence/raw/](evidence/raw/map.md): `verdicts.jsonl` pairs them, `headline.md` counts them, `summary.md` adds the
+[evidence/raw/](evidence/raw/): `verdicts.jsonl` pairs them, `headline.md` counts them, `summary.md` adds the
 door-by-direction table, the follows grid and every write, nest, reader-side, `now` and unset cell. **Revision
 (2026-11-17, after the critic):** 156 more cells on main `6f80793b` (package `pkg-avg-27d6149f`, whose product tree
-equals main's) in [evidence/raw/](evidence/raw/map.md) `rev-cells.md`, read in §7; they change the headline below and
+equals main's) in [evidence/raw/](evidence/raw/) `rev-cells.md`, read in §7; they change the headline below and
 correct the held and rename doors.
 
 ## Axes and size

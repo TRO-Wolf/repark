@@ -146,5 +146,3 @@ otherwise calls `DatePart$.parseExtractField(String, Expression)`. Its constant 
   TimestampType, TimestampNTZType), StringTypeWithCollation)`: a `STRING` is **not** cast; it is parsed with the
   format (default `yyyy-MM-dd HH:mm:ss`), and an unparsable text raises `CANNOT_PARSE_TIMESTAMP` (ANSI on) or answers
   NULL.
-
-Up: [map.md](map.md).

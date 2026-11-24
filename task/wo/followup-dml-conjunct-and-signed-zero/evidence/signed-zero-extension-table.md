@@ -277,4 +277,3 @@ E8 spill-repark-native-1gb E8-group-by-d ANSWERED 502
 E8 spill-repark-native-1gb E8-join-zeros ANSWERED 1 
 E8 spill-repark-native-1gb E8-self-join-d ANSWERED 1 
 ```
-Up: [map.md](map.md).

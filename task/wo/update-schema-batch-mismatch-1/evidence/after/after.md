@@ -63,5 +63,3 @@ That second text predates this unit and is not changed here.
 ## Gates
 
 See [gates.md](gates.md).
-
-Up: [../map.md](../map.md).

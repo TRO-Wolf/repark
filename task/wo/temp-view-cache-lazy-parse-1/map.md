@@ -15,8 +15,8 @@ and probes only. Parent: [../temp-view-frame-reader-parse-1/](../temp-view-frame
   flips, frames on a UDF frame under Spark's per-plan rule).
 - [inventory.md](inventory.md) — the insertion inventory: every cache, cache-table and UDF planning site with
   file:line and when it plans.
-- [evidence/](evidence/map.md) — probes, raw cells (gzipped), verdicts, the trace, cost samples, `javap` excerpts,
+- [evidence/](evidence/) — probes, raw cells (gzipped), verdicts, the trace, cost samples, `javap` excerpts,
   provenance.
-- [built/](built/map.md) — **A1, built (2026-11-20):** the lazy cache table and the DataFrame doors; its bar (188 required and 128 forecast cells EQUAL, 0 EQUAL lost over 2,642), cost and evidence.
+- [built/](built/) — **A1, built (2026-11-20):** the lazy cache table and the DataFrame doors; its bar (188 required and 128 forecast cells EQUAL, 0 EQUAL lost over 2,642), cost and evidence.
 
 Up: [../map.md](../map.md).

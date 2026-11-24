@@ -139,5 +139,3 @@ Each line of `flat_matrix.jsonl` is one cell. Beyond the old fields:
   catalog for the 30 p15 cells, six more and three S3 Tables-kind cells (no missing observation, no file-count
   error, the canonical seed equal to Spark's read, Spark's own CTAS schema equal to `CTAS_SCHEMA`), and the live
   G5 module's C1-C6 (every new assertion green). K, R1 and S1 need AWS and run only live.
-
-Up: [map.md](map.md).

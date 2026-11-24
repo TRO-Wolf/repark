@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import importlib.util
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -57,6 +59,33 @@ def _sync(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
 def _commit(repo: Path, message: str) -> None:
     _git(repo, "add", "-A")
     _git(repo, "commit", "-m", message)
+
+
+def _task_wo_maps() -> tuple[str, ...]:
+    spec = importlib.util.spec_from_file_location("sync_map_md_under_test", _SYNC)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.TASK_WO_MAPS
+
+
+def _seed_task_wo_maps(repo: Path, skip: str = "") -> None:
+    for relative in _task_wo_maps():
+        if relative == skip:
+            continue
+        path = repo / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("# order\n", encoding="utf-8")
+
+
+def _task_wo_repo(tmp_path: Path, skip: str = "") -> Path:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init", "-b", "main")
+    (repo / "map.md").write_text("# root\n", encoding="utf-8")
+    _seed_task_wo_maps(repo, skip)
+    _commit(repo, "base")
+    return repo
 
 
 @pytest.fixture
@@ -215,6 +244,7 @@ def test_duplicate_row_rule_fires_on_two_rows(tmp_path: Path) -> None:
     (repo / "map.md").write_text(
         "# m\n\n- [a.py](a.py) — one\n- [a.py](a.py) — two\n", encoding="utf-8"
     )
+    _seed_task_wo_maps(repo)
     _commit(repo, "base")
     result = _sync(repo)
     assert result.returncode == 1
@@ -230,6 +260,7 @@ def test_duplicate_row_rule_survives_fix(tmp_path: Path) -> None:
     (repo / "map.md").write_text(
         "# m\n\n- [a.py](a.py) — one\n- [a.py](a.py) — two\n", encoding="utf-8"
     )
+    _seed_task_wo_maps(repo)
     _commit(repo, "base")
     result = _sync(repo, "--fix")
     assert result.returncode == 1
@@ -246,6 +277,7 @@ def test_duplicate_row_rule_quiet_when_one_row_mentions_twice(tmp_path: Path) ->
     (repo / "map.md").write_text(
         "# m\n\n- [a.py](a.py) — one row, [a.py](a.py) named twice\n", encoding="utf-8"
     )
+    _seed_task_wo_maps(repo)
     _commit(repo, "base")
     result = _sync(repo)
     assert result.returncode == 0, result.stderr
@@ -324,3 +356,62 @@ def test_a_modified_file_warns_in_neither_mode(repo: Path) -> None:
     branch = _guard(repo, "--base", base)
     assert branch.returncode == 0, branch.stderr
     assert branch.stderr == ""
+
+
+def test_task_wo_rule_refuses_a_map_below_an_existing_order(tmp_path: Path) -> None:
+    repo = _task_wo_repo(tmp_path)
+    order = next(path for path in _task_wo_maps() if path != "task/wo/map.md")
+    relative = f"{Path(order).parent.as_posix()}/evidence/map.md"
+    (repo / relative).parent.mkdir(parents=True)
+    (repo / relative).write_text("# evidence\n", encoding="utf-8")
+    _commit(repo, "deep map")
+    result = _sync(repo)
+    assert result.returncode == 1
+    message = f"{relative}: a map.md under task/wo that TASK_WO_MAPS does not list — delete it"
+    assert message in result.stderr.splitlines()
+
+
+def test_task_wo_rule_refuses_a_map_for_a_new_order(tmp_path: Path) -> None:
+    repo = _task_wo_repo(tmp_path)
+    relative = "task/wo/no-such-order-1/map.md"
+    assert relative not in _task_wo_maps()
+    (repo / relative).parent.mkdir(parents=True)
+    (repo / relative).write_text("# order\n", encoding="utf-8")
+    _commit(repo, "new order map")
+    result = _sync(repo)
+    assert result.returncode == 1
+    message = f"{relative}: a map.md under task/wo that TASK_WO_MAPS does not list — delete it"
+    assert message in result.stderr.splitlines()
+
+
+def test_task_wo_rule_passes_the_allowed_maps(tmp_path: Path) -> None:
+    result = _sync(_task_wo_repo(tmp_path))
+    assert result.returncode == 0, result.stderr
+
+
+def test_task_wo_rule_passes_the_branch_tree() -> None:
+    result = subprocess.run(
+        [sys.executable, str(_SYNC), "--check"],
+        capture_output=True,
+        text=True,
+        check=False,
+        cwd=_REPO,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_task_wo_rule_refuses_a_stale_row(tmp_path: Path) -> None:
+    stale = _task_wo_maps()[-1]
+    result = _sync(_task_wo_repo(tmp_path, skip=stale))
+    assert result.returncode == 1
+    message = f"{stale}: listed in TASK_WO_MAPS but not tracked — delete its row"
+    assert message in result.stderr.splitlines()
+
+
+def test_task_wo_maps_is_sorted_unique_and_only_shrinks() -> None:
+    maps = _task_wo_maps()
+    assert list(maps) == sorted(set(maps))
+    assert len(maps) <= 74
+    assert all(
+        path == "task/wo/map.md" or re.fullmatch(r"task/wo/[^/]+/map\.md", path) for path in maps
+    )

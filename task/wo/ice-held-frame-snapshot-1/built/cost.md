@@ -113,5 +113,3 @@ action = the difference over 40): `held_filter_count` 216.4M against main's 214.
 plan walk where a view's plan is inlined, which these rows reach only through the facade's internal scratch views,
 whose scans are in query mode. The row's five samples spread from 10.4 to 14.8 ms on the base alone (head over the
 first base 1.037x), so the 1.127x is the spread at n=5, not the delta.
-
-Up: [map.md](map.md).

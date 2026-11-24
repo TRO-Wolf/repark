@@ -16,7 +16,7 @@ least-common-type family, matching Spark's lossy comparison and union; step 0 "g
   DataFusion 54.1.0 and RePark main, with the doors.
 - After the inventory critic (`GAPS`, no cell contradicted): map keys, aliased `USING`, `IN`-list integer
   literals and set-operation membership re-measured and added to the table, sketch §11 and the inventory.
-- [evidence/](evidence/map.md) — the probes, the raw cells, the verdicts and the provenance; the build's bar and cost are in
-  [evidence/built/](evidence/built/map.md) (seat A, head `7bf32859`, branch `fix/decimal-common-type-1`).
+- [evidence/](evidence/) — the probes, the raw cells, the verdicts and the provenance; the build's bar and cost are in
+  [evidence/built/](evidence/built/) (seat A, head `7bf32859`, branch `fix/decimal-common-type-1`).
 
 Up: [../map.md](../map.md).

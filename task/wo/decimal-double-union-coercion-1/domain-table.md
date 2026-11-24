@@ -2,7 +2,7 @@
 
 RePark main `04d84ab9` (package `pkg-04d84ab9`, Spark door, DataFrame API, native door) against Spark
 4.1.2 (`local[1]`, session zone UTC), ANSI on and off, Iceberg 1.11.0 runtime for the writes. Raw
-cells, probes and provenance: [evidence/map.md](evidence/map.md). Every cell compares the result type
+cells, probes and provenance: [evidence/map.md](evidence/). Every cell compares the result type
 and the values; a written cell compares the rows **Spark reads back** from the Iceberg table each engine
 wrote.
 

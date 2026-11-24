@@ -15,8 +15,8 @@ label-blocking, built next on lane B after `sum`, as its own unit. Measured on m
 - [inventory.md](inventory.md) — every path that adds, merges, ships, spills, converts or evaluates `avg`'s sum and
   count, with file:line, the ones that trust the declared precision or the row layout, and the reuse of #1360's
   carrier.
-- [evidence/](evidence/map.md) — the probes, the verdict tables, the Spark answers and the `javap` excerpts.
-- [evidence/raw-r1/](evidence/raw-r1/map.md) — **critic round 1 (r1, 2026-11-19):** the critic's UNSOUND verdict
+- [evidence/](evidence/) — the probes, the verdict tables, the Spark answers and the `javap` excerpts.
+- [evidence/raw-r1/](evidence/raw-r1/) — **critic round 1 (r1, 2026-11-19):** the critic's UNSOUND verdict
   and the rendered tables that close its eight items. The sketch's §7 holds the revision and amends §1 (Spark's rule
   by operator), §4 (seat A's window, narrow and `Decimal256` paths, the state schema, the kept divergence), §5 (the
   pins) and §6 (Q1 to Q7) in place; the domain table and the inventory gain r1 sections (the codec, the analyzer

@@ -24,5 +24,3 @@ JDK 17.0.15. `ts` is `2024-01-01 00:00:00.123455`. Each cell answered the same i
 The `ROUND` rows are [ROUND-DOUBLE-EXACT-1](../../../../roadmap/mid-term/round-double-exact-1-card-2026-11-14.md);
 the `trycast_ts_*` rows are [TRY-CAST-TIMESTAMP-NUMERIC-1](../../../../roadmap/mid-term/try-cast-timestamp-numeric-1-card-2026-11-14.md).
 `cast_ts_dec38_18` is a written cast: it answers main's binary value on the head until step 4 of the split plan.
-
-Up: [map.md](map.md).

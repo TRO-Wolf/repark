@@ -55,7 +55,7 @@ Each of the three calls either stores Spark's rows or refuses loudly before any 
 
 Every writer verb was run on every target kind the native door reaches, with seven frame shapes:
 1568 native cells and 868 Spark-door cells. The table is
-[evidence/map.md](../../wo/native-dataframe-write-silent-1/evidence/map.md); the raw cells are
+[evidence/map.md](../../wo/native-dataframe-write-silent-1/evidence/); the raw cells are
 under its `step0/`.
 
 - **SILENT, 308 cells.** These return success and leave rows, snapshots and files unchanged:
@@ -118,7 +118,7 @@ under its `step0/`.
   allow-listed after a refusal. Also recorded there: the S3 overwrite deletes before it copies
   (`path_write.rs:403`), a native path containing `'` is refused before the seat, and the Spark
   door stores `partitionBy(c).insertInto` rows. The list is in
-  [evidence/map.md](../../wo/native-dataframe-write-silent-1/evidence/map.md).
+  [evidence/map.md](../../wo/native-dataframe-write-silent-1/evidence/).
 
 ## Delta (2026-11-13, after both verifiers)
 

@@ -35,6 +35,8 @@ first ambiguity. If the first run fails that test, the fix is in the order, not 
 
 Standing rules every order inherits: no code comments from Anthropic models (docstrings are not
 comments); relocated code sheds its comments; a map row changes only when a unit adds, removes or renames a file (owner ruling, 2026-11-18);
+no new `map.md` under `task/wo`: only `task/wo/map.md` and the order maps that `TASK_WO_MAPS` in `scripts/sync_map_md.py`
+lists may exist, and `make check-map-sync` refuses any other (owner ruling, 2026-11-23);
 commit-first briefs with a provisional hand-back for engines that cannot see their step budget;
 the scratch clone, never the live worktree; the TRO-Wolf identity and the `Authored-By:` trailer;
 the evidence home is `task/wo/<unit>/evidence/`, which holds a unit's briefs, verdicts, probe tables

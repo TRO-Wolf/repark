@@ -7,7 +7,7 @@ sample at least 200 ms (the shortest 0.209 s). A view sample warms once, then ti
 the median per repetition. Data: 2,000,000 rows (`k`) and 100,000 rows (`k2`) of Parquet, read as DataFrame views;
 `v = SELECT a, b, a % 7 AS m FROM k` and `vv = SELECT a, m FROM v` are SQL temp views created under ANSI on. The
 differing rows `SET spark.sql.ansi.enabled=false` before timing. C-012 is the replay set the earlier units held
-(`replay_work.py`, the `c012p6` and `c012rest` halves). Scripts: [cost/](cost/map.md).
+(`replay_work.py`, the `c012p6` and `c012rest` halves). Scripts: [cost/](cost/).
 
 **`EXPLAIN` identity:** the five matching cases' plans are identical on main and the head (`cost/explain-plans.json`),
 as are the pin file's five (`temp_view_session_settings_1_plans.json`: read, filter, `LIMIT`, join, view over view).
@@ -65,5 +65,3 @@ the re-run were sampled; those runs' samples sit inside the other runs' range.)
 Every held row is at or under 1.05x at five runs; no ten-run extension was needed. Answers are equal across the three
 builds on every row. The first pass's C-012 medians, wall clock with the waits, were 1.007 (`c012p6`) and 1.026
 (`c012rest`). The check runs only on the differing path, once per scan, over the inlined frames' nodes.
-
-Up: [map.md](map.md).
