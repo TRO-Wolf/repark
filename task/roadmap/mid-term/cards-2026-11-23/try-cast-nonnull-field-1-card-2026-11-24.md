@@ -88,6 +88,19 @@ identical in both ANSI modes (`false` and `true`):
 | `dfbug/make_dt_interval_nan_col` (`sep/ice/make_dt_interval_nan_col`) | `[[1, None], [2, '7 days, 0:00:01.500000']]`, `intervaldaytosecond`, nulls `[False, True]` | crash (`Column 'r' is declared as non-nullable`), `string`, nulls `[False, False]` | `make_dt_interval` UDF declares non-null output despite NaN producing NULL (and returns `string` on nullable inputs: `sep/pq/`, `sep/mem/`) |
 | `dfbug/make_dt_interval_ovf_col` (`sep/*/make_dt_interval_ovf_col`) | `INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION` | Iceberg: crash (`Column 'r' is declared as non-nullable`); Parquet/mem: returns `NULL` instead of raising | `make_dt_interval` UDF emits NULL on overflow instead of raising |
 
+**A pushed projection, present on main and not closed here (orchestrator ruling, delta 1).** Under the default
+`pushdown_filters = false`, DataFusion 54.1.0 can push into the Parquet scan's own projection a bare `TRY_CAST` that
+common-subexpression elimination shares between two consumers. Seat 2 cannot reach that projection, because the field
+is private in DataFusion. Over a NOT NULL Parquet `s` holding `'abc'`, `'7'` and `'-5'`, in both ANSI modes:
+
+| Statement | Spark 4.1.2 | Main, first head `47631b25`, delta-1 head |
+|---|---|---|
+| `SELECT id, map('k', TRY_CAST(coalesce(s, 'x') AS INT))['k'] AS a, abs(TRY_CAST(coalesce(s, 'x') AS INT)) AS b FROM pq_nn` | `[1, NULL, NULL], [2, 7, 7], [3, -5, 5]` | crash (`Found unmasked nulls for non-nullable StructArray field`) |
+| the same with `map('m', …)['m']` as `b` | `[1, NULL, NULL], [2, 7, 7], [3, -5, -5]` | crash, the same |
+| `SELECT id, abs(TRY_CAST(coalesce(s, 'x') AS INT)) AS a, TRY_CAST(coalesce(s, 'x') AS INT) + 1 AS b FROM pq_nn` | `[1, NULL, NULL], [2, 7, 8], [3, 5, -4]` | equal to Spark |
+
+It needs its own unit.
+
 Note also (pre-existing, unchanged by this unit): `spark.createDataFrame(rows, schema)` with explicit `nullable=False`
 `StructField`s currently emits `nullable=True` columns on RePark (`door/*/mem/*` col 0 `id` is `True` vs Spark
 `False`).
