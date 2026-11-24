@@ -11,7 +11,7 @@ Spark's multiset answer); its evidence is
 [../sql-setop-all-multiset-1/](../sql-setop-all-multiset-1/). This directory stays as the
 refusal's record.
 
-- [evidence/map.md](evidence/map.md) — the step-0 table on main against Spark 4.1.2, the same cells on
+- [evidence/](evidence/) — the step-0 table on main against Spark 4.1.2, the same cells on
   the branch, the scripts that measured them, the seat and the red/green record.
 
 Up: [../map.md](../map.md).

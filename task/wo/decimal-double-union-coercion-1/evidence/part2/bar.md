@@ -110,6 +110,4 @@ Raw: `raw/delta-<spark|a06c|head|new>-<mode>.jsonl` (`head` is the build's `pkg-
 
 ## Raw sets
 
-[raw/](raw/map.md).
-
-Up: [map.md](map.md).
+[raw/](raw/).

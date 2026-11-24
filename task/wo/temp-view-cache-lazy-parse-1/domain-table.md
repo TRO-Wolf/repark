@@ -7,7 +7,7 @@
 schema), `csv_s` (CSV with a schema), `csv_i` (CSV, `inferSchema`), controls `pq` (Parquet) and `ice` (Iceberg v2).
 Directions `la_utc` (create under Los Angeles, read under UTC, third zone Tokyo) and `utc_tk` (UTC, Tokyo, Los
 Angeles); ANSI on and off. A door × action row holds 12 text cells (3 readers × 2 directions × 2 modes) and 8
-control cells. Raw: [evidence/raw/](evidence/raw/map.md); verdicts `verdicts.jsonl.gz`, counts `summary.txt`.
+control cells. Raw: [evidence/raw/](evidence/raw/); verdicts `verdicts.jsonl.gz`, counts `summary.txt`.
 
 ## 0. Totals
 

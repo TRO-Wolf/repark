@@ -4,8 +4,8 @@ Model `claude-opus-5-5`, 2026-11-12. RePark main `a3f8c7d9`'s release module, fo
 Spark 4.1.2 with Iceberg 1.11.0 (`iceberg-spark-runtime-4.1_2.13-1.11.0.jar`), Hadoop catalogs
 on local disk. Rows `(1, 0.0), (2, -0.0), (3, NaN), (4, NULL), (5, 1.5)` in `(id BIGINT, d T)`
 for T in DOUBLE and FLOAT; `(6, Infinity), (7, -Infinity)` in a DOUBLE twin. The rendered
-cells are in [table-a3f8c7d9.md](table-a3f8c7d9.md); raw legs in [raw/](raw/map.md); probes
-in [probe/](probe/map.md).
+cells are in [table-a3f8c7d9.md](table-a3f8c7d9.md); raw legs in [raw/](raw/); probes
+in [probe/](probe/).
 
 ## 1. The seat, to the line
 

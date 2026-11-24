@@ -1,7 +1,7 @@
 # Step 0: the table on main, on the stack base `ff34baf5` and on the emulated head
 
 Spark 4.1.2 (JDK 17, Iceberg 1.11.0) against main (`6f9f2aaa`) and the stack base (`ff34baf5`), both ANSI modes;
-provenance in [map.md](map.md). A cell is wrong when its verdict is not `equal` / `EQUAL` / `BOTH-RAISE`. The
+provenance in [map.md](./). A cell is wrong when its verdict is not `equal` / `EQUAL` / `BOTH-RAISE`. The
 emulated head is the widened form (every DECIMAL operand of a DOUBLE comparison or union cast to DOUBLE by hand)
 run on `ff34baf5`; Spark answers every widened form as it answers the original (the faithfulness line).
 
@@ -764,5 +764,3 @@ Faithfulness (Spark answers its widened forms as it answers the originals): {"co
 |---|---|---|---|---|---|
 | ff34 wrong | 0 of 5455 | 0 of 5455 | 724 of 5455 | 118 of 5455 | 967 of 5455 |
 | main wrong | 0 of 5455 | 0 of 5455 | 724 of 5455 | 118 of 5455 | 967 of 5455 |
-
-Up: [map.md](map.md).

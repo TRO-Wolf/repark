@@ -1,6 +1,6 @@
 # ZERO-PARTITION-MERGE-1 step 0: the rendered cells
 
-Rendered by `probe/render_step0.py` from [raw/](raw/map.md). Statuses: see [step0.md](step0.md) section 1.2. A count is over the 12 variants (v2/v3 x Parquet/ORC/Avro x `d`/`f`) of a door.
+Rendered by `probe/render_step0.py` from [raw/](raw/). Statuses: see [step0.md](step0.md) section 1.2. A count is over the 12 variants (v2/v3 x Parquet/ORC/Avro x `d`/`f`) of a door.
 
 ## 1. Status per door and run
 

@@ -70,7 +70,7 @@ Method:
 - C-012 is the like-for-like replay set (`replay_work.py`, `c012p6` and `c012rest`), as in AVG-DECIMAL-ROUND-1.
 
 Raw: [raw/cost/](raw/cost/) (`samples.jsonl`, `raw-ddl.jsonl`, `table.md`). Runner and table:
-[scripts/](scripts/map.md) (`run.sh`, `ddl_cost.py`, `analyze.py`).
+[scripts/](scripts/) (`run.sh`, `ddl_cost.py`, `analyze.py`).
 
 | row | main (s) | head (s) | head/main | control band (main-aa/main) | bar | runs | answers equal | at the bar |
 |---|---|---|---|---|---|---|---|---|

@@ -21,7 +21,7 @@ replace, of which 0.72 MB and 0.85 MB are file pages that only the 40-wide state
 MB and 7.78 MB. On the runner, on the final head, they are 0.34 MB and 0.49 MB against the 8 MiB bound. The floor therefore becomes the effective bound, and C-002's recorded blow-up (22.9 MB at N=12, 290.6 MB
 at N=16, death at N=40 on the base tree) sits far above it.
 
-The evidence is in [evidence/](evidence/map.md): the eight-row runner table and its raw lines, the ten local deltas for
+The evidence is in [evidence/](evidence/): the eight-row runner table and its raw lines, the ten local deltas for
 both modes with and without the warm-up (the mutation check, not committed), the pin file ten times, the dataframe
 directory once under `-n 8`, and the runner read of the final head. The unit's ledger is
 [../../ledgers/staging/replace-linear-pin-1-ledger.md](../../ledgers/archive/2026-10/2026-10-30-replace-linear-pin-1-ledger.md). The

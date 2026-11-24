@@ -18,6 +18,6 @@ probes only, no product code.
   the metadata DELETE).
 - [inventory.md](inventory.md) — every seat where a NaN is compared, ordered, reduced or pruned, "seen: yes /
   no, because", with file:line in arrow 58.4.1, DataFusion 54.1.0, the fork and RePark, and how it was searched.
-- [evidence/](evidence/map.md) — the probes, the per-cell answers, the file metadata and the provenance.
+- [evidence/](evidence/) — the probes, the per-cell answers, the file metadata and the provenance.
 
 Up: [../map.md](../map.md).

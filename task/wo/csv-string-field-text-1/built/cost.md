@@ -111,5 +111,3 @@ against head in alternating order.
 
 Raw: [raw/delta2-cost-samples.jsonl](raw/delta2-cost-samples.jsonl), [raw/delta2-cost-perf.txt](raw/delta2-cost-perf.txt),
 [raw/delta2-c012-samples.jsonl](raw/delta2-c012-samples.jsonl).
-
-Up: [map.md](map.md).

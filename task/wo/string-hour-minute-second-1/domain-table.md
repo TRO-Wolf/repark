@@ -2,7 +2,7 @@
 
 Every cell is one expression over one text, on one input, door and configuration, answered by main
 (`pkg-main-4c365814`) and by Spark 4.1.2 with Iceberg 1.11.0 (`local[1]`). The probes are in
-[evidence/probes/](evidence/probes/map.md); the counts below are `cmp.py`'s
+[evidence/probes/](evidence/probes/); the counts below are `cmp.py`'s
 ([evidence/verdicts/summary.md](evidence/verdicts/summary.md)); every `hour` / `minute` / `second`, `extract` /
 `date_part` time-field and `CAST` control cell is in [evidence/verdicts/hms-cells.tsv](evidence/verdicts/hms-cells.tsv);
 the full 75,032-row verdict file stays in `N/string-hms-out/verdicts.jsonl`.
@@ -78,7 +78,7 @@ Literal SQL answers, Spark / main, ANSI off, `America/Los_Angeles`:
 
 - **Implicit cast = explicit cast:** Spark's `hour(c)`, `minute(c)`, `second(c)` equal its
   `<f>(CAST(c AS TIMESTAMP))` on all 3,072 `TIMESTAMP_LTZ` projection cells; Spark's `EXPLAIN` prints the same
-  `hour(cast(c as timestamp), Some(<zone>))` for both ([evidence/raw/map.md](evidence/raw/map.md)).
+  `hour(cast(c as timestamp), Some(<zone>))` for both ([evidence/raw/map.md](evidence/raw/)).
 - **`spark.sql.timestampType=TIMESTAMP_NTZ`:** they differ on 96 of 768 cells, wherever an NTZ cast and an instant
   cast of the text disagree: `off` (both zones) and `zulu` (Los Angeles), the offset dropped by the NTZ cast; `gap`
   (Los Angeles), which has no gap as a wall; `tonly`, which the NTZ cast refuses (`CAST_INVALID_INPUT`) and the

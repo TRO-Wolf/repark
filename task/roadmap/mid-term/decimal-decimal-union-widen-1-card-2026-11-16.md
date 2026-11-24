@@ -107,7 +107,7 @@ The text above is unchanged.
 
 Built by Claude Opus 5.5 (`claude-opus-5-5`) on branch `fix/decimal-common-type-1`, product commit `7bf32859`, on
 main `33bfde4e`; not pushed. The bar, cost, probes and raw data are in
-[../../wo/decimal-common-type-1/evidence/built/](../../wo/decimal-common-type-1/evidence/built/map.md). The text above is
+[../../wo/decimal-common-type-1/evidence/built/](../../wo/decimal-common-type-1/evidence/built/). The text above is
 unchanged.
 
 **The rulings, verbatim.** The owner, 2026-11-16, about 14:40 UTC: "defaults" (S1, label-blocking; one unit for

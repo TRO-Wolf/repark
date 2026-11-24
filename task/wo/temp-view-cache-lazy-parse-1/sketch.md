@@ -11,7 +11,7 @@ the insertion-inventory rule (2026-11-09).
 **Builds:** main `9f9650f5` (unit 1 of TEMP-VIEW-FRAME-READER-PARSE-1, #1373; package `S/ddu-work/pkg-rp1d-52f468ce`,
 `BUILT_FROM` `52f468ce`, the tree of #1373's final head), label `main`; main before unit 1, `8bc26cba`
 (`S/ddu-work/pkg-rp1base-8bc26cba`), label `base`; Spark 4.1.2 with Iceberg 1.11.0. Provenance:
-[evidence/map.md](evidence/map.md).
+[evidence/map.md](evidence/).
 
 ## 0. The findings
 

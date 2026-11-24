@@ -7,6 +7,6 @@ the main release wheel built from `fdc61f26` and on the Spark 4.1.2 oracle. The 
 `SELECT * FROM t WHERE P` returns must be exactly the rows each write seat touches. Measurement only;
 no product code; a records-only round with no frontier critic.
 
-- [evidence/](evidence/map.md) — the probe, the raw leg files, the cell table, the summary, the finding lines and the provenance.
+- [evidence/](evidence/) — the probe, the raw leg files, the cell table, the summary, the finding lines and the provenance.
 
 Up: [../map.md](../map.md).

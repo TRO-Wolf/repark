@@ -28,7 +28,7 @@ this step was cut).
 5. **Every analyzer list that holds a cast folder:** `grep -rn "FoldSparkNumericCasts\|
    install_shared_analyzer_rules" crates` (the session list, the F.expr context list, a test).
 6. **The iceberg-rust fork:** `grep -rn "cast_with_options\|compute::cast\b\|kernels::cast" crates/iceberg/src`.
-7. **Measured confirmation:** each door's error text in [raw/](raw/map.md) names the seat that raised it
+7. **Measured confirmation:** each door's error text in [raw/](raw/) names the seat that raised it
    (Arrow's own text, `Optimizer rule 'simplify_expressions' failed`, or `INSERT OVERWRITE cast of source
    column`), and `EXPLAIN VERBOSE` on the literal shapes shows which rule folds (below, C2).
 
@@ -81,5 +81,3 @@ SELECT, INSERT, CTAS, DataFrame and no-WHERE UPDATE doors, not MERGE, the identi
 kinds) or the batch doors; it does not reach the F.expr fold (C2), container leaves (C6) or the
 Postgres chokepoint (D3). The built seats (owner, 2026-11-13, option A) are in
 [../fix/seats.md](../fix/seats.md).
-
-Up: [map.md](map.md).

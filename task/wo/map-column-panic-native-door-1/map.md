@@ -27,7 +27,7 @@ differ for native-door reasons, each reproduced by a map-free control; the Spark
 repeated or NULL key now raises Spark's `[DUPLICATED_MAP_KEY]` / `[NULL_MAP_KEY]` text on the native door too. The cost of the added rule is
 1.02x to 1.04x on the native `SELECT 1` (0.43 ms to 0.44 ms) and 0.76x to 0.89x on a 1,000-row `map(id, id + 1)` select. The ZONE-ORACLE-1
 corpus is not re-recorded here: its 20 REFUSED and 10 ERROR counts are on the Spark door, which this change does not touch. The numbers, the
-logs and the raw answers are in [evidence/](evidence/map.md). The ANSI door was the one finding of the first three commits and is commit 4,
+logs and the raw answers are in [evidence/](evidence/). The ANSI door was the one finding of the first three commits and is commit 4,
 under the orchestrator's ruling that no door may panic: `repark-sql`'s `AnsiDialect`, the Rust-embedded ANSI door with no Python entry, builds
 its analyzer list through the same `analyzer_rules_with_timestamp_unit_widen` and lacked the rule; `AnsiDialect::configure_analyzer_rules` now
 pushes it, the same one push. The red-first pins are `crates/repark-sql/tests/ansi_door_map_column.rs` (the one-row `list array` panic and the
@@ -36,7 +36,7 @@ door: on main 5 panics and 14 same-length errors, on the head none; the 14 answe
 head, the same 33 as the Python native door, 43 of 47 equal that door's answers and 4 more in rows only (the Python export coerces `Utf8View`
 and list nullability); the repeated and NULL key refusals carry Spark's text here too.
 
-- [evidence/](evidence/map.md) — the red-on-main and green-on-head logs, the oracle replay table and its raw answers, the map-free controls,
+- [evidence/](evidence/) — the red-on-main and green-on-head logs, the oracle replay table and its raw answers, the map-free controls,
   the cost medians, the two probe children, the memory-pin bisect and the ANSI door's replay.
 
 Up: [../map.md](../map.md).

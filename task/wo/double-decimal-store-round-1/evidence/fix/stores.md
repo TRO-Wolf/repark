@@ -67,5 +67,3 @@ no-cast rows ran 15 repeats per sample. Raw: [raw/stores-cost-cast-raw.jsonl](ra
 - **Equal to main again:** both `CAST` rows and the `decimal = double` filter (0.87x to 1.02x): no cast and no
   comparison runs K1.
 - **The no-cast rows** hold 1.05x (0.95x to 1.02x).
-
-Up: [map.md](map.md).

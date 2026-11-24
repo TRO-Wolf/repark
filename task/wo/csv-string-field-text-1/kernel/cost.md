@@ -41,5 +41,3 @@ Nothing in C-012 reads CSV, and nothing reads through the kernel in this unit; t
 
 Raw: [raw/cost-samples.jsonl](raw/cost-samples.jsonl), [raw/cost-perf.txt](raw/cost-perf.txt),
 [raw/c012-samples.jsonl](raw/c012-samples.jsonl).
-
-Up: [map.md](map.md).

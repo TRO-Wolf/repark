@@ -57,5 +57,3 @@ Main `pkg-main-4c365814` unless named. Spill: one file of 200,000 groups (`M, M`
 | `t/c38_0/win/sum/g2` | true | NVOOR | NVOOR | NVOOR |
 | `t/c38_0/win/sum/g3` | true | NVOOR | NVOOR | NVOOR |
 | `t/c38_0/win/sum/g5` | true | NVOOR | NVOOR | NVOOR |
-
-Up: [map.md](map.md).

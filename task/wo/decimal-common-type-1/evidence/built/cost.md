@@ -74,5 +74,3 @@ equality is task for task, not file pruning.
 `CAST(c10 AS DECIMAL(38,0)) <> a38 + i`, 0.634 s on main and 0.616 s on the head; without the `+ i`, 0.093 s on
 both. The time is DataFusion planning 200 casts beside 200 decimal additions, which main pays for the same
 user-written query.
-
-Up: [map.md](map.md).
