@@ -7,7 +7,7 @@ use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
 use datafusion::common::types::{logical_date, logical_string};
 use datafusion::common::utils::take_function_args;
-use datafusion::common::{DFSchema, DataFusionError, Result, ScalarValue, internal_err};
+use datafusion::common::{DFSchema, DataFusionError, Result, ScalarValue, internal_err, plan_err};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::{
@@ -30,6 +30,19 @@ pub fn date_part_udf() -> Arc<ScalarUDF> {
 #[must_use]
 pub fn extract_date_part_rule() -> Arc<dyn AnalyzerRule + Send + Sync> {
     Arc::new(SparkExtractDatePart)
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn insert_extract_date_part_before_coercion(
+    mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
+) -> Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
+    let Some(position) = rules.iter().position(|rule| rule.name() == "type_coercion") else {
+        return plan_err!(
+            "the extract date_part rule requires the default type_coercion analyzer rule"
+        );
+    };
+    rules.insert(position, extract_date_part_rule());
+    Ok(rules)
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]

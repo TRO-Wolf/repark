@@ -49,12 +49,14 @@ fn analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_
         "struct_operands_by_position"
     );
     assert_eq!(configured_names[position + 8], "spark_string_integral_cast");
-    assert_eq!(configured_names[position + 9], "type_coercion");
+    assert_eq!(configured_names[position + 9], "spark_extract_date_part");
+    assert_eq!(configured_names[position + 10], "type_coercion");
     let without_insertions: Vec<String> = configured_names
         .into_iter()
         .filter(|name| {
             name != "join_condition_refusals"
                 && name != "spark_string_integral_cast"
+                && name != "spark_extract_date_part"
                 && name != "spark_values_typing"
                 && name != "spark_map_subscript"
                 && name != "struct_operands_by_position"

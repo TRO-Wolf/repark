@@ -19,7 +19,7 @@ use datafusion::logical_expr::{
 };
 
 mod session_wall;
-mod spark_date_part;
+pub mod spark_date_part;
 
 pub(crate) use session_wall::{
     datetime_from_micros, local_datetime_from_micros, localize_wall_micros_in_zone,

@@ -29,8 +29,11 @@ past its ratcheted size.
   / `to_utc_timestamp` (ledger R-1, R-2).
 - `spark_date_part.rs` — **DATE-PART-SESSION-ZONE-1 (2026-11-23, delta 1):** owns Spark's
   `date_part` / `datepart` scalar UDF (`SparkDatePart`, `date_part_udf`) and the
-  `SparkExtractDatePart` analyzer rule (`extract_date_part_rule`, installed in
-  `registration::analyzer_rules` after `ltz_timestamp_cast_rule` and before `TypeCoercion`).
+  `SparkExtractDatePart` analyzer rule (`extract_date_part_rule`,
+  `insert_extract_date_part_before_coercion`, seated before DataFusion's first `type_coercion` in
+  `SparkExtension::configure_analyzer_rules` as well as in `registration::analyzer_rules` after
+  `ltz_timestamp_cast_rule` so SQL `EXTRACT(<field> FROM <string>)` never hits stock `date_part`'s
+  implicit `Timestamp(ns)` cast before rewrite).
   `SparkDatePart` accepts `Timestamp`, `Date`, `String`, and `Interval` sources (plus `Null` and
   `Dictionary` over them) and installs no `preimage` override so `WHERE date_part('year', ts) = …`
   never prunes in UTC. For temporal, `String`, and `Null` inputs it accepts only the exact 38
