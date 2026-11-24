@@ -5,7 +5,7 @@ use datafusion::arrow::array::{Int32Array, Int64Array, ListArray};
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Schema, TimeUnit};
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::common::metadata::FieldMetadata;
-use datafusion::common::{DFSchema, Result, ScalarValue, exec_err};
+use datafusion::common::{DFSchema, Result, ScalarValue, Spans, exec_err};
 use datafusion::datasource::MemTable;
 use datafusion::functions_aggregate::count::count_udaf;
 use datafusion::logical_expr::expr::{AggregateFunction, Alias, ScalarFunction, Sort, Unnest};
@@ -296,7 +296,7 @@ fn synthetic_alias_has_no_metadata_while_existing_alias_keeps_its_metadata() {
     let bare_col_proj =
         LogicalPlan::Projection(Projection::try_new(vec![col("d")], Arc::clone(&scan)).unwrap());
     let wrapped_col = wrap_subquery_output(bare_col_proj).unwrap();
-    let LogicalPlan::Projection(ref proj) = wrapped_col else {
+    let LogicalPlan::Projection(proj) = &wrapped_col else {
         panic!("expected projection");
     };
     let Expr::Alias(Alias { metadata, .. }) = &proj.expr[0] else {
@@ -323,7 +323,7 @@ fn synthetic_alias_has_no_metadata_while_existing_alias_keeps_its_metadata() {
         .unwrap(),
     );
     let wrapped_cast = wrap_subquery_output(cast_proj).unwrap();
-    let LogicalPlan::Projection(ref cast_out) = wrapped_cast else {
+    let LogicalPlan::Projection(cast_out) = &wrapped_cast else {
         panic!("expected projection");
     };
     let Expr::Alias(Alias {
@@ -341,7 +341,7 @@ fn synthetic_alias_has_no_metadata_while_existing_alias_keeps_its_metadata() {
         input: Arc::clone(&scan),
     });
     let wrapped_limit = wrap_subquery_output(limit_plan).unwrap();
-    let LogicalPlan::Projection(ref limit_out) = wrapped_limit else {
+    let LogicalPlan::Projection(limit_out) = &wrapped_limit else {
         panic!("expected projection over limit");
     };
     let Expr::Alias(Alias {
@@ -364,7 +364,7 @@ fn synthetic_alias_has_no_metadata_while_existing_alias_keeps_its_metadata() {
         .unwrap(),
     );
     let wrapped_aliased = wrap_subquery_output(aliased_proj).unwrap();
-    let LogicalPlan::Projection(ref aliased_out) = wrapped_aliased else {
+    let LogicalPlan::Projection(aliased_out) = &wrapped_aliased else {
         panic!("expected projection");
     };
     let Expr::Alias(Alias {
@@ -404,7 +404,7 @@ fn unexpanded_generator_placeholders_defer_wrap_until_expanded() {
         let subq = Subquery {
             subquery: Arc::new(proj.clone()),
             outer_ref_columns: vec![],
-            spans: Default::default(),
+            spans: Spans::default(),
         };
         assert!(!scalar_subquery_needs_wrap(&subq), "{placeholder}");
 
@@ -416,7 +416,7 @@ fn unexpanded_generator_placeholders_defer_wrap_until_expanded() {
         let subq_limited = Subquery {
             subquery: Arc::new(limited),
             outer_ref_columns: vec![],
-            spans: Default::default(),
+            spans: Spans::default(),
         };
         assert!(!scalar_subquery_needs_wrap(&subq_limited), "{placeholder}");
     }
@@ -432,20 +432,20 @@ fn unexpanded_generator_placeholders_defer_wrap_until_expanded() {
     let unnest_subq = Subquery {
         subquery: Arc::new(unnest_proj),
         outer_ref_columns: vec![],
-        spans: Default::default(),
+        spans: Spans::default(),
     };
     assert!(scalar_subquery_needs_wrap(&unnest_subq));
 }
 
 #[test]
-fn second_pass_wraps_post_coercion_nonnull_subquery_and_peels_stale_cast_nonnull() {
+fn second_pass_wraps_post_coercion_nonnull_subquery() {
     let nullable_scan = Arc::new(field_id_scan_plan("b", DataType::Int32, true));
     let nullable_subq = Subquery {
         subquery: Arc::new(LogicalPlan::Projection(
             Projection::try_new(vec![col("b")], Arc::clone(&nullable_scan)).unwrap(),
         )),
         outer_ref_columns: vec![],
-        spans: Default::default(),
+        spans: Spans::default(),
     };
     let outer_before = LogicalPlan::Projection(
         Projection::try_new(
@@ -462,7 +462,7 @@ fn second_pass_wraps_post_coercion_nonnull_subquery_and_peels_stale_cast_nonnull
         subquery: Arc::new(LogicalPlan::Projection(
             Projection::try_new(
                 vec![Expr::ScalarFunction(ScalarFunction::new_udf(
-                    Arc::clone(&spark_nonnull),
+                    spark_nonnull,
                     vec![col("b")],
                 ))],
                 Arc::clone(&nullable_scan),
@@ -470,7 +470,7 @@ fn second_pass_wraps_post_coercion_nonnull_subquery_and_peels_stale_cast_nonnull
             .unwrap(),
         )),
         outer_ref_columns: vec![],
-        spans: Default::default(),
+        spans: Spans::default(),
     };
     let outer_after_spark_nullability = LogicalPlan::Projection(
         Projection::try_new(
@@ -490,14 +490,18 @@ fn second_pass_wraps_post_coercion_nonnull_subquery_and_peels_stale_cast_nonnull
     assert!(pass2.data.schema().field(0).is_nullable());
     let pass3 = wrap_plan(pass2.data).unwrap();
     assert!(!pass3.transformed);
+}
 
+#[test]
+fn second_pass_peels_stale_cast_nonnull_and_keeps_guaranteed_date() {
+    let spark_nonnull = StubUdf::new(SPARK_NONNULL_NAME, false);
     let empty_date_scan = Arc::new(field_id_scan_plan("d", DataType::Date32, false));
     let date_subq = Subquery {
         subquery: Arc::new(LogicalPlan::Projection(
             Projection::try_new(vec![col("d")], empty_date_scan).unwrap(),
         )),
         outer_ref_columns: vec![],
-        spans: Default::default(),
+        spans: Spans::default(),
     };
     let stale_cast = Expr::ScalarFunction(ScalarFunction::new_udf(
         Arc::clone(&spark_nonnull),
@@ -530,7 +534,7 @@ fn second_pass_wraps_post_coercion_nonnull_subquery_and_peels_stale_cast_nonnull
             .unwrap(),
         )),
         outer_ref_columns: vec![],
-        spans: Default::default(),
+        spans: Spans::default(),
     };
     let kept_cast = Expr::ScalarFunction(ScalarFunction::new_udf(
         spark_nonnull,
@@ -555,7 +559,7 @@ fn second_pass_wraps_post_coercion_nonnull_subquery_and_peels_stale_cast_nonnull
 }
 
 #[tokio::test]
-async fn analyzer_wraps_empty_subquery_and_keeps_count_star_nonnull() {
+async fn session_seats_rule_before_coercion_and_at_end() {
     let session = ReparkSession::new().unwrap();
     let analyzer_names: Vec<String> = session
         .context()
@@ -578,6 +582,11 @@ async fn analyzer_wraps_empty_subquery_and_keeps_count_star_nonnull() {
         analyzer_names.last().map(String::as_str),
         Some(ANALYZER_RULE_NAME)
     );
+}
+
+#[tokio::test]
+async fn analyzer_wraps_empty_subquery_and_keeps_count_star_nonnull() {
+    let session = ReparkSession::new().unwrap();
 
     let empty_schema = Arc::new(Schema::new(vec![Field::new("b", DataType::Int32, false)]));
     let empty_tbl = MemTable::try_new(empty_schema, vec![vec![]]).unwrap();
