@@ -1,5 +1,6 @@
 use std::any::Any;
 use std::collections::{HashMap, HashSet};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use async_trait::async_trait;
@@ -28,6 +29,7 @@ use crate::view_ddl::read::{
 use crate::view_ddl::temp_settings::{TempViewSettings, plan_under_overlay, view_filter_pushdown};
 
 const MAX_TEMP_VIEW_WALK: usize = 4096;
+static NEXT_VIEW_ID: AtomicU64 = AtomicU64::new(1);
 
 pub(crate) struct TempViewDefinition {
     pub(crate) home: Vec<String>,
@@ -40,6 +42,7 @@ pub(crate) struct TempViewDefinition {
 }
 
 pub(crate) struct ReplanningTempView {
+    id: u64,
     ctx: SessionContext,
     catalogs: CatalogRegistry,
     definition: TempViewDefinition,
@@ -63,16 +66,24 @@ pub(crate) fn definition_plan(provider: &dyn TableProvider) -> Option<LogicalPla
         .or_else(|| frame_plan(provider))
 }
 
-pub(crate) fn plan_and_settings(
+pub(crate) fn view_cache_key(provider: &dyn TableProvider) -> Option<u64> {
+    let any: &dyn Any = provider;
+    any.downcast_ref::<ReplanningTempView>().map(|view| view.id)
+}
+
+pub(crate) async fn live_replanning_plan(
+    provider: &dyn TableProvider,
+) -> Result<Option<(LogicalPlan, TempViewSettings)>> {
+    let any: &dyn Any = provider;
+    let Some(view) = any.downcast_ref::<ReplanningTempView>() else {
+        return Ok(None);
+    };
+    view.live_plan_and_settings().await
+}
+
+pub(crate) fn static_view_plan(
     provider: &dyn TableProvider,
 ) -> Option<(LogicalPlan, Option<TempViewSettings>)> {
-    let any: &dyn Any = provider;
-    if let Some(view) = any.downcast_ref::<ReplanningTempView>() {
-        return Some((
-            view.definition_plan.clone(),
-            Some(view.definition.settings.clone()),
-        ));
-    }
     if let Some((plan, settings)) = frame_plan_and_settings(provider) {
         return Some((plan, Some(settings)));
     }
@@ -134,6 +145,42 @@ impl TableProvider for ReplanningTempView {
 }
 
 impl ReplanningTempView {
+    async fn live_plan_and_settings(&self) -> Result<Option<(LogicalPlan, TempViewSettings)>> {
+        let guard = self.catalogs.view_expansion_guard();
+        if guard.level() > MAX_VIEW_EXPANSION_DEPTH {
+            return Ok(None);
+        }
+        if refuse_dropped_dependency(&self.ctx, &self.dependencies).is_err() {
+            return Ok(None);
+        }
+        let mut state = self.ctx.state();
+        self.definition
+            .settings
+            .apply(state.config_mut().options_mut());
+        let options = Arc::clone(state.config_options());
+        state.execution_props_mut().config_options = Some(options);
+        let planner = SessionContext::new_with_state(state);
+        let frame = on_grown_stack_with(
+            VIEW_EXPANSION_STACK_RED_ZONE,
+            VIEW_EXPANSION_STACK_SEGMENT,
+            view_body(plan_definition(
+                &planner,
+                &self.catalogs,
+                &self.definition,
+                &TempHomes::Captured(&self.temp_homes),
+            )),
+        )
+        .await?;
+        let Ok(frame) = conform_to_creation_schema(frame, &self.schema, &self.definition.display)
+        else {
+            return Ok(None);
+        };
+        Ok(Some((
+            frame.logical_plan().clone(),
+            self.definition.settings.clone(),
+        )))
+    }
+
     async fn scan_replanned(
         &self,
         state: &dyn Session,
@@ -224,6 +271,7 @@ pub(crate) async fn replanning_temp_view(
         .into_inner()
         .unwrap_or_else(PoisonError::into_inner);
     Ok(Arc::new(ReplanningTempView {
+        id: NEXT_VIEW_ID.fetch_add(1, Ordering::Relaxed),
         ctx: ctx.clone(),
         catalogs: catalogs.clone(),
         schema: frame_names::strip_schema_ids(Arc::new(frame.schema().as_arrow().clone())),
@@ -330,6 +378,7 @@ pub(crate) fn renamed_temp_view(
         settings: view.definition.settings.clone(),
     };
     Ok(Some(Arc::new(ReplanningTempView {
+        id: NEXT_VIEW_ID.fetch_add(1, Ordering::Relaxed),
         ctx: view.ctx.clone(),
         catalogs: view.catalogs.clone(),
         definition,
@@ -663,6 +712,7 @@ mod tests {
         references: Vec<Vec<String>>,
     ) -> ReplanningTempView {
         ReplanningTempView {
+            id: NEXT_VIEW_ID.fetch_add(1, Ordering::Relaxed),
             ctx: ctx.clone(),
             catalogs: CatalogRegistry::new(),
             definition: TempViewDefinition {

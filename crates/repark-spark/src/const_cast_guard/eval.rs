@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use datafusion::arrow::datatypes::{DataType, Schema as ArrowSchema};
+use datafusion::arrow::datatypes::{DataType, Schema as ArrowSchema, TimeUnit};
 use datafusion::arrow::record_batch::{RecordBatch, RecordBatchOptions};
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::{Column, DFSchema, ScalarValue};
@@ -20,7 +20,11 @@ use repark_functions::ansi::spark_ansi_enabled_from_options;
 use repark_functions::cast_map::EMPTY_MAP_CAST_NAME;
 use repark_functions::timestamp_ntz_cast::TRY_TIMESTAMP_NTZ_CAST_NAME;
 
-use super::walk_plan;
+use super::spark_grammar::{
+    eval_string_cast_with_grammar, invalid_input_error, is_valid_spark_timestamp_ltz,
+    spark_type_name,
+};
+use super::{ViewPlanCache, walk_plan};
 
 const PARSE_JAVA_DOUBLE: &str = "__repark_parse_java_double__";
 const PARSE_JAVA_FLOAT: &str = "__repark_parse_java_float__";
@@ -40,6 +44,7 @@ pub(super) struct EvalContext<'a> {
     pub(super) env: &'a Env,
     pub(super) options: &'a ConfigOptions,
     pub(super) plan_depth: usize,
+    pub(super) views: &'a ViewPlanCache,
 }
 
 impl EvalContext<'_> {
@@ -114,7 +119,7 @@ fn eval_expr_depth(
 }
 
 fn walk_subquery(ctx: &EvalContext<'_>, plan: &LogicalPlan) -> Result<()> {
-    let _ = walk_plan(plan, ctx.options, None, ctx.plan_depth + 1, true)?;
+    let _ = walk_plan(plan, ctx.options, None, ctx.plan_depth + 1, true, ctx.views)?;
     Ok(())
 }
 
@@ -359,7 +364,11 @@ fn eval_case(ctx: &EvalContext<'_>, case: &Case, depth: usize) -> Result<Option<
     }
 }
 
-fn scalars_equal(options: &ConfigOptions, left: &ScalarValue, right: &ScalarValue) -> bool {
+pub(super) fn scalars_equal(
+    options: &ConfigOptions,
+    left: &ScalarValue,
+    right: &ScalarValue,
+) -> bool {
     if left == right {
         return true;
     }
@@ -374,6 +383,15 @@ fn scalars_equal(options: &ConfigOptions, left: &ScalarValue, right: &ScalarValu
     )
 }
 
+fn scalar_as_str(scalar: &ScalarValue) -> Option<&str> {
+    match scalar {
+        ScalarValue::Utf8(Some(text))
+        | ScalarValue::LargeUtf8(Some(text))
+        | ScalarValue::Utf8View(Some(text)) => Some(text.as_str()),
+        _ => None,
+    }
+}
+
 fn eval_cast(ctx: &EvalContext<'_>, cast: &Cast, depth: usize) -> Result<Option<ScalarValue>> {
     let Some(input) = eval_expr_depth(ctx, &cast.expr, depth)? else {
         return Ok(None);
@@ -381,6 +399,11 @@ fn eval_cast(ctx: &EvalContext<'_>, cast: &Cast, depth: usize) -> Result<Option<
     let target = cast.field.data_type();
     if input.is_null() {
         return Ok(ScalarValue::try_from(target).ok());
+    }
+    if let Some(text) = scalar_as_str(&input)
+        && let Some(result) = eval_string_cast_with_grammar(text, target, ctx.ansi_enabled())
+    {
+        return result;
     }
     if matches!(
         target,
@@ -396,6 +419,12 @@ fn eval_cast(ctx: &EvalContext<'_>, cast: &Cast, depth: usize) -> Result<Option<
     match eval_literal_expr(ctx.options, &rebuilt) {
         Ok(scalar) => Ok(Some(scalar)),
         Err(error) => {
+            if matches!(target, DataType::Timestamp(TimeUnit::Microsecond, Some(_)))
+                && let Some(text) = scalar_as_str(&input)
+                && is_valid_spark_timestamp_ltz(text)
+            {
+                return Ok(None);
+            }
             if !ctx.ansi_enabled() {
                 return Ok(None);
             }
@@ -470,6 +499,16 @@ fn eval_scalar_function(
         let target = function.func.return_type(&[input.data_type()]).ok();
         return Ok(target.and_then(|data_type| ScalarValue::try_from(&data_type).ok()));
     }
+    if is_cast
+        && !is_try_cast_udf(name, &function.args)
+        && function.args.len() == 1
+        && let Some(Some(input)) = arg_vals.first()
+        && let Some(text) = scalar_as_str(input)
+        && let Ok(target) = function.func.return_type(&[input.data_type()])
+        && let Some(result) = eval_string_cast_with_grammar(text, &target, ctx.ansi_enabled())
+    {
+        return result;
+    }
 
     let lit_args = arg_vals
         .iter()
@@ -484,6 +523,19 @@ fn eval_scalar_function(
     match eval_literal_expr(ctx.options, &rebuilt) {
         Ok(scalar) => Ok(Some(scalar)),
         Err(error) => {
+            if is_cast
+                && !is_try_cast_udf(name, &function.args)
+                && function.args.len() == 1
+                && let Some(Some(input)) = arg_vals.first()
+                && let Some(text) = scalar_as_str(input)
+                && matches!(
+                    function.func.return_type(&[input.data_type()]),
+                    Ok(DataType::Timestamp(TimeUnit::Microsecond, Some(_)))
+                )
+                && is_valid_spark_timestamp_ltz(text)
+            {
+                return Ok(None);
+            }
             if !is_cast || !ctx.ansi_enabled() || is_try_cast_udf(name, &function.args) {
                 return Ok(None);
             }
@@ -750,6 +802,15 @@ fn normalize_cast_udf_error(
     if has_spark_error_class(&text) {
         return error;
     }
+    if matches!(name, "to_timestamp_ltz" | "to_timestamp_ntz") && function.args.len() == 2 {
+        let rendered = arg_vals
+            .first()
+            .and_then(|val| val.as_ref())
+            .map_or_else(|| "NULL".to_string(), ToString::to_string);
+        return DataFusionError::Execution(format!(
+            "[CANNOT_PARSE_TIMESTAMP] Text {rendered} could not be parsed. SQLSTATE: 22007"
+        ));
+    }
     if let Some(Some(input)) = arg_vals.first()
         && let Ok(target) = function.func.return_type(&[input.data_type()])
     {
@@ -762,6 +823,8 @@ fn has_spark_error_class(message: &str) -> bool {
     message.contains("[CAST_INVALID_INPUT]")
         || message.contains("[CAST_OVERFLOW]")
         || message.contains("[NUMERIC_VALUE_OUT_OF_RANGE")
+        || message.contains("[NUMERIC_OUT_OF_SUPPORTED_RANGE]")
+        || message.contains("[CANNOT_PARSE_TIMESTAMP]")
         || message.contains("[INVALID_INTERVAL_FORMAT")
         || message.contains("[DATATYPE_MISMATCH")
 }
@@ -862,16 +925,6 @@ fn format_spark_cast_error(
     }
 }
 
-fn invalid_input_error(text: &str, from: &str, to: &str) -> DataFusionError {
-    let escaped = text.replace('\\', "\\\\").replace('\'', "\\'");
-    DataFusionError::Execution(format!(
-        "[CAST_INVALID_INPUT] The value '{escaped}' of the type \"{from}\" cannot be cast to \
-         \"{to}\" because it is malformed. Correct the value as per the syntax, or change its \
-         target type. Use `try_cast` to tolerate malformed input and return NULL instead. \
-         SQLSTATE: 22018"
-    ))
-}
-
 fn is_valid_decimal_text(text: &str) -> bool {
     let trimmed = text.trim();
     if trimmed.is_empty() {
@@ -909,30 +962,4 @@ fn is_valid_decimal_text(text: &str) -> bool {
         }
     }
     true
-}
-
-fn spark_type_name(data_type: &DataType) -> String {
-    match data_type {
-        DataType::Boolean => "BOOLEAN".to_string(),
-        DataType::Int8 => "TINYINT".to_string(),
-        DataType::Int16 => "SMALLINT".to_string(),
-        DataType::Int32 => "INT".to_string(),
-        DataType::Int64 => "BIGINT".to_string(),
-        DataType::Float32 => "FLOAT".to_string(),
-        DataType::Float64 => "DOUBLE".to_string(),
-        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => "STRING".to_string(),
-        DataType::Date32 | DataType::Date64 => "DATE".to_string(),
-        DataType::Timestamp(_, Some(_)) => "TIMESTAMP".to_string(),
-        DataType::Timestamp(_, None) => "TIMESTAMP_NTZ".to_string(),
-        DataType::Decimal128(precision, scale) | DataType::Decimal256(precision, scale) => {
-            format!("DECIMAL({precision},{scale})")
-        }
-        DataType::Interval(_) => "INTERVAL".to_string(),
-        DataType::List(field) | DataType::LargeList(field) | DataType::FixedSizeList(field, _) => {
-            format!("ARRAY<{}>", spark_type_name(field.data_type()))
-        }
-        DataType::Struct(_) => "STRUCT".to_string(),
-        DataType::Map(_, _) => "MAP".to_string(),
-        other => format!("{other}"),
-    }
 }

@@ -353,17 +353,417 @@ fn is_cast_error_ignores_non_cast_spark_errors() {
     let ordering = DataFusionError::Plan(
         "[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c = m)\"".to_string(),
     );
-    assert!(!super::is_cast_error(&ordering));
+    assert!(!super::probes::is_cast_error(&ordering));
 
     for msg in [
         "[CAST_INVALID_INPUT] bad",
         "[CAST_OVERFLOW] big",
         "[NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION] big",
+        "[NUMERIC_OUT_OF_SUPPORTED_RANGE] big",
+        "[CANNOT_PARSE_TIMESTAMP] bad",
         "[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] bad",
     ] {
         assert!(
-            super::is_cast_error(&DataFusionError::Execution(msg.to_string())),
+            super::probes::is_cast_error(&DataFusionError::Execution(msg.to_string())),
             "{msg}"
         );
     }
+}
+
+#[test]
+fn spark_grammar_date_and_timestamp_boundaries() {
+    use super::spark_grammar::{
+        is_valid_spark_timestamp_ltz, parse_spark_date, parse_spark_timestamp_ntz,
+    };
+
+    for valid in [
+        " 2024-01-01 ",
+        "\t2024-01-01\n",
+        "2024",
+        "2024-01",
+        "2024-1",
+        "2024-1-1",
+        "2024-02-29",
+        "2024-01-01T12:34:56",
+        "2024-01-01 12:34:56",
+        "2024-01-01T",
+        "2024-01-01 garbage",
+        "+2024-01-01",
+        "02024-01-01",
+        "0000-01-01",
+        "-0001-01-01",
+        "10000-01-01",
+    ] {
+        assert!(parse_spark_date(valid).is_some(), "DATE valid: {valid:?}");
+    }
+    for invalid in [
+        "",
+        "   ",
+        "x",
+        "2023-02-29",
+        "2024-13-01",
+        "2024-00-01",
+        "2024-01-32",
+        "2024-01-01Z",
+        "2024-01-01+02:00",
+        "2024 T",
+        "2024-01 00:00:00",
+        "2024-01-01\t12:00:00",
+        "2024-01-",
+        "999-01-01",
+    ] {
+        assert!(
+            parse_spark_date(invalid).is_none(),
+            "DATE invalid: {invalid:?}"
+        );
+    }
+
+    for valid in [
+        "2024",
+        "2024-01",
+        "2024-1",
+        "2024-1-1",
+        " 2024-01-01 00:00:00 ",
+        "2024-01-01T12:34:56",
+        "2024-01-01T12:34:56.1234567890",
+        "2024-01-01 1:2:3",
+        "2024-01-01 12:34:56.",
+        "2024-01-01T12:34",
+        "2024-01-01 12",
+        "2024-01-01 12:34:56Z",
+        "2024-01-01 12:34:56+02:00",
+        "2024-01-01 12:34:56+02",
+        "2024-01-01 12:34:56-05:30:10",
+        "2024-01-01 12:34:56 America/New_York",
+        "2024-01-01 12:34:56 UTC",
+        "-0001-01-01 00:00:00",
+    ] {
+        assert!(
+            parse_spark_timestamp_ntz(valid).is_some(),
+            "NTZ valid: {valid:?}"
+        );
+        assert!(is_valid_spark_timestamp_ltz(valid), "LTZ valid: {valid:?}");
+    }
+    assert!(is_valid_spark_timestamp_ltz("12:34:56"));
+    assert!(is_valid_spark_timestamp_ltz("T12:34:56"));
+    for invalid in [
+        "",
+        "x",
+        "12:34:56",
+        "T12:34:56",
+        "2023-02-29 00:00:00",
+        "2024-01-01 24:00:00",
+        "2024-01-01 23:60:00",
+        "2024-01-01 23:59:60",
+        "2024-01-01 12:34:56 BADZONE",
+        "2024-01-01T",
+    ] {
+        assert!(
+            parse_spark_timestamp_ntz(invalid).is_none(),
+            "NTZ invalid: {invalid:?}"
+        );
+    }
+    assert!(!is_valid_spark_timestamp_ltz("2024-01-01 12:34:56 BADZONE"));
+    assert!(!is_valid_spark_timestamp_ltz("2024-01-01T"));
+    assert!(!is_valid_spark_timestamp_ltz("x"));
+}
+
+#[test]
+fn spark_grammar_float_boundaries() {
+    use super::spark_grammar::{parse_spark_double, parse_spark_float};
+
+    for valid in [
+        "0x1.0p0",
+        " 0x1.0p0 ",
+        "-0x1.8p+1",
+        "+0X1p-2",
+        "0x1p0d",
+        "0x1p0f",
+        "0x1.p0",
+        "0x.8p0",
+        "0x10p0f",
+        "0x1p-1075",
+        "0x1p1024",
+        "+0x0p0",
+        "1d",
+        "1f",
+        " 1.5D ",
+        "\t-2.5f\n",
+        "Infinity",
+        "+Infinity",
+        "-Infinity",
+        "Inf",
+        "inf",
+        "-inf",
+        "NaN",
+        "nan",
+        "-NaN",
+        "1e309",
+        ".5",
+        "1.",
+        "1.0e+10",
+    ] {
+        assert!(parse_spark_double(valid).is_some(), "DBL valid: {valid:?}");
+        assert!(parse_spark_float(valid).is_some(), "FLT valid: {valid:?}");
+    }
+    for invalid in [
+        "",
+        "   ",
+        "x",
+        "0x10",
+        "0x1p",
+        "Infinityd",
+        concat!("NaN", "d"),
+        "NaNf",
+        "Inff",
+        "1 d",
+        ".",
+        "1e",
+        "1_000.0",
+        "1dd",
+    ] {
+        assert!(
+            parse_spark_double(invalid).is_none(),
+            "DBL invalid: {invalid:?}"
+        );
+    }
+}
+
+#[test]
+fn spark_grammar_decimal_and_integral_boundaries() {
+    use super::spark_grammar::{SparkDecimalOutcome, parse_spark_decimal, parse_spark_integral};
+    use datafusion::arrow::datatypes::DataType;
+
+    assert!(matches!(
+        parse_spark_decimal("1e4", 5, 0),
+        SparkDecimalOutcome::Ok(10_000)
+    ));
+    assert!(matches!(
+        parse_spark_decimal(" 1e4 ", 5, 0),
+        SparkDecimalOutcome::Ok(10_000)
+    ));
+    assert!(matches!(
+        parse_spark_decimal("9.99994e4", 5, 0),
+        SparkDecimalOutcome::Ok(99_999)
+    ));
+    assert!(matches!(
+        parse_spark_decimal("9.99995e4", 5, 0),
+        SparkDecimalOutcome::OutOfRange
+    ));
+    assert!(matches!(
+        parse_spark_decimal("1e5", 5, 0),
+        SparkDecimalOutcome::OutOfRange
+    ));
+    assert!(matches!(
+        parse_spark_decimal("100000e-1", 5, 0),
+        SparkDecimalOutcome::Ok(10_000)
+    ));
+    assert!(matches!(
+        parse_spark_decimal("0.0000001e10", 5, 0),
+        SparkDecimalOutcome::Ok(1_000)
+    ));
+    assert!(matches!(
+        parse_spark_decimal("0e37", 5, 0),
+        SparkDecimalOutcome::Ok(0)
+    ));
+    assert!(matches!(
+        parse_spark_decimal("0e38", 5, 0),
+        SparkDecimalOutcome::OutOfSupportedRange
+    ));
+    assert!(matches!(
+        parse_spark_decimal("1e38", 5, 0),
+        SparkDecimalOutcome::OutOfSupportedRange
+    ));
+    assert!(matches!(
+        parse_spark_decimal("0e-1000", 5, 0),
+        SparkDecimalOutcome::Ok(0)
+    ));
+    assert!(matches!(
+        parse_spark_decimal("1e-1000", 5, 0),
+        SparkDecimalOutcome::Ok(0)
+    ));
+    assert!(matches!(
+        parse_spark_decimal(".5", 5, 0),
+        SparkDecimalOutcome::Ok(1)
+    ));
+    assert!(matches!(
+        parse_spark_decimal("999.994", 5, 2),
+        SparkDecimalOutcome::Ok(99_999)
+    ));
+    assert!(matches!(
+        parse_spark_decimal("999.995", 5, 2),
+        SparkDecimalOutcome::OutOfRange
+    ));
+    assert!(matches!(
+        parse_spark_decimal("-999.995", 5, 2),
+        SparkDecimalOutcome::OutOfRange
+    ));
+    assert!(matches!(
+        parse_spark_decimal("999.994999999999", 5, 2),
+        SparkDecimalOutcome::Ok(99_999)
+    ));
+    for invalid in ["", "   ", ".", "1d", "0x1p0", "NaN", "Infinity", "1_000"] {
+        assert!(
+            matches!(
+                parse_spark_decimal(invalid, 5, 0),
+                SparkDecimalOutcome::InvalidInput
+            ),
+            "DEC invalid: {invalid:?}"
+        );
+    }
+
+    assert!(parse_spark_integral(" 42 ", &DataType::Int32).is_some());
+    assert!(parse_spark_integral("+42", &DataType::Int32).is_some());
+    assert!(parse_spark_integral("-0", &DataType::Int32).is_some());
+    assert!(parse_spark_integral("2147483647", &DataType::Int32).is_some());
+    assert!(parse_spark_integral("2147483648", &DataType::Int32).is_none());
+    assert!(parse_spark_integral("1.0", &DataType::Int32).is_none());
+    assert!(parse_spark_integral("1e3", &DataType::Int32).is_none());
+    assert!(parse_spark_integral("9223372036854775807", &DataType::Int64).is_some());
+    assert!(parse_spark_integral("9223372036854775808", &DataType::Int64).is_none());
+}
+
+#[tokio::test]
+async fn outer_join_and_merge_action_rules_match_spark() -> Result<()> {
+    let wh = TempDir::new()?;
+    let session = spark_session(&wh, true).await?;
+
+    exec(&session, "CREATE TABLE ice.ns.real2 (id INT)").await?;
+    exec(&session, "INSERT INTO ice.ns.real2 VALUES (2)").await?;
+    exec(&session, "CREATE TABLE ice.ns.t_dbl (x DOUBLE)").await?;
+    exec(&session, "INSERT INTO ice.ns.t_dbl VALUES (9.0)").await?;
+    exec(&session, "CREATE TABLE ice.ns.t_ts (x TIMESTAMP)").await?;
+    exec(
+        &session,
+        "INSERT INTO ice.ns.t_ts VALUES (TIMESTAMP '2020-01-01 00:00:00')",
+    )
+    .await?;
+
+    exec(
+        &session,
+        "INSERT OVERWRITE ice.ns.t_dbl SELECT CAST(r.s AS DOUBLE) FROM ice.ns.real2 l \
+         LEFT JOIN (SELECT 1 AS id, 'x' AS s) r ON l.id = r.id",
+    )
+    .await?;
+    assert_eq!(row_count(&session, "ice.ns.t_dbl").await?, 1);
+
+    exec(
+        &session,
+        "INSERT OVERWRITE ice.ns.t_ts SELECT CAST(r.s AS TIMESTAMP) FROM ice.ns.real2 l \
+         LEFT JOIN (SELECT 1 AS id, 'x' AS s) r ON false",
+    )
+    .await?;
+    exec(
+        &session,
+        "INSERT OVERWRITE ice.ns.t_ts SELECT CAST(l.s AS TIMESTAMP) FROM (SELECT 1 AS id, 'x' AS s) l \
+         RIGHT JOIN ice.ns.real2 r ON l.id = r.id",
+    )
+    .await?;
+
+    let err = exec(
+        &session,
+        "INSERT OVERWRITE ice.ns.t_dbl SELECT CAST(r.s AS DOUBLE) FROM (SELECT 1 AS id) l \
+         LEFT JOIN (SELECT 1 AS id, 'x' AS s) r ON l.id = r.id WHERE 1 = 0",
+    )
+    .await;
+    assert!(err.is_err_and(|e| e.to_string().contains("[CAST_INVALID_INPUT]")));
+
+    exec(&session, "CREATE TABLE ice.ns.t_mg (id INT, x TIMESTAMP)").await?;
+    exec(
+        &session,
+        "INSERT INTO ice.ns.t_mg VALUES (1, TIMESTAMP '2020-01-01 00:00:00')",
+    )
+    .await?;
+    exec(
+        &session,
+        "MERGE INTO ice.ns.t_mg t USING (SELECT 2 AS id, 'x' AS s) src ON t.id = src.id \
+         WHEN MATCHED THEN UPDATE SET x = CAST(src.s AS TIMESTAMP)",
+    )
+    .await?;
+    exec(
+        &session,
+        "MERGE INTO ice.ns.t_mg t USING (SELECT 1 AS id, 'x' AS s) src ON false \
+         WHEN MATCHED THEN UPDATE SET x = CAST(src.s AS TIMESTAMP)",
+    )
+    .await?;
+    let err = exec(
+        &session,
+        "MERGE INTO ice.ns.t_mg t USING (SELECT 2 AS id, 'x' AS s) src ON t.id = src.id \
+         WHEN MATCHED THEN UPDATE SET x = CAST('x' AS TIMESTAMP)",
+    )
+    .await;
+    assert!(err.is_err_and(|e| e.to_string().contains("[CAST_INVALID_INPUT]")));
+    Ok(())
+}
+
+#[tokio::test]
+async fn replaced_temp_view_and_fc_rules_match_spark() -> Result<()> {
+    let wh = TempDir::new()?;
+    let session = spark_session(&wh, true).await?;
+
+    exec(&session, "CREATE TABLE ice.ns.t_ts (x TIMESTAMP)").await?;
+    exec(
+        &session,
+        "INSERT INTO ice.ns.t_ts VALUES (TIMESTAMP '2020-01-01 00:00:00')",
+    )
+    .await?;
+
+    exec(
+        &session,
+        "CREATE OR REPLACE TEMP VIEW tv_r1 AS SELECT 'x' AS s",
+    )
+    .await?;
+    exec(
+        &session,
+        "CREATE OR REPLACE TEMP VIEW tv_r2 AS SELECT CAST(s AS TIMESTAMP) AS x FROM tv_r1",
+    )
+    .await?;
+    exec(
+        &session,
+        "CREATE OR REPLACE TEMP VIEW tv_r1 AS SELECT '2024-01-01 00:00:00' AS s",
+    )
+    .await?;
+    exec(&session, "INSERT OVERWRITE ice.ns.t_ts SELECT x FROM tv_r2").await?;
+    assert_eq!(row_count(&session, "ice.ns.t_ts").await?, 1);
+
+    exec(
+        &session,
+        "CREATE OR REPLACE TEMP VIEW tv_c1 AS SELECT '2024-01-01 00:00:00' AS s",
+    )
+    .await?;
+    exec(
+        &session,
+        "CREATE OR REPLACE TEMP VIEW tv_c2 AS SELECT s FROM tv_c1",
+    )
+    .await?;
+    exec(
+        &session,
+        "CREATE OR REPLACE TEMP VIEW tv_c1 AS SELECT 'x' AS s",
+    )
+    .await?;
+    let err = exec(
+        &session,
+        "INSERT OVERWRITE ice.ns.t_ts SELECT CAST(s AS TIMESTAMP) FROM tv_c2 WHERE 1 = 0",
+    )
+    .await;
+    assert!(err.is_err_and(|e| e.to_string().contains("[CAST_INVALID_INPUT]")));
+    assert_eq!(row_count(&session, "ice.ns.t_ts").await?, 1);
+
+    let err = exec(
+        &session,
+        "INSERT OVERWRITE ice.ns.t_ts SELECT to_timestamp_ltz(s, 'yyyy-MM-dd') \
+         FROM (SELECT 'x' AS s) q WHERE 1 = 0",
+    )
+    .await;
+    assert!(err.is_err_and(|e| e.to_string().contains("[CANNOT_PARSE_TIMESTAMP]")));
+
+    let err = exec(
+        &session,
+        "INSERT OVERWRITE ice.ns.t_ts SELECT CAST('x' AS TIMESTAMP) \
+         FROM (SELECT COUNT(*) AS c FROM (SELECT 1 AS a LIMIT 0) q) a WHERE 1 = 0",
+    )
+    .await;
+    assert!(err.is_err_and(|e| e.to_string().contains("[CAST_INVALID_INPUT]")));
+
+    Ok(())
 }

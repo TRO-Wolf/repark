@@ -419,7 +419,7 @@ async fn refuse_non_deterministic(
         )));
     }
     if crate::const_cast_guard::sql_expr_has_explicit_cast(predicate) {
-        crate::const_cast_guard::validate_write_plan(ctx, check.logical_plan())?;
+        crate::const_cast_guard::validate_write_plan(ctx, check.logical_plan()).await?;
     }
     Ok(())
 }

@@ -223,7 +223,7 @@ pub(crate) async fn execute_partition_overwrite(
     refuse_partition_overwrite_sources(ctx, &table, table_name, &filled, &reserved).await?;
     let column_names = filled.columns;
     let source_df = spark_ast::execute_passthrough(ctx, catalogs, &filled.sql).await?;
-    crate::const_cast_guard::validate_write_plan(ctx, source_df.logical_plan())?;
+    crate::const_cast_guard::validate_write_plan(ctx, source_df.logical_plan()).await?;
     let pairing = StructPairing::from_source_by_name(
         options.source_by_name,
         !crate::spark_door_case_insensitive(ctx.state().config().options()),

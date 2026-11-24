@@ -294,7 +294,7 @@ async fn execute_passthrough_inner(
     };
     let plan = crate::insert_timestamp_ns::after_analysis(plan)?;
     if is_eager_command || mode.insert_source {
-        crate::const_cast_guard::validate_write_plan(ctx, &plan)?;
+        crate::const_cast_guard::validate_write_plan(ctx, &plan).await?;
     }
     if mode.insert_source {
         return ctx.execute_logical_plan(insert_input(&plan)?).await;
