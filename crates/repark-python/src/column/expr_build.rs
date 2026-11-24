@@ -343,6 +343,7 @@ pub(super) fn build_expr_context() -> datafusion::error::Result<SessionContext> 
     rules.push(std::sync::Arc::new(repark_spark::FoldSparkNumericCasts));
     rules.push(std::sync::Arc::new(repark_spark::SparkProjectionDisplay));
     rules.extend(repark_spark::spark_literal_typing::spark_door_post_coercion_rules());
+    rules.push(repark_core::scalar_nullable::analyzer_rule());
     let state = SessionStateBuilder::new()
         .with_type_planner(repark_functions::spark_type_planner())
         .with_config(config)
@@ -966,6 +967,10 @@ mod tests {
         assert_eq!(names[seat + 1], "spark_string_integral_cast");
         assert_eq!(names[seat + 2], "repark_scalar_subquery_nullability");
         assert_eq!(names[seat - 1], "spark_map_subscript");
+        assert_eq!(
+            names.last().map(String::as_str),
+            Some("repark_scalar_subquery_nullability")
+        );
         let planners = context.state().expr_planners().len();
         let bare = SessionContext::new().state().expr_planners().len();
         assert!(planners > bare);

@@ -1,8 +1,7 @@
 use std::sync::{Arc, LazyLock};
 
-use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
+use datafusion::arrow::datatypes::{DataType, FieldRef};
 use datafusion::common::config::ConfigOptions;
-use datafusion::common::metadata::FieldMetadata;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
 use datafusion::common::{Column, DFSchema, DFSchemaRef, Result, ScalarValue, exec_err, plan_err};
 use datafusion::logical_expr::expr::{Alias, Exists, InSubquery, ScalarFunction, SetComparison};
@@ -21,6 +20,12 @@ const ANALYZER_RULE_NAME: &str = "repark_scalar_subquery_nullability";
 const STRIP_RULE_NAME: &str = "repark_strip_scalar_nullable";
 
 const TYPE_COERCION_RULE_NAME: &str = "type_coercion";
+
+const SPARK_NONNULL_NAME: &str = "__repark_spark_nonnull__";
+
+const TIMESTAMP_NTZ_CAST_NAME: &str = "__repark_cast_timestamp_ntz__";
+
+const ZONE_SEAM_NAME: &str = "__repark_zone_seam__";
 
 static SCALAR_NULLABLE: LazyLock<Arc<ScalarUDF>> = LazyLock::new(|| {
     Arc::new(ScalarUDF::from(ScalarNullable {
@@ -88,6 +93,11 @@ impl ScalarUDFImpl for ScalarNullable {
     }
 }
 
+#[must_use]
+pub fn analyzer_rule() -> Arc<dyn AnalyzerRule + Send + Sync> {
+    Arc::new(ReparkScalarSubqueryNullability)
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub fn insert_before_coercion(
     mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
@@ -100,7 +110,7 @@ pub fn insert_before_coercion(
             "cannot seat {ANALYZER_RULE_NAME}: {TYPE_COERCION_RULE_NAME} missing from analyzer list"
         );
     };
-    rules.insert(position, Arc::new(ReparkScalarSubqueryNullability));
+    rules.insert(position, analyzer_rule());
     Ok(rules)
 }
 
@@ -193,6 +203,66 @@ fn scalar_subquery_needs_wrap(subquery: &Subquery) -> bool {
     fields.len() == 1
         && !fields[0].is_nullable()
         && !guaranteed_at_least_one_row(subquery.subquery.as_ref())
+        && !plan_has_unexpanded_generator(subquery.subquery.as_ref())
+}
+
+fn plan_has_unexpanded_generator(plan: &LogicalPlan) -> bool {
+    let mut found = false;
+    let _ = plan.apply(|node| {
+        if let LogicalPlan::Projection(projection) = node
+            && projection_has_unexpanded_generator(&projection.expr)
+        {
+            found = true;
+            return Ok(TreeNodeRecursion::Stop);
+        }
+        Ok(TreeNodeRecursion::Continue)
+    });
+    found
+}
+
+fn projection_has_unexpanded_generator(expressions: &[Expr]) -> bool {
+    expressions.iter().any(|expr| {
+        let mut found = false;
+        let _ = expr.apply(|node| match node {
+            Expr::ScalarSubquery(_)
+            | Expr::Exists(_)
+            | Expr::InSubquery(_)
+            | Expr::SetComparison(_) => Ok(TreeNodeRecursion::Jump),
+            Expr::ScalarFunction(call) if is_unexpanded_generator_placeholder(call.name()) => {
+                found = true;
+                Ok(TreeNodeRecursion::Stop)
+            }
+            _ => Ok(TreeNodeRecursion::Continue),
+        });
+        found
+    })
+}
+
+fn plan_input_schema(plan: &LogicalPlan) -> DFSchema {
+    let mut schema = DFSchema::empty();
+    for input in plan.inputs() {
+        schema.merge(input.schema());
+    }
+    schema
+}
+
+fn cast_wrapper_has_nullable_operand(expr: &Expr, schema: &DFSchema) -> bool {
+    let operand = match expr {
+        Expr::Cast(cast) => cast.expr.as_ref(),
+        Expr::ScalarFunction(call)
+            if matches!(
+                call.func.name(),
+                "to_timestamp" | TIMESTAMP_NTZ_CAST_NAME | ZONE_SEAM_NAME
+            ) =>
+        {
+            let Some(first) = call.args.first() else {
+                return false;
+            };
+            first
+        }
+        _ => return false,
+    };
+    operand.nullable(schema).unwrap_or(false)
 }
 
 fn rewrite_wrap_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
@@ -201,6 +271,7 @@ fn rewrite_wrap_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
         transformed: children_changed,
         ..
     } = plan.map_children(rewrite_wrap_plan)?;
+    let input_schema = plan_input_schema(&plan);
     let preserver = NamePreserver::new(&plan);
     let Transformed {
         data: plan,
@@ -208,7 +279,7 @@ fn rewrite_wrap_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
         ..
     } = plan.map_expressions(|expr| {
         let saved = preserver.save(&expr);
-        expr.transform_up(rewrite_wrap_expr)?
+        expr.transform_up(|node| rewrite_wrap_expr(node, &input_schema))?
             .map_data(|rewritten| Ok(saved.restore(rewritten)))
     })?;
     if children_changed || exprs_changed {
@@ -218,7 +289,7 @@ fn rewrite_wrap_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     }
 }
 
-fn rewrite_wrap_expr(expr: Expr) -> Result<Transformed<Expr>> {
+fn rewrite_wrap_expr(expr: Expr, input_schema: &DFSchema) -> Result<Transformed<Expr>> {
     match expr {
         Expr::ScalarSubquery(mut subquery) => {
             let Transformed {
@@ -297,6 +368,16 @@ fn rewrite_wrap_expr(expr: Expr) -> Result<Transformed<Expr>> {
                 TreeNodeRecursion::Continue,
             ))
         }
+        Expr::ScalarFunction(ScalarFunction { func, mut args })
+            if func.name() == SPARK_NONNULL_NAME
+                && args.len() == 1
+                && cast_wrapper_has_nullable_operand(&args[0], input_schema) =>
+        {
+            let Some(inner) = args.pop() else {
+                return plan_err!("{SPARK_NONNULL_NAME} missing inner expression");
+            };
+            Ok(Transformed::yes(inner))
+        }
         other => Ok(Transformed::no(other)),
     }
 }
@@ -305,7 +386,6 @@ fn wrap_subquery_output(plan: LogicalPlan) -> Result<LogicalPlan> {
     let (relation, field) = plan.schema().qualified_field(0);
     let relation = relation.cloned();
     let name = field.name().clone();
-    let metadata = field_metadata(field);
     match plan {
         LogicalPlan::Projection(Projection {
             mut expr, input, ..
@@ -324,8 +404,7 @@ fn wrap_subquery_output(plan: LogicalPlan) -> Result<LogicalPlan> {
                     alias_name,
                     alias_metadata,
                 ),
-                other => scalar_nullable_call(other)
-                    .alias_qualified_with_metadata(relation, name, metadata),
+                other => scalar_nullable_call(other).alias_qualified(relation, name),
             };
             Ok(LogicalPlan::Projection(Projection::try_new(
                 vec![wrapped],
@@ -334,18 +413,13 @@ fn wrap_subquery_output(plan: LogicalPlan) -> Result<LogicalPlan> {
         }
         other => {
             let column = Expr::Column(Column::new(relation.clone(), name.clone()));
-            let wrapped = scalar_nullable_call(column)
-                .alias_qualified_with_metadata(relation, name, metadata);
+            let wrapped = scalar_nullable_call(column).alias_qualified(relation, name);
             Ok(LogicalPlan::Projection(Projection::try_new(
                 vec![wrapped],
                 Arc::new(other),
             )?))
         }
     }
-}
-
-fn field_metadata(field: &Field) -> Option<FieldMetadata> {
-    (!field.metadata().is_empty()).then(|| FieldMetadata::from(field.metadata().clone()))
 }
 
 pub(crate) fn strip_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
@@ -548,7 +622,7 @@ fn projection_may_drop_rows(expressions: &[Expr]) -> bool {
     })
 }
 
-fn is_row_dropping_generator(name: &str) -> bool {
+fn is_unexpanded_generator_placeholder(name: &str) -> bool {
     matches!(
         name.to_ascii_lowercase().as_str(),
         "explode"
@@ -557,10 +631,15 @@ fn is_row_dropping_generator(name: &str) -> bool {
             | "posexplode_outer"
             | "inline"
             | "inline_outer"
+            | "json_tuple"
             | "stack"
-            | "unnest"
             | "__repark_gen_alias"
+            | "__repark_gen_bare"
     )
+}
+
+fn is_row_dropping_generator(name: &str) -> bool {
+    is_unexpanded_generator_placeholder(name) || name.eq_ignore_ascii_case("unnest")
 }
 
 fn limit_keeps_at_least_one_row(limit: &Limit) -> bool {
@@ -593,330 +672,5 @@ fn integer_literal_value(expr: &Expr) -> Option<i128> {
 }
 
 #[cfg(test)]
-mod tests {
-    use std::collections::HashMap;
-    use std::sync::Arc;
-
-    use datafusion::arrow::array::{Int32Array, Int64Array, ListArray};
-    use datafusion::arrow::datatypes::{DataType, Field, Schema};
-    use datafusion::arrow::record_batch::RecordBatch;
-    use datafusion::common::{DFSchema, ScalarValue};
-    use datafusion::datasource::MemTable;
-    use datafusion::functions_aggregate::count::count_udaf;
-    use datafusion::logical_expr::expr::{AggregateFunction, Sort, Unnest};
-    use datafusion::logical_expr::logical_plan::{
-        Aggregate, Distinct, EmptyRelation, Filter, Limit, Projection, Sort as SortPlan,
-        SubqueryAlias, Union, Values,
-    };
-    use datafusion::logical_expr::{Expr, GroupingSet, LogicalPlan, LogicalPlanBuilder, col, lit};
-    use datafusion::optimizer::{AnalyzerRule, OptimizerContext, OptimizerRule};
-
-    use super::{
-        ANALYZER_RULE_NAME, ReparkScalarSubqueryNullability, SCALAR_NULLABLE_NAME,
-        StripScalarNullable, guaranteed_at_least_one_row, insert_before_coercion, udf,
-    };
-    use crate::ReparkSession;
-
-    fn one_row_plan() -> LogicalPlan {
-        LogicalPlan::EmptyRelation(EmptyRelation {
-            produce_one_row: true,
-            schema: Arc::new(DFSchema::empty()),
-        })
-    }
-
-    fn zero_row_plan() -> LogicalPlan {
-        LogicalPlan::EmptyRelation(EmptyRelation {
-            produce_one_row: false,
-            schema: Arc::new(DFSchema::empty()),
-        })
-    }
-
-    fn count_star_expr() -> Expr {
-        Expr::AggregateFunction(AggregateFunction::new_udf(
-            count_udaf(),
-            vec![lit(1_i64)],
-            false,
-            None,
-            vec![],
-            None,
-        ))
-    }
-
-    fn nonnull_scan_plan() -> LogicalPlan {
-        let schema = Arc::new(Schema::new(vec![Field::new("b", DataType::Int32, false)]));
-        let table = MemTable::try_new(schema, vec![vec![]]).unwrap();
-        LogicalPlanBuilder::scan(
-            "empty_nn",
-            datafusion::datasource::provider_as_source(Arc::new(table)),
-            None,
-        )
-        .unwrap()
-        .build()
-        .unwrap()
-    }
-
-    #[test]
-    fn row_guarantee_empty_relations_and_values() {
-        assert!(guaranteed_at_least_one_row(&one_row_plan()));
-        assert!(!guaranteed_at_least_one_row(&zero_row_plan()));
-        let non_empty_values = LogicalPlan::Values(Values {
-            schema: Arc::new(
-                DFSchema::from_unqualified_fields(
-                    vec![Field::new("c", DataType::Int32, false)].into(),
-                    HashMap::new(),
-                )
-                .unwrap(),
-            ),
-            values: vec![vec![lit(1_i32)]],
-        });
-        assert!(guaranteed_at_least_one_row(&non_empty_values));
-        let empty_values = LogicalPlan::Values(Values {
-            schema: Arc::new(
-                DFSchema::from_unqualified_fields(
-                    vec![Field::new("c", DataType::Int32, false)].into(),
-                    HashMap::new(),
-                )
-                .unwrap(),
-            ),
-            values: vec![],
-        });
-        assert!(!guaranteed_at_least_one_row(&empty_values));
-        assert!(!guaranteed_at_least_one_row(&nonnull_scan_plan()));
-    }
-
-    #[test]
-    fn row_guarantee_aggregates_and_grouping_sets() {
-        let scan = Arc::new(nonnull_scan_plan());
-        let ungrouped = LogicalPlan::Aggregate(
-            Aggregate::try_new(Arc::clone(&scan), vec![], vec![count_star_expr()]).unwrap(),
-        );
-        assert!(guaranteed_at_least_one_row(&ungrouped));
-        let grouped = LogicalPlan::Aggregate(
-            Aggregate::try_new(Arc::clone(&scan), vec![col("b")], vec![count_star_expr()]).unwrap(),
-        );
-        assert!(!guaranteed_at_least_one_row(&grouped));
-        let rollup = LogicalPlan::Aggregate(
-            Aggregate::try_new(
-                Arc::clone(&scan),
-                vec![Expr::GroupingSet(GroupingSet::Rollup(vec![col("b")]))],
-                vec![count_star_expr()],
-            )
-            .unwrap(),
-        );
-        assert!(!guaranteed_at_least_one_row(&rollup));
-        let cube = LogicalPlan::Aggregate(
-            Aggregate::try_new(
-                Arc::clone(&scan),
-                vec![Expr::GroupingSet(GroupingSet::Cube(vec![col("b")]))],
-                vec![count_star_expr()],
-            )
-            .unwrap(),
-        );
-        assert!(!guaranteed_at_least_one_row(&cube));
-        let grouping_sets = LogicalPlan::Aggregate(
-            Aggregate::try_new(
-                Arc::clone(&scan),
-                vec![Expr::GroupingSet(GroupingSet::GroupingSets(vec![vec![]]))],
-                vec![count_star_expr()],
-            )
-            .unwrap(),
-        );
-        assert!(!guaranteed_at_least_one_row(&grouping_sets));
-        let with_having = LogicalPlan::Filter(
-            Filter::try_new(col("count(Int64(1))").gt(lit(0_i64)), Arc::new(ungrouped)).unwrap(),
-        );
-        assert!(!guaranteed_at_least_one_row(&with_having));
-    }
-
-    #[test]
-    fn row_guarantee_projection_sort_limit_filter_distinct_union() {
-        let lit_proj = LogicalPlan::Projection(
-            Projection::try_new(vec![lit(1_i32)], Arc::new(one_row_plan())).unwrap(),
-        );
-        assert!(guaranteed_at_least_one_row(&lit_proj));
-        let empty_list = ScalarValue::List(Arc::new(ListArray::new_null(
-            Arc::new(Field::new("item", DataType::Int32, true)),
-            1,
-        )));
-        let unnest_proj = LogicalPlan::Projection(
-            Projection::try_new(
-                vec![Expr::Unnest(Unnest::new(lit(empty_list)))],
-                Arc::new(one_row_plan()),
-            )
-            .unwrap(),
-        );
-        assert!(!guaranteed_at_least_one_row(&unnest_proj));
-        let sort_no_fetch = LogicalPlan::Sort(SortPlan {
-            expr: vec![Sort::new(lit(1_i32), true, false)],
-            input: Arc::new(lit_proj.clone()),
-            fetch: None,
-        });
-        assert!(guaranteed_at_least_one_row(&sort_no_fetch));
-        let sort_fetch_one = LogicalPlan::Sort(SortPlan {
-            expr: vec![Sort::new(lit(1_i32), true, false)],
-            input: Arc::new(lit_proj.clone()),
-            fetch: Some(1),
-        });
-        assert!(guaranteed_at_least_one_row(&sort_fetch_one));
-        let sort_fetch_zero = LogicalPlan::Sort(SortPlan {
-            expr: vec![Sort::new(lit(1_i32), true, false)],
-            input: Arc::new(lit_proj.clone()),
-            fetch: Some(0),
-        });
-        assert!(!guaranteed_at_least_one_row(&sort_fetch_zero));
-        let limit_one = LogicalPlan::Limit(Limit {
-            skip: Some(Box::new(lit(0_i32))),
-            fetch: Some(Box::new(lit(1_u64))),
-            input: Arc::new(lit_proj.clone()),
-        });
-        assert!(guaranteed_at_least_one_row(&limit_one));
-        let limit_zero = LogicalPlan::Limit(Limit {
-            skip: None,
-            fetch: Some(Box::new(lit(0_i64))),
-            input: Arc::new(lit_proj.clone()),
-        });
-        assert!(!guaranteed_at_least_one_row(&limit_zero));
-        let limit_offset = LogicalPlan::Limit(Limit {
-            skip: Some(Box::new(lit(1_i64))),
-            fetch: Some(Box::new(lit(1_i64))),
-            input: Arc::new(lit_proj.clone()),
-        });
-        assert!(!guaranteed_at_least_one_row(&limit_offset));
-        let filter_true =
-            LogicalPlan::Filter(Filter::try_new(lit(true), Arc::new(lit_proj.clone())).unwrap());
-        assert!(guaranteed_at_least_one_row(&filter_true));
-        let filter_false =
-            LogicalPlan::Filter(Filter::try_new(lit(false), Arc::new(lit_proj.clone())).unwrap());
-        assert!(!guaranteed_at_least_one_row(&filter_false));
-        let distinct_all = LogicalPlan::Distinct(Distinct::All(Arc::new(lit_proj.clone())));
-        assert!(guaranteed_at_least_one_row(&distinct_all));
-        let alias = LogicalPlan::SubqueryAlias(
-            SubqueryAlias::try_new(Arc::new(lit_proj.clone()), "a").unwrap(),
-        );
-        assert!(guaranteed_at_least_one_row(&alias));
-        let zero_proj = LogicalPlan::Projection(
-            Projection::try_new(vec![lit(1_i32)], Arc::new(zero_row_plan())).unwrap(),
-        );
-        let union_guaranteed = LogicalPlan::Union(
-            Union::try_new(vec![Arc::new(zero_proj.clone()), Arc::new(lit_proj)]).unwrap(),
-        );
-        assert!(guaranteed_at_least_one_row(&union_guaranteed));
-        let union_empty = LogicalPlan::Union(
-            Union::try_new(vec![Arc::new(zero_proj.clone()), Arc::new(zero_proj)]).unwrap(),
-        );
-        assert!(!guaranteed_at_least_one_row(&union_empty));
-    }
-
-    #[test]
-    fn seat_helper_places_rule_immediately_before_type_coercion() {
-        let rules = insert_before_coercion(datafusion::optimizer::Analyzer::new().rules).unwrap();
-        let names: Vec<&str> = rules.iter().map(|rule| rule.name()).collect();
-        let seat = names
-            .iter()
-            .position(|name| *name == ANALYZER_RULE_NAME)
-            .unwrap();
-        let coercion = names
-            .iter()
-            .position(|name| *name == "type_coercion")
-            .unwrap();
-        assert_eq!(seat + 1, coercion);
-    }
-
-    #[tokio::test]
-    async fn analyzer_wraps_empty_subquery_and_keeps_count_star_nonnull() {
-        let session = ReparkSession::new().unwrap();
-        let empty_schema = Arc::new(Schema::new(vec![Field::new("b", DataType::Int32, false)]));
-        let empty_tbl = MemTable::try_new(empty_schema, vec![vec![]]).unwrap();
-        session
-            .context()
-            .register_table("empty_nn", Arc::new(empty_tbl))
-            .unwrap();
-        let left_schema = Arc::new(Schema::new(vec![Field::new("id", DataType::Int32, false)]));
-        let left_batch = RecordBatch::try_new(
-            Arc::clone(&left_schema),
-            vec![Arc::new(Int32Array::from(vec![1, 2]))],
-        )
-        .unwrap();
-        let left_tbl = MemTable::try_new(left_schema, vec![vec![left_batch]]).unwrap();
-        session
-            .context()
-            .register_table("l_nn", Arc::new(left_tbl))
-            .unwrap();
-
-        let empty_df = session
-            .sql("SELECT (SELECT b FROM empty_nn) IS NULL AS r")
-            .await
-            .unwrap();
-        let empty_opt = empty_df.clone().into_optimized_plan().unwrap();
-        let empty_plan_text = empty_opt.display_indent().to_string();
-        assert!(!empty_plan_text.contains(SCALAR_NULLABLE_NAME));
-        let empty_batches = empty_df.collect().await.unwrap();
-        let flag = empty_batches[0]
-            .column(0)
-            .as_any()
-            .downcast_ref::<datafusion::arrow::array::BooleanArray>()
-            .unwrap()
-            .value(0);
-        assert!(flag);
-
-        let count_df = session
-            .sql("SELECT (SELECT COUNT(*) FROM empty_nn) IS NULL AS r")
-            .await
-            .unwrap();
-        let count_opt = count_df.clone().into_optimized_plan().unwrap();
-        assert!(
-            count_opt
-                .display_indent()
-                .to_string()
-                .contains("Boolean(false)")
-        );
-        let count_batches = count_df.collect().await.unwrap();
-        let count_flag = count_batches[0]
-            .column(0)
-            .as_any()
-            .downcast_ref::<datafusion::arrow::array::BooleanArray>()
-            .unwrap()
-            .value(0);
-        assert!(!count_flag);
-
-        let cte_df = session
-            .sql("WITH c AS (SELECT id, (SELECT b FROM empty_nn) AS r FROM l_nn) SELECT id, r IS NULL AS n, COALESCE(r, 42) AS c FROM c ORDER BY id")
-            .await
-            .unwrap();
-        let cte_batches = cte_df.collect().await.unwrap();
-        let n_col = cte_batches[0]
-            .column(1)
-            .as_any()
-            .downcast_ref::<datafusion::arrow::array::BooleanArray>()
-            .unwrap();
-        let c_col = cte_batches[0]
-            .column(2)
-            .as_any()
-            .downcast_ref::<Int64Array>()
-            .unwrap();
-        assert!(n_col.value(0) && n_col.value(1));
-        assert_eq!(c_col.value(0), 42);
-        assert_eq!(c_col.value(1), 42);
-
-        let raw_plan = session
-            .context()
-            .state()
-            .create_logical_plan("SELECT (SELECT b FROM empty_nn) AS r")
-            .await
-            .unwrap();
-        let analyzed_once = ReparkScalarSubqueryNullability
-            .analyze(raw_plan, session.context().state().config_options())
-            .unwrap();
-        assert!(analyzed_once.schema().field(0).is_nullable());
-        let optimizer_ctx = OptimizerContext::new();
-        let second = ReparkScalarSubqueryNullability
-            .rewrite(analyzed_once.clone(), &optimizer_ctx)
-            .unwrap();
-        assert!(!second.transformed);
-        let stripped_surviving = StripScalarNullable
-            .rewrite(analyzed_once, &optimizer_ctx)
-            .unwrap();
-        assert!(!stripped_surviving.transformed);
-        assert!(udf().name() == SCALAR_NULLABLE_NAME);
-    }
-}
+#[path = "scalar_nullable_tests.rs"]
+mod tests;

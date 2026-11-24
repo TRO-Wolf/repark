@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 
 import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 from _scalar_subquery_empty_null_1_cells import (
     ANSI_MODES,
+    DELTA1_F001_CELLS,
+    DELTA1_F002_CELLS,
+    DELTA1_F003_TV_EXPECTED,
     DF_EXPECTED,
     NATIVE_SQL_BUG_CELLS,
     PHYS_UNCORR_CELLS,
@@ -69,7 +74,7 @@ def build_spark_session(warehouse: Path, name: str, ansi: str) -> SparkSession:
     )
 
 
-def seed_spark_tables(session: SparkSession) -> None:
+def seed_spark_tables(session: SparkSession, parquet_root: Path | None = None) -> None:
     session.sql("CREATE NAMESPACE IF NOT EXISTS ice.ns").collect()
     session.sql(
         "CREATE TABLE ice.ns.empty_nn (id INT NOT NULL, b INT NOT NULL, "
@@ -83,6 +88,52 @@ def seed_spark_tables(session: SparkSession) -> None:
         "CREATE TABLE ice.ns.r_nn (id INT NOT NULL, b INT NOT NULL) USING iceberg"
     ).collect()
     session.sql("INSERT INTO ice.ns.r_nn VALUES (2, 20)").collect()
+    session.sql(
+        "CREATE TABLE ice.ns.one_nn (id INT NOT NULL, b INT NOT NULL, "
+        "d DATE NOT NULL, ts TIMESTAMP NOT NULL, dec DECIMAL(10, 2) NOT NULL) USING iceberg"
+    ).collect()
+    session.sql(
+        "INSERT INTO ice.ns.one_nn VALUES "
+        "(1, 10, DATE '2024-01-15', TIMESTAMP '2024-01-15 12:30:00', CAST(12.34 AS DECIMAL(10, 2)))"
+    ).collect()
+    session.sql(
+        "CREATE TABLE ice.ns.empty_typed (id INT NOT NULL, b INT NOT NULL, "
+        "d DATE NOT NULL, ts TIMESTAMP NOT NULL, dec DECIMAL(10, 2) NOT NULL) USING iceberg"
+    ).collect()
+    session.sql(
+        "CREATE TABLE ice.ns.empty_null (id INT, b INT, ts TIMESTAMP) USING iceberg"
+    ).collect()
+    if parquet_root is not None:
+        parquet_root.mkdir(parents=True, exist_ok=True)
+        pq_schema = pa.schema(
+            [
+                pa.field("id", pa.int32(), nullable=False),
+                pa.field("b", pa.int32(), nullable=False),
+                pa.field("d", pa.date32(), nullable=False),
+            ]
+        )
+        one_tbl = pa.table(
+            {
+                "id": pa.array([1], type=pa.int32()),
+                "b": pa.array([10], type=pa.int32()),
+                "d": pa.array([datetime.date(2024, 1, 15)], type=pa.date32()),
+            },
+            schema=pq_schema,
+        )
+        empty_tbl = pa.table(
+            {
+                "id": pa.array([], type=pa.int32()),
+                "b": pa.array([], type=pa.int32()),
+                "d": pa.array([], type=pa.date32()),
+            },
+            schema=pq_schema,
+        )
+        one_path = parquet_root / "one_nn.parquet"
+        empty_path = parquet_root / "empty_nn.parquet"
+        pq.write_table(one_tbl, one_path)
+        pq.write_table(empty_tbl, empty_path)
+        session.read.parquet(str(one_path)).createOrReplaceTempView("pq_one_nn")
+        session.read.parquet(str(empty_path)).createOrReplaceTempView("pq_empty_nn")
 
 
 def measure_df_cells(session: SparkSession) -> dict[str, dict[str, Any]]:
@@ -167,7 +218,139 @@ def measure_df_cells(session: SparkSession) -> dict[str, dict[str, Any]]:
         "filter_scalar_isnotnull": capture_arrow(
             lambda: left.filter(scalar_col.isNotNull()).select("id").toArrow()
         ),
+        "f002_selectexpr_cast_b_smallint": capture_arrow(
+            lambda: left.selectExpr(
+                "id", "(SELECT CAST(b AS SMALLINT) FROM ice.ns.one_nn) AS r"
+            ).toArrow()
+        ),
+        "f002_selectexpr_cast_d_ts_empty": capture_arrow(
+            lambda: left.selectExpr(
+                "id", "(SELECT CAST(d AS TIMESTAMP) FROM ice.ns.empty_typed) IS NULL AS r"
+            ).toArrow()
+        ),
+        "f003_fexpr_named_struct_isnull": capture_arrow(
+            lambda: (
+                left.withColumn(
+                    "r",
+                    f.expr("(SELECT named_struct('a', CAST(NULL AS INT)) WHERE false) IS NULL"),
+                )
+                .select("id", "r")
+                .toArrow()
+            )
+        ),
+        "f003_fexpr_nse_isnull": capture_arrow(
+            lambda: (
+                left.withColumn(
+                    "r",
+                    f.expr("(SELECT (CAST(NULL AS INT) <=> 1) WHERE false) IS NULL"),
+                )
+                .select("id", "r")
+                .toArrow()
+            )
+        ),
+        "f003_fexpr_explode_empty_isnull": capture_arrow(
+            lambda: (
+                left.withColumn(
+                    "r",
+                    f.expr("(SELECT explode(filter(array(1), x -> x > 5))) IS NULL"),
+                )
+                .select("id", "r")
+                .toArrow()
+            )
+        ),
+        "f003_fexpr_nse_bare_schema": capture_arrow(
+            lambda: (
+                left.withColumn("r", f.expr("(SELECT (CAST(NULL AS INT) <=> 1) WHERE false)"))
+                .select("id", "r")
+                .toArrow()
+            )
+        ),
     }
+
+
+def measure_f003_tempviews(session: SparkSession) -> tuple[dict[str, Any], dict[str, bool]]:
+    views = (
+        (
+            "tv_f003_nse",
+            "SELECT id, (SELECT (b <=> 1) FROM ice.ns.empty_null) AS r FROM ice.ns.l_nn",
+        ),
+        (
+            "tv_f003_struct",
+            "SELECT id, (SELECT named_struct('a', CAST(NULL AS INT)) FROM ice.ns.empty_null) AS r "
+            "FROM ice.ns.l_nn",
+        ),
+        (
+            "tv_f003_map",
+            "SELECT id, (SELECT map('a', CAST(NULL AS INT)) FROM ice.ns.empty_null) AS r "
+            "FROM ice.ns.l_nn",
+        ),
+        (
+            "tv_f003_expl_alias",
+            "SELECT id, (SELECT explode(filter(array(1), x -> x > 5)) AS x) AS r FROM ice.ns.l_nn",
+        ),
+        (
+            "tv_f003_expl_bare",
+            "SELECT id, (SELECT explode(filter(array(1), x -> x > 5))) AS r FROM ice.ns.l_nn",
+        ),
+        (
+            "tv_f003_win",
+            "SELECT id, (SELECT window(ts, '1 hour') FROM ice.ns.empty_null) AS r FROM ice.ns.l_nn",
+        ),
+    )
+    schema_nullable: dict[str, bool] = {}
+    setup_errors: dict[str, str] = {}
+    for view_name, body in views:
+        try:
+            session.sql(f"CREATE OR REPLACE TEMP VIEW {view_name} AS {body}").collect()
+            df = session.sql(body)
+            schema_nullable[view_name] = bool(df.schema["r"].nullable)
+        except Exception as exc:
+            setup_errors[view_name] = f"{type(exc).__name__}: {exc}"
+            schema_nullable[view_name] = False
+    view_queries = (
+        (
+            "f003_tv_sql_nse_where",
+            "tv_f003_nse",
+            "SELECT id FROM tv_f003_nse WHERE r IS NULL ORDER BY id",
+        ),
+        (
+            "f003_tv_sql_nse_isnull",
+            "tv_f003_nse",
+            "SELECT id, r IS NULL AS n FROM tv_f003_nse ORDER BY id",
+        ),
+        (
+            "f003_tv_sql_struct_where",
+            "tv_f003_struct",
+            "SELECT id FROM tv_f003_struct WHERE r IS NULL ORDER BY id",
+        ),
+        (
+            "f003_tv_sql_map_where",
+            "tv_f003_map",
+            "SELECT id FROM tv_f003_map WHERE r IS NULL ORDER BY id",
+        ),
+        (
+            "f003_tv_sql_explode_alias_where",
+            "tv_f003_expl_alias",
+            "SELECT id FROM tv_f003_expl_alias WHERE r IS NULL ORDER BY id",
+        ),
+        (
+            "f003_tv_sql_explode_bare_where",
+            "tv_f003_expl_bare",
+            "SELECT id FROM tv_f003_expl_bare WHERE r IS NULL ORDER BY id",
+        ),
+        (
+            "f003_tv_sql_window_where",
+            "tv_f003_win",
+            "SELECT id FROM tv_f003_win WHERE r IS NULL ORDER BY id",
+        ),
+    )
+    cells: dict[str, Any] = {}
+    for cell_id, view_name, query in view_queries:
+        if view_name in setup_errors:
+            cells[cell_id] = {"ok": False, "error": setup_errors[view_name]}
+        else:
+            cells[cell_id] = capture_arrow(lambda q=query: session.sql(q).toArrow())
+    return cells, schema_nullable
 
 
 def measure_spark_writes(warehouse: Path, ansi: str) -> dict[str, Any]:
@@ -199,6 +382,31 @@ def measure_spark_writes(warehouse: Path, ansi: str) -> dict[str, Any]:
         ).collect()
         out["ctas_bare"] = capture_arrow(
             lambda: session.sql("SELECT id, r FROM ice.ns.dst_bare ORDER BY id").toArrow()
+        )
+        session.sql(
+            "CREATE TABLE ice.ns.dst_f002_cast (id INT NOT NULL, v INT) USING iceberg"
+        ).collect()
+        out["f002_insert_cast_subq"] = capture_arrow(
+            lambda: (
+                session.sql(
+                    "INSERT INTO ice.ns.dst_f002_cast "
+                    "SELECT id, CAST((SELECT CAST(b AS SMALLINT) FROM ice.ns.one_nn) AS INT) "
+                    "FROM ice.ns.l_nn"
+                ).collect(),
+                session.sql("SELECT id, v FROM ice.ns.dst_f002_cast ORDER BY id").toArrow(),
+            )[1]
+        )
+        session.sql(
+            "CREATE TABLE ice.ns.dst_f002_col (id INT NOT NULL, v INT) USING iceberg"
+        ).collect()
+        out["f002_insert_col_subq"] = capture_arrow(
+            lambda: (
+                session.sql(
+                    "INSERT INTO ice.ns.dst_f002_col "
+                    "SELECT id, (SELECT b FROM ice.ns.one_nn) FROM ice.ns.l_nn"
+                ).collect(),
+                session.sql("SELECT id, v FROM ice.ns.dst_f002_col ORDER BY id").toArrow(),
+            )[1]
         )
         for key, stmt in (
             (
@@ -300,6 +508,10 @@ def measured(tmp_path_factory: pytest.TempPathFactory) -> Iterator[dict[str, Any
         "spark_sql": {},
         "spark_ctrl": {},
         "df": {},
+        "delta1_f001": {},
+        "delta1_f002": {},
+        "delta1_f003_tv": {},
+        "delta1_f003_schema": {},
         "stored": {},
         "phys": {},
         "explain": {},
@@ -308,7 +520,7 @@ def measured(tmp_path_factory: pytest.TempPathFactory) -> Iterator[dict[str, Any
 
     session = build_spark_session(root / "wh_read", "scalar-subq-read", "false")
     try:
-        seed_spark_tables(session)
+        seed_spark_tables(session, root / "pq_data")
         for ansi in ANSI_MODES:
             session.conf.set("spark.sql.ansi.enabled", ansi)
             results["spark_sql"][ansi] = {
@@ -319,7 +531,18 @@ def measured(tmp_path_factory: pytest.TempPathFactory) -> Iterator[dict[str, Any
                 cell_id: capture_arrow(lambda q=sql: session.sql(q).toArrow())
                 for cell_id, sql, _ in SQL_CONTROL_CELLS
             }
+            results["delta1_f001"][ansi] = {
+                cell_id: capture_arrow(lambda q=sql: session.sql(q).toArrow())
+                for cell_id, sql, _ in DELTA1_F001_CELLS
+            }
+            results["delta1_f002"][ansi] = {
+                cell_id: capture_arrow(lambda q=sql: session.sql(q).toArrow())
+                for cell_id, sql, _ in DELTA1_F002_CELLS
+            }
             results["df"][ansi] = measure_df_cells(session)
+            tv_cells, tv_schema = measure_f003_tempviews(session)
+            results["delta1_f003_tv"][ansi] = tv_cells
+            results["delta1_f003_schema"][ansi] = tv_schema
 
         session.conf.set("spark.sql.ansi.enabled", "false")
         session.sql(
@@ -467,7 +690,11 @@ def test_dataframe_and_fexpr_doors(
 ) -> None:
     cell = measured["df"][ansi][cell_id]
     assert_cell_matches(cell, DF_EXPECTED[cell_id], f"df:{cell_id} (ansi={ansi})")
-    if cell_id in ("fexpr_withcol_bare", "fexpr_withcol_cast_date_ts"):
+    if cell_id in (
+        "fexpr_withcol_bare",
+        "fexpr_withcol_cast_date_ts",
+        "f003_fexpr_nse_bare_schema",
+    ):
         assert cell["nullability"]["r"] is True
 
 
@@ -519,8 +746,76 @@ def test_iceberg_hadoop_write_cells_spark_door(
     assert_cell_matches(writes["ctas_where"], [[1, 42], [2, 42]], f"ctas (ansi={ansi})")
     assert_cell_matches(writes["ctas_bare"], [[1, None], [2, None]], f"ctas_bare (ansi={ansi})")
     assert writes["ctas_bare"]["nullability"]["r"] is True
+    assert_cell_matches(
+        writes["f002_insert_cast_subq"], [[1, 10], [2, 10]], f"f002_insert_cast (ansi={ansi})"
+    )
+    assert_cell_matches(
+        writes["f002_insert_col_subq"], [[1, 10], [2, 10]], f"f002_insert_col (ansi={ansi})"
+    )
     assert writes["delete_refused"] == "AnalysisException"
     assert writes["update_refused"] == "AnalysisException"
+
+
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+@pytest.mark.parametrize(
+    ("cell_id", "sql", "expected"),
+    DELTA1_F001_CELLS,
+    ids=[cell[0] for cell in DELTA1_F001_CELLS],
+)
+def test_delta1_f001_generators_in_scalar_subqueries(
+    measured: dict[str, Any],
+    ansi: str,
+    cell_id: str,
+    sql: str,
+    expected: list[list[Any]],
+) -> None:
+    _ = sql
+    assert_cell_matches(
+        measured["delta1_f001"][ansi][cell_id], expected, f"f001:{cell_id} (ansi={ansi})"
+    )
+
+
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+@pytest.mark.parametrize(
+    ("cell_id", "sql", "expected"),
+    DELTA1_F002_CELLS,
+    ids=[cell[0] for cell in DELTA1_F002_CELLS],
+)
+def test_delta1_f002_iceberg_and_parquet_cast_metadata(
+    measured: dict[str, Any],
+    ansi: str,
+    cell_id: str,
+    sql: str,
+    expected: list[list[Any]],
+) -> None:
+    _ = sql
+    assert_cell_matches(
+        measured["delta1_f002"][ansi][cell_id], expected, f"f002:{cell_id} (ansi={ansi})"
+    )
+
+
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+@pytest.mark.parametrize("cell_id", list(DELTA1_F003_TV_EXPECTED.keys()))
+def test_delta1_f003_post_coercion_nonnull_temp_views(
+    measured: dict[str, Any],
+    ansi: str,
+    cell_id: str,
+) -> None:
+    assert_cell_matches(
+        measured["delta1_f003_tv"][ansi][cell_id],
+        DELTA1_F003_TV_EXPECTED[cell_id],
+        f"f003:{cell_id} (ansi={ansi})",
+    )
+
+
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+def test_delta1_f003_analyzed_schema_nullable(
+    measured: dict[str, Any],
+    ansi: str,
+) -> None:
+    schema_map = measured["delta1_f003_schema"][ansi]
+    for view_name, is_nullable in schema_map.items():
+        assert is_nullable is True, f"f003 schema nullable false for {view_name} (ansi={ansi})"
 
 
 def test_iceberg_hadoop_write_cells_native_door(measured: dict[str, Any]) -> None:

@@ -219,7 +219,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** `dead_datafusion_54_1_refusal` and the new `invalid_datafusion_config` echo
   the value masked; `spill.rs`'s `memory_limit` refusal likewise.
   **STAMP-2-R5P6-2 (2026-10-07):** `df_guards.rs` declares `df_guards/join_exact.rs` (`df_guards/map.md`).
-  **SCALAR-SUBQUERY-EMPTY-NULL-1 (2026-11-23):** `df_guards.rs` declares `df_guards/scalar_nullable.rs`, registers `__repark_scalar_nullable__`, seats `repark_scalar_subquery_nullability` before `type_coercion` and `simplify_expressions`, and seats `repark_strip_scalar_nullable` after `scalar_subquery_to_join`.
+  **SCALAR-SUBQUERY-EMPTY-NULL-1 (2026-11-23; Delta 1 2026-11-24):** `df_guards.rs` declares `df_guards/scalar_nullable.rs`, registers `__repark_scalar_nullable__`, seats `repark_scalar_subquery_nullability` before `type_coercion`, at the end of `finish_session_build`, and before `simplify_expressions`, and seats `repark_strip_scalar_nullable` after `scalar_subquery_to_join`.
   **U11-EDGE-1 (2026-09-26):** `df_guards.rs` declares `df_guards/case_bind.rs` (`frame_names`).
   **ATTR-ID-1 S1/S2b/S4/SJ-1 (2026-09-30..10-02):** `df_guards.rs` declares `attr_id.rs`, `attr_lineage.rs`, `frame_lineage.rs`, `self_join.rs` (`df_guards/map.md`); `StripAttributeIds` runs first in `unnest_safe_optimizer_rules`.
 - `tests/df_guard.rs` — DF 54.1 guard pins (split from `tests.rs`): Guard 1 (scalar-subquery default), Guard 2 (six leaf-pushdown pins, eighth `LEFT JOIN` extraction-collision decline, ninth `BoomOnProjection`), and the optimizer rule-order pin (`StripAttributeIds`, subquery, signed-zero, cast-shield, `repark_scalar_subquery_nullability` / `repark_strip_scalar_nullable`).

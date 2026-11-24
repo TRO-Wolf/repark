@@ -259,11 +259,28 @@ def run_df_door_cells(
     out["fexpr_filter_col_isnotnull"] = run_call(
         lambda: left_df.filter(funcs.expr("(SELECT 1 WHERE false) IS NOT NULL")).select("id")
     )
+    out["fexpr_filter_col_tbl_isnull"] = run_call(
+        lambda: left_df.filter(funcs.expr(f"(SELECT b FROM {empty}) IS NULL")).select("id")
+    )
     out["filter_str_inline_isnull"] = run_call(
         lambda: left_df.filter("(SELECT 1 WHERE false) IS NULL").select("id")
     )
     out["filter_str_inline_isnotnull"] = run_call(
         lambda: left_df.filter("(SELECT 1 WHERE false) IS NOT NULL").select("id")
+    )
+    out["filter_str_tbl_isnull"] = run_call(
+        lambda: left_df.filter(f"(SELECT b FROM {empty}) IS NULL").select("id")
+    )
+    out["filter_str_tbl_isnotnull"] = run_call(
+        lambda: left_df.filter(f"(SELECT b FROM {empty}) IS NOT NULL").select("id")
+    )
+    out["filter_str_count_having_isnull"] = run_call(
+        lambda: left_df.filter(
+            f"(SELECT COUNT(*) FROM {empty} HAVING COUNT(*) > 0) IS NULL"
+        ).select("id")
+    )
+    out["filter_str_count_star_control"] = run_call(
+        lambda: left_df.filter(f"(SELECT COUNT(*) FROM {empty}) IS NULL").select("id")
     )
     out["selectexpr_inline_isnull"] = run_call(
         lambda: left_df.selectExpr("id", "(SELECT 1 WHERE false) IS NULL AS r")
@@ -333,6 +350,9 @@ def run_df_door_cells(
     )
     session.conf.set("spark.sql.ansi.enabled", orig_ansi)
     out["cached_subq_where_isnull"] = run_call(lambda: run_cached_cell(session, empty, left))
+    out["spark_explode_empty_isnull"] = run_call(
+        lambda: session.sql("SELECT (SELECT explode(filter(array(1), x -> x > 5))) IS NULL AS r")
+    )
     return out
 
 

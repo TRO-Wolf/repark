@@ -223,6 +223,7 @@ pub(super) fn finish_session_build(
     context.add_analyzer_rule(Arc::new(OptimizerSeatConfig));
     signed_zero::install_literal_seat(context, extension.signed_zero_policy());
     context.add_analyzer_rule(Arc::new(cast_shield::CastShieldRule));
+    context.add_analyzer_rule(scalar_nullable::analyzer_rule());
 }
 
 pub(super) fn analyzer_rules_with_df_54_1_rule_guards()

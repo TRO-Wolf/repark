@@ -10,7 +10,7 @@ drops every row, or keeps every row. **Status:** built on `fix/scalar-subquery-e
 - **Read matrix (121 cells per ANSI mode against live Spark 4.1.2):** 60 silent wrong answers in each ANSI mode (57
   caused by this defect + 3 empty-table `GROUP BY ROLLUP`/`CUBE`/`GROUPING SETS (())` divergence), 3 pre-existing
   unaggregated correlated non-LIMIT errors, 44 `NONNULL_WITH_NULLS` Arrow schema violations, plus runtime Arrow errors
-  on `inline_utf8view_subq` (`SELECT (SELECT 'hello' WHERE false)`) and `CAST((SELECT d FROM empty_nn) AS TIMESTAMP)`.
+  on `inline_utf8view_subq` (`SELECT (SELECT arrow_cast('x', 'Utf8View') WHERE 1 = 0)`) and `CAST((SELECT d FROM empty_nn) AS TIMESTAMP)`.
   Native `repark.sql()` reproduced the same 60 wrong answers against DuckDB/Trino.
 - **DataFrame / expression / stored-plan doors:** `F.expr`, `filter(Column)` from `F.expr`, `filter(str)`,
   `selectExpr`, `withColumn`, `.scalar()`, SQL and DataFrame temp views (including ANSI-flip), cached DataFrames,
@@ -21,23 +21,14 @@ drops every row, or keeps every row. **Status:** built on `fix/scalar-subquery-e
 
 ## Fix
 
-Implemented refined Option A+ in `crates/repark-core/src/session/df_guards/scalar_nullable.rs`:
+Implemented refined Option A+ in `crates/repark-core/src/session/df_guards/scalar_nullable.rs` (updated in Delta 1, 2026-11-24):
 
-- `ReparkScalarSubqueryNullability` (`AnalyzerRule` immediately before `type_coercion` on every session and in
-  `crates/repark-python/src/column/expr_build.rs` `build_expr_context`, `OptimizerRule` immediately before
-  `simplify_expressions`, and invoked in `PreExecute::execute` for `Statement::Prepare` and `DdlStatement::CreateView`)
-  wraps single-column non-null `Expr::ScalarSubquery` outputs lacking `guaranteed_at_least_one_row` in `Volatile` UDF
-  `__repark_scalar_nullable__` (`schema_name` passthrough, `nullable=true`), recomputing ancestor schemas (including
-  `Union` and `Values`).
-- `guaranteed_at_least_one_row` keeps provably-1-row subqueries (`COUNT(*)` without `GROUP BY`, global aggregates,
-  `(SELECT 1)`, non-empty `VALUES`) non-null so constant folding is preserved, while guarding `Sort { fetch: Some(0) }`,
-  `Limit`, `Projection` with `Unnest`/generator UDFs, and grouping sets.
-- `StripScalarNullable` runs immediately after `scalar_subquery_to_join` to remove markers outside surviving subqueries
-  and recompute ancestor schemas, preserving `EliminateOuterJoin`, filter pushdown, CSE, and
-  `enable_physical_uncorrelated_scalar_subquery=true`.
-- **Pins:** Rust unit tests in `crates/repark-core/src/session/df_guards/scalar_nullable.rs` and
-  `crates/repark-core/src/pre_execute/tests.rs`; table-driven facade pins across both doors and Iceberg Hadoop writes
-  in `python/repark/tests/sql/test_scalar_subquery_empty_null_1.py` (`_scalar_subquery_empty_null_1_cells.py`).
+- `ReparkScalarSubqueryNullability` runs at two analyzer seats in every session (`crates/repark-core/src/session/df_guards.rs`: Pass 1 immediately before `type_coercion`, Pass 2 at the end of `finish_session_build` after `SparkNullability`, `GeneratorRewrite`, `StackRewrite`, and time-window rules) and at both matching seats in `crates/repark-python/src/column/expr_build.rs` `build_expr_context`, as an `OptimizerRule` immediately before `simplify_expressions`, and in `PreExecute::execute` for `Statement::Prepare` and `DdlStatement::CreateView`.
+- Pass 1 wraps single-column non-null `Expr::ScalarSubquery` outputs lacking `guaranteed_at_least_one_row` in `Volatile` UDF `__repark_scalar_nullable__` (`schema_name` passthrough, `nullable=true`), deferring subqueries that still contain an unexpanded generator placeholder (`explode`, `explode_outer`, `posexplode`, `posexplode_outer`, `inline`, `inline_outer`, `json_tuple`, `stack`, `__repark_gen_alias`, `__repark_gen_bare`) so `GeneratorRewrite` and `StackRewrite` expand cleanly first. Pass 2 wraps subqueries turned non-null after `type_coercion` (from `SparkNullability`, `GeneratorRewrite`, `StackRewrite`, or time-window rules) and peels stale outer `__repark_spark_nonnull__` cast wrappers whose cast operand became nullable.
+- Newly synthesized aliases in `wrap_subquery_output` carry no metadata (`metadata: None`) so downstream cast-to-UDF rewrites never mismatch Iceberg `PARQUET:field_id` metadata between logical and physical schemas; existing `Expr::Alias` metadata is preserved. Ancestor schemas (including `Union` and `Values`) are recomputed.
+- `guaranteed_at_least_one_row` keeps provably-1-row subqueries (`COUNT(*)` without `GROUP BY`, global aggregates, `(SELECT 1)`, non-empty `VALUES`) non-null so constant folding is preserved, while guarding `Sort { fetch: Some(0) }`, `Limit`, `Projection` with `Unnest`/generator UDFs, and grouping sets.
+- `StripScalarNullable` runs immediately after `scalar_subquery_to_join` to remove markers outside surviving subqueries and recompute ancestor schemas, preserving `EliminateOuterJoin`, filter pushdown, CSE, and `enable_physical_uncorrelated_scalar_subquery=true`.
+- **Pins:** Rust unit tests in `crates/repark-core/src/session/df_guards/scalar_nullable_tests.rs` and `crates/repark-core/src/pre_execute/tests.rs`; table-driven facade pins across both doors, Delta 1 F-001/F-002/F-003 regressions, Parquet/Iceberg casts, and Iceberg Hadoop writes in `python/repark/tests/sql/test_scalar_subquery_empty_null_1.py` (`_scalar_subquery_empty_null_1_cells.py`).
 
 ## Still unlike Spark (outside this unit)
 

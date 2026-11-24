@@ -146,6 +146,7 @@ async fn default_hooks_are_noops_and_build_succeeds_without_extension() {
     expected.push("repark_optimizer_seat_config".to_string());
     expected.push("signed_zero_literals".to_string());
     expected.push("repark_cast_shield".to_string());
+    expected.push("repark_scalar_subquery_nullability".to_string());
     assert_eq!(installed, expected);
     let frame = session
         .sql("SELECT 1 AS one")
