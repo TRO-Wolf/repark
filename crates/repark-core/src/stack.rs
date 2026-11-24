@@ -2,6 +2,7 @@ mod empty_dml;
 mod exec;
 mod planner;
 mod rewrite;
+mod try_cast_nullable;
 mod udf;
 
 use std::cmp::Ordering;
@@ -18,9 +19,11 @@ use crate::{Result, engine_err};
 
 pub use planner::StackQueryPlanner;
 pub use rewrite::StackRewrite;
+pub use try_cast_nullable::shield_try_cast_expr;
 pub use udf::stack_udf;
 
 pub(crate) use exec::UnpivotExec;
+pub(crate) use try_cast_nullable::{nullable_field_udf, repair_inlined_try_cast_plan};
 
 pub fn register_stack(context: &SessionContext) {
     context.register_udf(stack_udf().as_ref().clone());
