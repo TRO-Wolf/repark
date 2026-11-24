@@ -10,14 +10,12 @@ standard time. Every cell reads its expected answer from
 per zone.
 
 ``zone_horizon_render_1_residue.json`` lists the cells RePark still answers differently.
-Each either differs the same way in the 2099 control or belongs to a named class: the
-built-in ``extract`` and ``date_part`` never read the session zone; ``from_utc_timestamp``
-and ``to_utc_timestamp`` are an upstream kernel this unit does not own, so they still read
-standard time after 2099; ``make_timestamp``, the ``TIMESTAMP_NTZ`` literal and
-``unix_timestamp`` stop at the nanosecond range (2262); and ``months_between`` reads the
-wall clock on a transition day where Spark reads elapsed seconds. A
-residue cell that starts to agree with Spark turns its zone's pin red, so the list cannot
-go stale.
+Each either differs the same way in the 2099 control or belongs to a named class:
+``from_utc_timestamp`` and ``to_utc_timestamp`` are an upstream kernel this unit does not
+own, so they still read standard time after 2099; ``make_timestamp``, the ``TIMESTAMP_NTZ``
+literal and ``unix_timestamp`` stop at the nanosecond range (2262); and ``months_between``
+reads the wall clock on a transition day where Spark reads elapsed seconds. A residue cell
+that starts to agree with Spark turns its zone's pin red, so the list cannot go stale.
 
 The live tier re-runs the committed probes on live Spark and asserts the fixture.
 
