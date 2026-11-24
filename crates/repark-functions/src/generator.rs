@@ -1,16 +1,17 @@
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Array, Int32Builder, ListArray, new_null_array};
+use datafusion::arrow::array::{ListArray, new_null_array};
 use datafusion::arrow::buffer::OffsetBuffer;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
 use datafusion::common::config::ConfigOptions;
+use datafusion::common::metadata::FieldMetadata;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
 use datafusion::common::{
     Column, DFSchema, Result, ScalarValue, TableReference, UnnestOptions, exec_err, plan_err,
 };
 use datafusion::functions_nested::expr_fn as nested_fn;
-use datafusion::logical_expr::expr::{Cast, ScalarFunction};
+use datafusion::logical_expr::expr::{Alias, Cast, ScalarFunction};
 use datafusion::logical_expr::expr_fn::when;
 use datafusion::logical_expr::{
     ColumnarValue, Expr, ExprSchemable, LogicalPlan, LogicalPlanBuilder, Projection,
@@ -20,10 +21,15 @@ use datafusion::optimizer::AnalyzerRule;
 use datafusion::prelude::lit;
 
 mod json_tuple;
+mod udfs;
 
-pub(crate) const GENERATOR_ALIAS_UDF: &str = "__repark_gen_alias";
-const GENERATOR_ORDINALITY_UDF: &str = "__repark_gen_ordinality";
-const GENERATOR_FIELD_UDF: &str = "__repark_gen_field";
+pub(crate) use udfs::GeneratorField;
+use udfs::GeneratorOrdinality;
+#[cfg(test)]
+use udfs::ordinality;
+
+pub const GENERATOR_ALIAS_UDF: &str = "__repark_gen_alias";
+const GENERATOR_BARE_UDF: &str = "__repark_gen_bare";
 
 pub(crate) const GENERATOR_FIELD: &str = "__repark_gen_out";
 const GENERATOR_POS_FIELD: &str = "__repark_gen_pos";
@@ -54,6 +60,12 @@ impl GeneratorPlaceholder {
     }
 }
 
+impl GeneratorPlaceholder {
+    fn explodes_one_column(&self) -> bool {
+        matches!(self.name, "explode" | "explode_outer")
+    }
+}
+
 impl PartialEq for GeneratorPlaceholder {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name
@@ -78,7 +90,53 @@ impl ScalarUDFImpl for GeneratorPlaceholder {
     }
 
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
-        Ok(arg_types.first().cloned().unwrap_or(DataType::Null))
+        let first = arg_types.first().cloned().unwrap_or(DataType::Null);
+        if self.explodes_one_column()
+            && let Some(item) = list_element(&first)
+        {
+            return Ok(item.data_type().clone());
+        }
+        Ok(first)
+    }
+
+    fn return_field_from_args(
+        &self,
+        args: datafusion::logical_expr::ReturnFieldArgs,
+    ) -> Result<FieldRef> {
+        let first = args.arg_fields.first();
+        if self.name == GENERATOR_BARE_UDF
+            && let Some(inner) = first
+        {
+            return Ok(Arc::clone(inner));
+        }
+        if self.explodes_one_column()
+            && let Some(item) = first.and_then(|field| list_element(field.data_type()))
+        {
+            let nullable = self.name == "explode_outer" || item.is_nullable();
+            return Ok(Arc::new(Field::new(
+                "col",
+                item.data_type().clone(),
+                nullable,
+            )));
+        }
+        let data_type = first.map_or(DataType::Null, |field| field.data_type().clone());
+        Ok(Arc::new(Field::new(self.name, data_type, true)))
+    }
+
+    fn schema_name(&self, args: &[Expr]) -> Result<String> {
+        if self.explodes_one_column() {
+            return Ok("col".to_string());
+        }
+        if self.name == GENERATOR_BARE_UDF
+            && let Some(inner) = args.first()
+        {
+            return Ok(inner.schema_name().to_string());
+        }
+        let formatted: Vec<String> = args
+            .iter()
+            .map(|arg| arg.schema_name().to_string())
+            .collect();
+        Ok(format!("{}({})", self.name, formatted.join(",")))
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
@@ -93,225 +151,6 @@ impl ScalarUDFImpl for GeneratorPlaceholder {
     }
 }
 
-#[derive(Debug)]
-struct GeneratorOrdinality {
-    signature: Signature,
-}
-
-impl GeneratorOrdinality {
-    fn new() -> Self {
-        Self {
-            signature: Signature::any(1, Volatility::Immutable),
-        }
-    }
-}
-
-impl PartialEq for GeneratorOrdinality {
-    fn eq(&self, _other: &Self) -> bool {
-        true
-    }
-}
-
-impl Eq for GeneratorOrdinality {}
-
-impl Hash for GeneratorOrdinality {
-    fn hash<H: Hasher>(&self, _state: &mut H) {}
-}
-
-impl ScalarUDFImpl for GeneratorOrdinality {
-    fn name(&self) -> &'static str {
-        GENERATOR_ORDINALITY_UDF
-    }
-
-    fn signature(&self) -> &Signature {
-        &self.signature
-    }
-
-    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
-        Ok(DataType::List(Arc::new(Field::new(
-            "item",
-            DataType::Int32,
-            false,
-        ))))
-    }
-
-    fn return_field_from_args(
-        &self,
-        args: datafusion::logical_expr::ReturnFieldArgs,
-    ) -> Result<FieldRef> {
-        let nullable = args
-            .arg_fields
-            .first()
-            .is_some_and(|field| field.is_nullable());
-        Ok(Arc::new(Field::new(
-            self.name(),
-            self.return_type(&[])?,
-            nullable,
-        )))
-    }
-
-    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        let Some(first) = args.args.into_iter().next() else {
-            return exec_err!("'{GENERATOR_ORDINALITY_UDF}' requires one list argument");
-        };
-        match first {
-            ColumnarValue::Array(array) => {
-                let Some(list) = array.as_any().downcast_ref::<ListArray>() else {
-                    return exec_err!("'{GENERATOR_ORDINALITY_UDF}' requires a list argument");
-                };
-                Ok(ColumnarValue::Array(Arc::new(ordinality(list))))
-            }
-            ColumnarValue::Scalar(ScalarValue::List(list)) => Ok(ColumnarValue::Scalar(
-                ScalarValue::List(Arc::new(ordinality(list.as_ref()))),
-            )),
-            other @ ColumnarValue::Scalar(_) => {
-                exec_err!("'{GENERATOR_ORDINALITY_UDF}' received a non-list argument: {other:?}")
-            }
-        }
-    }
-}
-
-#[derive(Debug)]
-pub(crate) struct GeneratorField {
-    signature: Signature,
-}
-
-impl GeneratorField {
-    pub(crate) fn new() -> Self {
-        Self {
-            signature: Signature::any(2, Volatility::Immutable),
-        }
-    }
-}
-
-impl PartialEq for GeneratorField {
-    fn eq(&self, _other: &Self) -> bool {
-        true
-    }
-}
-
-impl Eq for GeneratorField {}
-
-impl Hash for GeneratorField {
-    fn hash<H: Hasher>(&self, _state: &mut H) {}
-}
-
-fn field_name_literal<'a>(
-    args: &'a datafusion::logical_expr::ReturnFieldArgs<'a>,
-) -> Result<&'a str> {
-    if let Some(Some(
-        ScalarValue::Utf8(Some(name))
-        | ScalarValue::LargeUtf8(Some(name))
-        | ScalarValue::Utf8View(Some(name)),
-    )) = args.scalar_arguments.get(1)
-    {
-        return Ok(name.as_str());
-    }
-    plan_err!("'{GENERATOR_FIELD_UDF}' requires a literal field name")
-}
-
-fn struct_field<'a>(data_type: &'a DataType, name: &str) -> Result<&'a FieldRef> {
-    let DataType::Struct(fields) = data_type else {
-        return exec_err!("'{GENERATOR_FIELD_UDF}' requires a struct argument, got {data_type}");
-    };
-    let Some(index) = fields.iter().position(|field| field.name() == name) else {
-        return exec_err!("'{GENERATOR_FIELD_UDF}' found no field named '{name}'");
-    };
-    Ok(&fields[index])
-}
-
-impl ScalarUDFImpl for GeneratorField {
-    fn name(&self) -> &'static str {
-        GENERATOR_FIELD_UDF
-    }
-
-    fn signature(&self) -> &Signature {
-        &self.signature
-    }
-
-    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
-        Ok(DataType::Null)
-    }
-
-    fn return_field_from_args(
-        &self,
-        args: datafusion::logical_expr::ReturnFieldArgs,
-    ) -> Result<FieldRef> {
-        let name = field_name_literal(&args)?;
-        let Some(base) = args.arg_fields.first() else {
-            return exec_err!("'{GENERATOR_FIELD_UDF}' requires a struct argument");
-        };
-        let field = struct_field(base.data_type(), name)?;
-        Ok(Arc::new(Field::new(name, field.data_type().clone(), true)))
-    }
-
-    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        let mut iter = args.args.into_iter();
-        let (Some(base), Some(name_arg)) = (iter.next(), iter.next()) else {
-            return exec_err!("'{GENERATOR_FIELD_UDF}' requires a struct and a field name");
-        };
-        let ColumnarValue::Scalar(name_scalar) = name_arg else {
-            return exec_err!("'{GENERATOR_FIELD_UDF}' requires a literal field name");
-        };
-        let (ScalarValue::Utf8(Some(name))
-        | ScalarValue::LargeUtf8(Some(name))
-        | ScalarValue::Utf8View(Some(name))) = name_scalar
-        else {
-            return exec_err!("'{GENERATOR_FIELD_UDF}' requires a literal field name");
-        };
-        let mask = |array: &Arc<dyn Array>| -> Result<datafusion::arrow::array::ArrayRef> {
-            let Some(structs) = array
-                .as_any()
-                .downcast_ref::<datafusion::arrow::array::StructArray>()
-            else {
-                return exec_err!("'{GENERATOR_FIELD_UDF}' requires a struct argument");
-            };
-            let Some(child) = structs.column_by_name(name.as_str()) else {
-                return exec_err!("'{GENERATOR_FIELD_UDF}' found no field named '{name}'");
-            };
-            let combined =
-                datafusion::arrow::buffer::NullBuffer::union(structs.nulls(), child.nulls());
-            let data = child.to_data().into_builder().nulls(combined).build()?;
-            Ok(datafusion::arrow::array::make_array(data))
-        };
-        match base {
-            ColumnarValue::Array(array) => Ok(ColumnarValue::Array(mask(&array)?)),
-            ColumnarValue::Scalar(ScalarValue::Struct(structs)) => {
-                let dyn_array: Arc<dyn Array> = structs;
-                let masked = mask(&dyn_array)?;
-                Ok(ColumnarValue::Scalar(ScalarValue::try_from_array(
-                    masked.as_ref(),
-                    0,
-                )?))
-            }
-            other @ ColumnarValue::Scalar(_) => {
-                exec_err!("'{GENERATOR_FIELD_UDF}' requires a struct argument: {other:?}")
-            }
-        }
-    }
-}
-
-fn ordinality(list: &ListArray) -> ListArray {
-    let mut values = Int32Builder::with_capacity(list.values().len());
-    let mut offsets: Vec<i32> = Vec::with_capacity(list.len() + 1);
-    let mut running: i32 = 0;
-    offsets.push(running);
-    for window in list.offsets().windows(2) {
-        let length = window[1] - window[0];
-        for position in 0..length {
-            values.append_value(position);
-        }
-        running += length;
-        offsets.push(running);
-    }
-    ListArray::new(
-        Arc::new(Field::new("item", DataType::Int32, false)),
-        OffsetBuffer::new(offsets.into()),
-        Arc::new(values.finish()),
-        list.nulls().cloned(),
-    )
-}
-
 #[must_use]
 pub fn generator_udf(name: &'static str) -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(GeneratorPlaceholder::new(name)))
@@ -320,17 +159,21 @@ pub fn generator_udf(name: &'static str) -> Arc<ScalarUDF> {
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
     vec![
+        generator_udf("explode"),
+        generator_udf("explode_outer"),
         generator_udf("posexplode"),
         generator_udf("posexplode_outer"),
         generator_udf("inline"),
         generator_udf("inline_outer"),
         generator_udf("json_tuple"),
         generator_udf(GENERATOR_ALIAS_UDF),
+        generator_udf(GENERATOR_BARE_UDF),
     ]
 }
 
 #[derive(Clone, Copy, Debug)]
 enum GeneratorKind {
+    Explode { outer: bool },
     PosExplode { outer: bool },
     Inline { outer: bool },
     JsonTuple,
@@ -339,6 +182,8 @@ enum GeneratorKind {
 impl GeneratorKind {
     fn label(self) -> &'static str {
         match self {
+            Self::Explode { outer: false } => "explode",
+            Self::Explode { outer: true } => "explode_outer",
             Self::PosExplode { outer: false } => "posexplode",
             Self::PosExplode { outer: true } => "posexplode_outer",
             Self::Inline { outer: false } => "inline",
@@ -349,7 +194,7 @@ impl GeneratorKind {
 
     fn outer(self) -> bool {
         match self {
-            Self::PosExplode { outer } | Self::Inline { outer } => outer,
+            Self::Explode { outer } | Self::PosExplode { outer } | Self::Inline { outer } => outer,
             Self::JsonTuple => false,
         }
     }
@@ -357,6 +202,8 @@ impl GeneratorKind {
 
 fn generator_kind(name: &str) -> Option<GeneratorKind> {
     match name {
+        "explode" => Some(GeneratorKind::Explode { outer: false }),
+        "explode_outer" => Some(GeneratorKind::Explode { outer: true }),
         "posexplode" => Some(GeneratorKind::PosExplode { outer: false }),
         "posexplode_outer" => Some(GeneratorKind::PosExplode { outer: true }),
         "inline" => Some(GeneratorKind::Inline { outer: false }),
@@ -366,7 +213,13 @@ fn generator_kind(name: &str) -> Option<GeneratorKind> {
     }
 }
 
-type GeneratorSite = (GeneratorKind, Vec<Expr>, Option<Vec<String>>);
+#[derive(Debug)]
+struct GeneratorSite {
+    kind: GeneratorKind,
+    args: Vec<Expr>,
+    names: Option<Vec<String>>,
+    metadata: Option<FieldMetadata>,
+}
 
 #[derive(Debug)]
 pub(crate) struct OutputSpec {
@@ -377,6 +230,118 @@ pub(crate) struct OutputSpec {
 
 #[derive(Debug, Default)]
 pub struct GeneratorRewrite;
+
+#[derive(Debug, Default)]
+pub struct GeneratorAliasMark;
+
+impl AnalyzerRule for GeneratorAliasMark {
+    fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
+        plan.transform_up_with_subqueries(mark_plan).data()
+    }
+
+    fn name(&self) -> &'static str {
+        "generator_alias_mark"
+    }
+}
+
+#[must_use]
+pub fn with_alias_mark_first(
+    mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
+) -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
+    rules.insert(0, Arc::new(GeneratorAliasMark));
+    rules
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn mark_generator_aliases(plan: LogicalPlan) -> Result<LogicalPlan> {
+    let projection = match mark_plan(plan).data()? {
+        LogicalPlan::Projection(projection) => projection,
+        other => return Ok(other),
+    };
+    if !projection.expr.iter().any(is_generator_expr) {
+        return Ok(LogicalPlan::Projection(projection));
+    }
+    let Projection {
+        expr,
+        input,
+        schema,
+        ..
+    } = projection;
+    let held = expr
+        .into_iter()
+        .map(|expr| {
+            if is_generator_expr(&expr) {
+                Expr::ScalarFunction(ScalarFunction::new_udf(
+                    generator_udf(GENERATOR_BARE_UDF),
+                    vec![expr],
+                ))
+            } else {
+                expr
+            }
+        })
+        .collect();
+    Ok(LogicalPlan::Projection(Projection::try_new_with_schema(
+        held, input, schema,
+    )?))
+}
+
+fn is_generator_expr(expr: &Expr) -> bool {
+    matches!(expr, Expr::ScalarFunction(function) if is_generator_call(function))
+}
+
+fn is_user_generator_alias(expr: &Expr) -> bool {
+    matches!(expr, Expr::Alias(alias) if is_generator_expr(alias.expr.as_ref()))
+}
+
+fn mark_expr(expr: Expr) -> Expr {
+    let Expr::Alias(alias) = expr else {
+        return expr;
+    };
+    let Alias {
+        expr: inner,
+        relation,
+        name,
+        metadata,
+    } = alias;
+    let marked = Expr::ScalarFunction(ScalarFunction::new_udf(
+        generator_udf(GENERATOR_ALIAS_UDF),
+        vec![*inner, lit(name.clone())],
+    ));
+    Expr::Alias(Alias {
+        expr: Box::new(marked),
+        relation,
+        name,
+        metadata,
+    })
+}
+
+fn mark_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+    let LogicalPlan::Projection(projection) = plan else {
+        return Ok(Transformed::no(plan));
+    };
+    if !projection.expr.iter().any(is_user_generator_alias) {
+        return Ok(Transformed::no(LogicalPlan::Projection(projection)));
+    }
+    let Projection {
+        expr,
+        input,
+        schema,
+        ..
+    } = projection;
+    let marked = expr
+        .into_iter()
+        .map(|expr| {
+            if is_user_generator_alias(&expr) {
+                mark_expr(expr)
+            } else {
+                expr
+            }
+        })
+        .collect();
+    Ok(Transformed::yes(LogicalPlan::Projection(
+        Projection::try_new_with_schema(marked, input, schema)?,
+    )))
+}
 
 impl AnalyzerRule for GeneratorRewrite {
     fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
@@ -392,12 +357,25 @@ fn is_generator_call(function: &ScalarFunction) -> bool {
     generator_kind(function.func.name()).is_some()
 }
 
+#[must_use]
+pub fn is_bare_generator_expr(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::ScalarFunction(function)
+            if is_generator_call(function) || is_marker_name(function.func.name())
+    )
+}
+
+fn is_marker_name(name: &str) -> bool {
+    name == GENERATOR_ALIAS_UDF || name == GENERATOR_BARE_UDF
+}
+
 fn contains_generator(expr: &Expr) -> bool {
     expr.exists(|node| {
         Ok(matches!(
             node,
             Expr::ScalarFunction(function)
-                if is_generator_call(function) || function.func.name() == GENERATOR_ALIAS_UDF
+                if is_generator_call(function) || is_marker_name(function.func.name())
         ))
     })
     .unwrap_or(false)
@@ -426,25 +404,21 @@ fn is_explode_temp_name(name: &str) -> bool {
 fn peel_generator(expr: &Expr) -> Result<Option<GeneratorSite>> {
     match expr {
         Expr::Alias(alias) => {
-            let Some((kind, arg, inner_names)) = peel_generator(alias.expr.as_ref())? else {
+            let Some(mut site) = peel_generator(alias.expr.as_ref())? else {
                 return Ok(None);
             };
-            let restored = matches!(
-                alias.expr.as_ref(),
-                Expr::ScalarFunction(function)
-                    if alias
-                        .name
-                        .starts_with(&format!("{}(", function.func.name()))
-            );
-            if restored {
-                return Ok(Some((kind, arg, inner_names)));
+            if let Some(metadata) = &alias.metadata {
+                let mut carried = site.metadata.take().unwrap_or_default();
+                carried.extend(metadata.clone());
+                site.metadata = Some(carried);
             }
-            if inner_names.is_some() {
-                return plan_err!(
-                    "[UNSUPPORTED_GENERATOR] a generator output does not support nested aliasing"
-                );
-            }
-            Ok(Some((kind, arg, Some(vec![alias.name.clone()]))))
+            Ok(Some(site))
+        }
+        Expr::ScalarFunction(function) if function.func.name() == GENERATOR_BARE_UDF => {
+            let Some(inner) = function.args.first() else {
+                return plan_err!("'{GENERATOR_BARE_UDF}' requires a generator call");
+            };
+            peel_generator(inner)
         }
         Expr::ScalarFunction(function) if function.func.name() == GENERATOR_ALIAS_UDF => {
             let Some(inner) = function.args.first() else {
@@ -468,10 +442,13 @@ fn peel_generator(expr: &Expr) -> Result<Option<GeneratorSite>> {
                     }
                 }
             }
-            let Some((kind, arg, _)) = peel_generator(inner)? else {
+            let Some(mut site) = peel_generator(inner)? else {
                 return plan_err!("'{GENERATOR_ALIAS_UDF}' wraps a non-generator expression");
             };
-            Ok(Some((kind, arg, Some(names))))
+            if !names.is_empty() {
+                site.names = Some(names);
+            }
+            Ok(Some(site))
         }
         Expr::ScalarFunction(function) => {
             let Some(kind) = generator_kind(function.func.name()) else {
@@ -481,7 +458,12 @@ fn peel_generator(expr: &Expr) -> Result<Option<GeneratorSite>> {
                 if function.args.len() < 2 {
                     return Err(crate::json::tuple::wrong_num_args(function.args.len()));
                 }
-                return Ok(Some((kind, function.args.clone(), None)));
+                return Ok(Some(GeneratorSite {
+                    kind,
+                    args: function.args.clone(),
+                    names: None,
+                    metadata: None,
+                }));
             }
             if function.args.len() != 1 {
                 return plan_err!(
@@ -490,7 +472,12 @@ fn peel_generator(expr: &Expr) -> Result<Option<GeneratorSite>> {
                     function.args.len()
                 );
             }
-            Ok(Some((kind, vec![function.args[0].clone()], None)))
+            Ok(Some(GeneratorSite {
+                kind,
+                args: vec![function.args[0].clone()],
+                names: None,
+                metadata: None,
+            }))
         }
         _ => Ok(None),
     }
@@ -519,9 +506,15 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
             }
         }
     }
-    let Some((site_index, (kind, args, alias_names))) = site else {
+    let Some((site_index, site)) = site else {
         return Ok(Transformed::no(plan));
     };
+    let GeneratorSite {
+        kind,
+        args,
+        names: alias_names,
+        metadata,
+    } = site;
     if args.iter().any(contains_generator) {
         return plan_err!(
             "[UNSUPPORTED_GENERATOR] The generator argument cannot contain another generator"
@@ -587,6 +580,7 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
         kind,
         &args,
         alias_names.as_deref(),
+        metadata.as_ref(),
     )?))
 }
 
@@ -616,13 +610,10 @@ fn unexpected_input(
 fn one_element_null_list(list_type: &DataType) -> Result<Expr> {
     match list_type {
         DataType::List(field) => {
-            let values = new_null_array(field.data_type(), 1);
-            let array = ListArray::new(
-                Arc::clone(field),
-                OffsetBuffer::from_lengths([1_usize]),
-                values,
-                None,
-            );
+            let nullable_field = Arc::new(field.as_ref().clone().with_nullable(true));
+            let values = new_null_array(nullable_field.data_type(), 1);
+            let offsets = OffsetBuffer::new(vec![0_i32, 1].into());
+            let array = ListArray::try_new(nullable_field, offsets, values, None)?;
             Ok(lit(ScalarValue::List(Arc::new(array))))
         }
         other => plan_err!("generator outer guard cannot build a one-element NULL {other}"),
@@ -655,20 +646,20 @@ fn guarded(outer: bool, cond: &Expr, list_expr: Expr, schema: &DFSchema) -> Resu
     if !outer {
         return Ok(list_expr);
     }
-    let list_type = match list_expr.get_type(schema)? {
-        list @ DataType::List(_) => list,
-        other => {
-            let Some(field) = list_element(&other) else {
-                return plan_err!("generator outer guard requires a list argument, got {other}");
-            };
-            DataType::List(Arc::clone(field))
-        }
+    let orig_type = list_expr.get_type(schema)?;
+    let Some(field) = list_element(&orig_type) else {
+        return plan_err!("generator outer guard requires a list argument, got {orig_type}");
     };
-    let then_arm = one_element_null_list(&list_type)?;
-    let else_expr = if matches!(list_expr.get_type(schema)?, DataType::List(_)) {
+    let target_type = if field.is_nullable() {
+        DataType::List(Arc::clone(field))
+    } else {
+        DataType::List(Arc::new(field.as_ref().clone().with_nullable(true)))
+    };
+    let then_arm = one_element_null_list(&target_type)?;
+    let else_expr = if orig_type == target_type {
         list_expr
     } else {
-        Expr::Cast(Cast::new(Box::new(list_expr), list_type))
+        Expr::Cast(Cast::new(Box::new(list_expr), target_type))
     };
     when(cond.clone(), then_arm).otherwise(else_expr)
 }
@@ -750,6 +741,7 @@ fn rewrite_projection(
     kind: GeneratorKind,
     args: &[Expr],
     alias_names: Option<&[String]>,
+    metadata: Option<&FieldMetadata>,
 ) -> Result<LogicalPlan> {
     let Some(arg) = args.first() else {
         return plan_err!("generator rewrite lost the generator argument");
@@ -773,40 +765,20 @@ fn rewrite_projection(
                 true,
             )
         }
+        GeneratorKind::Explode { .. } => {
+            let (is_map, specs) = collection_output(kind.label(), &arg_type, outer)?;
+            let lists = collection_lists(arg, &arg_type, is_map, outer, &cond, &input_schema)?;
+            (lists, specs, false)
+        }
         GeneratorKind::PosExplode { .. } => {
             let (is_map, mut specs) = collection_output(kind.label(), &arg_type, outer)?;
-            let mut lists: Vec<(&'static str, Expr)> = Vec::with_capacity(3);
-            if is_map {
-                lists.push((
-                    GENERATOR_POS_FIELD,
-                    ordinality_call(nested_fn::map_keys(arg.clone())),
-                ));
-                lists.push((
-                    GENERATOR_KEY_FIELD,
-                    guarded(
-                        outer,
-                        &cond,
-                        nested_fn::map_keys(arg.clone()),
-                        &input_schema,
-                    )?,
-                ));
-                lists.push((
-                    GENERATOR_VALUE_FIELD,
-                    guarded(
-                        outer,
-                        &cond,
-                        nested_fn::map_values(arg.clone()),
-                        &input_schema,
-                    )?,
-                ));
+            let mut lists = collection_lists(arg, &arg_type, is_map, outer, &cond, &input_schema)?;
+            let positions = if is_map {
+                ordinality_call(nested_fn::map_keys(arg.clone()))
             } else {
-                let list_arg = normalize_list(arg.clone(), &arg_type)?;
-                lists.push((GENERATOR_POS_FIELD, ordinality_call(list_arg.clone())));
-                lists.push((
-                    GENERATOR_COL_FIELD,
-                    guarded(outer, &cond, list_arg, &input_schema)?,
-                ));
-            }
+                ordinality_call(normalize_list(arg.clone(), &arg_type)?)
+            };
+            lists.insert(0, (GENERATOR_POS_FIELD, positions));
             specs.insert(
                 0,
                 OutputSpec {
@@ -832,15 +804,48 @@ fn rewrite_projection(
             spec.name.clone_from(name);
         }
     }
+    let carried = metadata.filter(|_| outputs.len() == 1);
     build_expansion(
         projection,
         site_index,
         &input_schema,
         &lists,
         &outputs,
-        outer,
-        flatten_struct,
+        (outer, flatten_struct),
+        carried,
     )
+}
+
+fn collection_lists(
+    arg: &Expr,
+    arg_type: &DataType,
+    is_map: bool,
+    outer: bool,
+    cond: &Expr,
+    input_schema: &DFSchema,
+) -> Result<Vec<(&'static str, Expr)>> {
+    if !is_map {
+        let list_arg = normalize_list(arg.clone(), arg_type)?;
+        return Ok(vec![(
+            GENERATOR_COL_FIELD,
+            guarded(outer, cond, list_arg, input_schema)?,
+        )]);
+    }
+    Ok(vec![
+        (
+            GENERATOR_KEY_FIELD,
+            guarded(outer, cond, nested_fn::map_keys(arg.clone()), input_schema)?,
+        ),
+        (
+            GENERATOR_VALUE_FIELD,
+            guarded(
+                outer,
+                cond,
+                nested_fn::map_values(arg.clone()),
+                input_schema,
+            )?,
+        ),
+    ])
 }
 
 fn build_expansion(
@@ -849,8 +854,8 @@ fn build_expansion(
     input_schema: &Arc<DFSchema>,
     lists: &[(&'static str, Expr)],
     outputs: &[OutputSpec],
-    outer: bool,
-    flatten_struct: bool,
+    (outer, flatten_struct): (bool, bool),
+    carried: Option<&FieldMetadata>,
 ) -> Result<LogicalPlan> {
     let mut inner_exprs: Vec<Expr> = Vec::with_capacity(projection.expr.len() - 1 + lists.len());
     for (index, expr) in projection.expr.iter().enumerate() {
@@ -897,7 +902,7 @@ fn build_expansion(
                         vec![expr],
                     ));
                 }
-                final_exprs.push(expr.alias(spec.name.clone()));
+                final_exprs.push(expr.alias_with_metadata(spec.name.clone(), carried.cloned()));
             }
             continue;
         }

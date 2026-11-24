@@ -1133,7 +1133,7 @@ class Column:
         Cast-of-attribute still differs: ``spark_display`` is ``CAST(...)`` while
         ``projection_name`` stays the child name, so the child name is applied here.
         """
-        if self._projection_name is None:
+        if self._projection_name is None or self._inner.is_bare_generator():
             return self
         return Column(
             self._inner.alias(self._projection_name),
