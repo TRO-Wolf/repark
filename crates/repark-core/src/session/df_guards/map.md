@@ -450,8 +450,8 @@ wrapped optimizer rule) and declares this directory.
   **CASESENS-2 (2026-10-03):** `JoinSide.qualifiers` lets `prepare_join_condition` bind
   free alias-qualified names via `predicate_names::bind_condition_qualifiers` (pins:
   `../tests/join_qualifiers.rs`). **FILTER-STRING-ESCAPED-QUOTE-1 (2026-11-24):**
-  `self_join::parse_attr_refs` and `case_bind::sql_text_tokens` skip Spark backslash
-  escapes, raw/hex literals, doubled backticks, and `--`/nested `/* */` comments.
+  `self_join::parse_attr_refs` skips Spark escapes/raw/nested comments; `case_bind::sql_text_tokens`
+  keeps literal words conservative while keeping backticks inside literals/comments inert.
 - `case_bind.rs` — **U11-EDGE-1 (2026-09-26):** `bind_case_insensitive`, run first by
   `subquery.rs`'s `resolve_bound_expr` (the DataFrame door's one binding hook). An
   unqualified column the frame schema does not hold exactly binds the single field

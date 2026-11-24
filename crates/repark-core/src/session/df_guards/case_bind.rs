@@ -444,6 +444,23 @@ fn skip_spark_literal(bytes: &[u8], start: usize, raw: bool) -> usize {
     bytes.len()
 }
 
+fn push_ascii_words<'a>(slice: &'a str, tokens: &mut Vec<&'a str>) {
+    let bytes = slice.as_bytes();
+    let mut word: Option<usize> = None;
+    for (pos, &byte) in bytes.iter().enumerate() {
+        if byte.is_ascii_alphanumeric() || byte == b'_' {
+            if word.is_none() {
+                word = Some(pos);
+            }
+        } else if let Some(begin) = word.take() {
+            tokens.push(&slice[begin..pos]);
+        }
+    }
+    if let Some(begin) = word {
+        tokens.push(&slice[begin..]);
+    }
+}
+
 fn sql_text_tokens(sql: &str) -> Vec<&str> {
     let bytes = sql.as_bytes();
     let mut tokens = Vec::new();
@@ -483,14 +500,18 @@ fn sql_text_tokens(sql: &str) -> Vec<&str> {
             && matches!(bytes[index], b'r' | b'R' | b'x' | b'X')
             && matches!(bytes.get(index + 1), Some(b'\'' | b'"'))
         {
-            index = skip_spark_literal(bytes, index + 1, true);
+            let lit_end = skip_spark_literal(bytes, index + 1, true);
+            push_ascii_words(&sql[index + 2..lit_end], &mut tokens);
+            index = lit_end;
             continue;
         }
         if matches!(bytes[index], b'\'' | b'"') {
             if let Some(begin) = word.take() {
                 tokens.push(&sql[begin..index]);
             }
-            index = skip_spark_literal(bytes, index, false);
+            let lit_end = skip_spark_literal(bytes, index, false);
+            push_ascii_words(&sql[index + 1..lit_end], &mut tokens);
+            index = lit_end;
             continue;
         }
         if bytes[index] == b'`' {
@@ -831,25 +852,39 @@ fn field_names(frame: &DataFrame) -> BTreeSet<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::sql_text_tokens;
+    use super::{NameRule, sql_mentions_duplicate, sql_text_tokens};
 
     #[test]
     fn sql_text_tokens_skips_escaped_quotes_raw_and_comments() {
-        assert_eq!(
-            sql_text_tokens(r"s = 'it\'s `x`' AND id = 1"),
-            vec!["s", "AND", "id", "1"]
-        );
-        assert_eq!(
-            sql_text_tokens("s = 'a`' AND id = 1 AND k = '`b'"),
-            vec!["s", "AND", "id", "1", "AND", "k"]
-        );
+        let displays = vec!["id".to_string(), "v".to_string(), "v".to_string()];
+        assert!(sql_mentions_duplicate(
+            "name = 'v'",
+            &displays,
+            NameRule::Exact
+        ));
+        assert!(sql_mentions_duplicate(
+            "s = 'a`' AND v = 1 AND k = '`b'",
+            &displays,
+            NameRule::Exact
+        ));
+        assert!(sql_mentions_duplicate(
+            r"s = 'it\'s `' AND v = 1 AND `id` = 2",
+            &displays,
+            NameRule::Exact
+        ));
+        assert!(sql_mentions_duplicate(
+            "/* a /* it's ` */ b */ v = 1 AND `id` = 2",
+            &displays,
+            NameRule::Exact
+        ));
+        assert!(sql_mentions_duplicate(
+            r"s = r'a\`' AND v = 1 AND `id` = 2",
+            &displays,
+            NameRule::Exact
+        ));
         assert_eq!(
             sql_text_tokens("/* a /* it's ` */ b */ id = 1"),
             vec!["id", "1"]
-        );
-        assert_eq!(
-            sql_text_tokens(r"s = r'a\' AND `col` = 1"),
-            vec!["s", "AND", "col", "1"]
         );
     }
 }
