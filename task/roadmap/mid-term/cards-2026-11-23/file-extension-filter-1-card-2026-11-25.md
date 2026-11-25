@@ -62,13 +62,17 @@ single-file fallback reads through the Spark listing. Re-measured on live Spark 
 `repro_d1_findings` (33) and attack (898) regress none. The #1430 cells that change: `L21_part_sub_txt` (4) and
 `B_two_stray_mid` (4) now refuse as Spark does (a `.txt` or suffix-less file inside the partition tree is listed);
 `B_stray_leaf_txt` and `B_two_stray_leaf` (8) answered rows where Spark fails reading the stray file and now refuse
-too, with RePark's Parquet error instead of `FAILED_READ_FILE.NO_HINT`; `path_file1` (2), a suffix-less single file
-under partition directories, refused and now reads its rows without the partition column Spark adds. The card's
+too, with RePark's Parquet error instead of `FAILED_READ_FILE.NO_HINT`; `path_file1` (2), the partitioned directory named
+with a single-slash `file:` URI (`file:/abs/tbl`), refused and now answers with the partition column, as Spark does
+(delta 2: `normalize_file_dir_url` gives every `file:` directory URL its trailing slash, not only `file://`). The card's
 partition layout now answers Spark's ids with `p int`.
 
 ## Still unlike Spark
 
 Measured on head, both ANSI modes:
+
+- **A local append beside a non-Parquet `_temporary/0/part-9.parquet`** now writes. Spark's committer fails and
+  removes the output directory; main refused while validating the hidden file.
 
 - **Partition columns** now come from #1430's discovery and equal Spark on the step-0 cells, including the
   `CONFLICTING_PARTITION_COLUMN_NAMES` refusal for `_p=2/` beside `p=1/`.

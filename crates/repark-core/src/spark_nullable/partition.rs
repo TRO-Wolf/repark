@@ -451,7 +451,7 @@ fn refuse_conflicting_directory_structures(
 }
 
 fn normalize_file_dir_url(path: String) -> String {
-    if path.starts_with("file://")
+    if path.starts_with("file:")
         && !path.ends_with('/')
         && let Ok(parsed) = Url::parse(&path)
         && parsed.to_file_path().is_ok_and(|local| local.is_dir())

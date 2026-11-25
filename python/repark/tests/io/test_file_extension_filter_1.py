@@ -247,6 +247,18 @@ def test_a_parquet_path_read_lists_what_spark_lists(
         assert _relative(frame.inputFiles(), tmp_path) == listed
 
 
+@pytest.mark.parametrize("ansi", _ANSI)
+@pytest.mark.parametrize("door", _DOORS)
+def test_a_single_slash_file_uri_reads_the_partitioned_directory_as_spark(
+    spark: ReparkSession, tmp_path: Path, door: str, ansi: str
+) -> None:
+    spark.conf.set("spark.sql.ansi.enabled", ansi)
+    _build(tmp_path, {"tbl/p=1/part-0.parquet": 10, "tbl/p=2/part-0.parquet": 20})
+    frame = _read(spark, door, "file:" + str(tmp_path / "tbl"))
+    assert frame.schema.simpleString() == "struct<id:bigint,p:int>"
+    assert sorted((row["id"], row["p"]) for row in frame.collect()) == [(10, 1), (20, 2)]
+
+
 @pytest.mark.parametrize("cell", sorted(_CELLS))
 def test_the_native_door_lists_what_spark_lists(tmp_path: Path, cell: str) -> None:
     files, target, rows, listed = _CELLS[cell]
