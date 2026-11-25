@@ -136,7 +136,7 @@ leaving text and ORC discovery untouched. Rules pinned to live Spark 4.1.2:
   `SparkListingTable`, `SparkListingSession`, and the registry and store wrappers that apply the rule to a listing.
 - `hidden_files_tests.rs` — the name table (Spark's writer markers, `_metadata`, `_k=1.parquet`, `._COPYING_`), the
   segment table (partition directories, hidden roots, single files), and `read_parquet` over a flat directory with
-  every marker, partition directories, single files with any suffix and hidden names, a hidden root directory, a
+  every marker, partition directories (`_q=3/` beside `p=1/` conflicts, as on Spark), single files with any suffix and hidden names, a hidden root directory, a
   glob, and the wrapped listing's S3 overwrite check. The S3 append pins are `../session/tests/hidden_append.rs`.
 
 - `int96_tests.rs` — a low-level `INT96` file (2025, year 2999 and 1960 instants, a NULL) beside an `INT64`

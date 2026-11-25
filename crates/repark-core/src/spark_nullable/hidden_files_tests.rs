@@ -171,18 +171,26 @@ async fn a_directory_read_lists_every_name_spark_lists() {
 #[tokio::test]
 async fn partition_directories_keep_the_rule_on_each_level() {
     let dir = tempfile::tempdir().expect("a temp dir");
-    for sub in ["p=1", "p=2", "_q=3", ".p=4"] {
+    for sub in ["p=1", "p=2", "p=3", ".p=4"] {
         std::fs::create_dir(dir.path().join(sub)).expect("a partition dir");
     }
     write_ids(&dir.path().join("p=1/part-00000"), &[1]);
     write_ids(&dir.path().join("p=2/data.bin"), &[2]);
-    write_ids(&dir.path().join("_q=3/x.parquet"), &[3]);
-    write_ids(&dir.path().join("_k=5.parquet"), &[5]);
+    write_ids(&dir.path().join("p=3/_k=5"), &[5]);
     write_ids(&dir.path().join(".p=4/x.parquet"), &[94]);
     write_bytes(&dir.path().join("p=1/_SUCCESS"), b"x");
     write_bytes(&dir.path().join("p=2/.data.bin.crc"), b"crc");
     let session = ReparkSession::new().expect("a session");
-    assert_eq!(read_ids(&session, dir.path()).await, Ok(vec![1, 2, 3, 5]));
+    assert_eq!(read_ids(&session, dir.path()).await, Ok(vec![1, 2, 5]));
+    std::fs::create_dir(dir.path().join("_q=3")).expect("a hidden-looking partition dir");
+    write_ids(&dir.path().join("_q=3/x.parquet"), &[3]);
+    let conflict = read_ids(&session, dir.path()).await;
+    assert!(
+        conflict
+            .as_ref()
+            .is_err_and(|error| error.contains("CONFLICTING_PARTITION_COLUMN_NAMES")),
+        "{conflict:?}"
+    );
 }
 
 #[tokio::test]
