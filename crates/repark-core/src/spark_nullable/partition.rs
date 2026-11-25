@@ -5,13 +5,11 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use arrow::array::timezone::Tz;
-use arrow::array::{Array, ArrayRef, BooleanArray, RecordBatch};
 use arrow::datatypes::{Field, FieldRef, Schema, SchemaRef};
 use async_trait::async_trait;
 use datafusion::catalog::Session;
 use datafusion::common::config::{ConfigEntry, ConfigExtension, ConfigOptions, ExtensionOptions};
-use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
-use datafusion::common::{Column, DFSchema, ScalarValue};
+use datafusion::common::{Column, ScalarValue};
 use datafusion::datasource::file_format::FileFormat;
 use datafusion::datasource::file_format::options::ReadOptions;
 use datafusion::datasource::listing::{ListingTableUrl, PartitionedFile};
@@ -19,16 +17,13 @@ use datafusion::datasource::physical_plan::{FileGroup, FileScanConfigBuilder};
 use datafusion::datasource::table_schema::TableSchema;
 use datafusion::datasource::{TableProvider, TableType};
 use datafusion::error::{DataFusionError, Result as DataFusionResult};
-use datafusion::logical_expr::{
-    BinaryExpr, Expr, Operator, TableProviderFilterPushDown, Volatility,
-};
-use datafusion::physical_expr::PhysicalExpr;
+use datafusion::logical_expr::{Expr, TableProviderFilterPushDown};
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::physical_plan::empty::EmptyExec;
 use datafusion::prelude::{DataFrame, ParquetReadOptions, SessionConfig, SessionContext};
 use futures::TryStreamExt;
 use object_store::ObjectMeta;
-use repark_common::java_case::string_lower_equal;
+use repark_common::java_case::{string_lower_equal, string_lowered};
 use repark_common::{Error, Result};
 use url::Url;
 
@@ -40,6 +35,7 @@ use crate::session::ReparkSession;
 use super::partition_infer::{
     infer_column_data_type, scalar_from_partition_text, unescape_spark_path_name,
 };
+use super::partition_prune::prune_partitioned_files;
 use super::{
     FloatBoundsInexactFormat, promote_parquet_null_types, read_parquet_float_bounds_inexact,
     relax_schema_to_nullable,
@@ -281,13 +277,11 @@ fn is_hidden_file_name(name: &str) -> bool {
     name.starts_with('.') || name.starts_with('_')
 }
 
-fn parse_relative_specs(
-    relative: &[&str],
-    location: &str,
-) -> Result<Vec<(String, Option<String>)>> {
+fn parse_relative_specs(relative: &[&str], location: &str) -> Result<(RawPartitionPairs, String)> {
     let dirs = &relative[..relative.len().saturating_sub(1)];
     let mut specs = Vec::new();
-    for segment in dirs.iter().rev() {
+    let mut base_len = 0;
+    for (index, segment) in dirs.iter().enumerate().rev() {
         if let Some((key, raw)) = segment.split_once('=') {
             if key.is_empty() {
                 return Err(Error::Iceberg(format!(
@@ -309,11 +303,15 @@ fn parse_relative_specs(
             };
             specs.push((unescaped_key, value));
         } else if !specs.is_empty() {
+            base_len = index + 1;
             break;
         }
     }
+    if specs.is_empty() {
+        base_len = dirs.len();
+    }
     specs.reverse();
-    Ok(specs)
+    Ok((specs, dirs[..base_len].join("/")))
 }
 
 #[derive(Debug)]
@@ -331,169 +329,6 @@ impl PartitionedParquetProvider {
     pub(crate) fn table_url(&self) -> &ListingTableUrl {
         &self.table_url
     }
-}
-
-fn expr_uses_only_columns(col_names: &[&str], expr: &Expr) -> bool {
-    let mut applicable = true;
-    let _ = expr.apply(|node| match node {
-        Expr::Column(Column { name, .. }) => {
-            applicable &= col_names.contains(&name.as_str());
-            if applicable {
-                Ok(TreeNodeRecursion::Jump)
-            } else {
-                Ok(TreeNodeRecursion::Stop)
-            }
-        }
-        Expr::Literal(_, _)
-        | Expr::Alias(_)
-        | Expr::OuterReferenceColumn(_, _)
-        | Expr::ScalarVariable(_, _)
-        | Expr::Not(_)
-        | Expr::IsNotNull(_)
-        | Expr::IsNull(_)
-        | Expr::IsTrue(_)
-        | Expr::IsFalse(_)
-        | Expr::IsUnknown(_)
-        | Expr::IsNotTrue(_)
-        | Expr::IsNotFalse(_)
-        | Expr::IsNotUnknown(_)
-        | Expr::Negative(_)
-        | Expr::Cast(_)
-        | Expr::TryCast(_)
-        | Expr::BinaryExpr(_)
-        | Expr::Between(_)
-        | Expr::Like(_)
-        | Expr::SimilarTo(_)
-        | Expr::InList(_)
-        | Expr::Case(_) => Ok(TreeNodeRecursion::Continue),
-        Expr::ScalarFunction(func) => match func.func.signature().volatility {
-            Volatility::Immutable => Ok(TreeNodeRecursion::Continue),
-            Volatility::Stable | Volatility::Volatile => {
-                applicable = false;
-                Ok(TreeNodeRecursion::Stop)
-            }
-        },
-        _ => {
-            applicable = false;
-            Ok(TreeNodeRecursion::Stop)
-        }
-    });
-    applicable
-}
-
-fn strip_column_qualifiers(expr: Expr) -> Expr {
-    expr.transform(|node| match node {
-        Expr::Column(column) => Ok(Transformed::yes(Expr::Column(Column::new_unqualified(
-            column.name,
-        )))),
-        other => Ok(Transformed::no(other)),
-    })
-    .map_or_else(
-        |_| Expr::Literal(ScalarValue::Boolean(Some(true)), None),
-        |t| t.data,
-    )
-}
-
-fn flatten_conjuncts(filters: &[Expr]) -> Vec<Expr> {
-    let mut out = Vec::with_capacity(filters.len());
-    let mut stack: Vec<Expr> = filters.iter().rev().cloned().collect();
-    while let Some(expr) = stack.pop() {
-        match expr {
-            Expr::BinaryExpr(BinaryExpr {
-                left,
-                op: Operator::And,
-                right,
-            }) => {
-                stack.push(*right);
-                stack.push(*left);
-            }
-            other => out.push(other),
-        }
-    }
-    out
-}
-
-fn prune_partitioned_files(
-    state: &dyn Session,
-    files: &[PartitionedFile],
-    partition_fields: &[FieldRef],
-    filters: &[Expr],
-) -> DataFusionResult<Vec<PartitionedFile>> {
-    if partition_fields.is_empty() || filters.is_empty() {
-        return Ok(files.to_vec());
-    }
-    let part_names: Vec<&str> = partition_fields
-        .iter()
-        .map(|field| field.name().as_str())
-        .collect();
-    let part_filters: Vec<Expr> = flatten_conjuncts(filters)
-        .into_iter()
-        .filter(|expr| expr_uses_only_columns(&part_names, expr))
-        .map(strip_column_qualifiers)
-        .collect();
-    if part_filters.is_empty() {
-        return Ok(files.to_vec());
-    }
-    let Ok(part_df_schema) = DFSchema::from_unqualified_fields(
-        partition_fields.iter().cloned().collect(),
-        HashMap::new(),
-    ) else {
-        return Ok(files.to_vec());
-    };
-    let mut physicals: Vec<Arc<dyn PhysicalExpr>> = Vec::with_capacity(part_filters.len());
-    for filter in part_filters {
-        if let Ok(physical) = state.create_physical_expr(filter, &part_df_schema) {
-            physicals.push(physical);
-        }
-    }
-    if physicals.is_empty() {
-        return Ok(files.to_vec());
-    }
-    let ansi_enabled = partition_pruning_ansi_from_options(state.config_options());
-    let part_arrow_schema = Arc::clone(part_df_schema.inner());
-    let mut kept = Vec::with_capacity(files.len());
-    for file in files {
-        let arrays: DataFusionResult<Vec<ArrayRef>> = file
-            .partition_values
-            .iter()
-            .map(|value| value.to_array_of_size(1))
-            .collect();
-        let Ok(arrays) = arrays else {
-            kept.push(file.clone());
-            continue;
-        };
-        let Ok(batch) = RecordBatch::try_new(Arc::clone(&part_arrow_schema), arrays) else {
-            kept.push(file.clone());
-            continue;
-        };
-        let mut keep_file = true;
-        for physical in &physicals {
-            let evaluated = physical
-                .evaluate(&batch)
-                .and_then(|value| value.into_array(1));
-            match evaluated {
-                Ok(array) => {
-                    if let Some(bools) = array.as_any().downcast_ref::<BooleanArray>()
-                        && bools.len() == 1
-                        && (!bools.is_valid(0) || !bools.value(0))
-                    {
-                        keep_file = false;
-                        break;
-                    }
-                }
-                Err(error) => {
-                    if ansi_enabled {
-                        return Err(error);
-                    }
-                    break;
-                }
-            }
-        }
-        if keep_file {
-            kept.push(file.clone());
-        }
-    }
-    Ok(kept)
 }
 
 #[async_trait]
@@ -556,10 +391,17 @@ async fn read_parquet_listing_fallback(
 }
 
 type RawPartitionPairs = Vec<(String, Option<String>)>;
-type DiscoveredEntry = (ObjectMeta, RawPartitionPairs, usize);
+type DiscoveredEntry = (ObjectMeta, RawPartitionPairs, usize, String);
 
-fn refuse_zero_byte_parquet(entries: &[DiscoveredEntry]) -> Result<()> {
-    if let Some((empty, _, _)) = entries.iter().find(|(meta, _, _)| meta.size == 0) {
+fn footer_file(entries: &[DiscoveredEntry]) -> Option<&ObjectMeta> {
+    entries
+        .iter()
+        .map(|(meta, _, _, _)| meta)
+        .min_by(|left, right| left.location.as_ref().cmp(right.location.as_ref()))
+}
+
+fn refuse_zero_byte_footer(footer: Option<&ObjectMeta>) -> Result<()> {
+    if let Some(empty) = footer.filter(|meta| meta.size == 0) {
         return Err(Error::Iceberg(format!(
             "[FAILED_READ_FILE.CANNOT_READ_FILE_FOOTER] Could not read footer for file: '{}' \
              (0 bytes). SQLSTATE: KD001",
@@ -567,6 +409,50 @@ fn refuse_zero_byte_parquet(entries: &[DiscoveredEntry]) -> Result<()> {
         )));
     }
     Ok(())
+}
+
+fn base_display_path(table_url: &ListingTableUrl, base: &str) -> String {
+    let root = table_url.prefix().as_ref().trim_end_matches('/');
+    let joined = match (root.is_empty(), base.is_empty()) {
+        (_, true) => root.to_string(),
+        (true, false) => base.to_string(),
+        (false, false) => format!("{root}/{base}"),
+    };
+    let url = table_url.get_url();
+    if url.scheme() == "file" {
+        format!("file:/{joined}")
+    } else {
+        format!(
+            "{}://{}/{joined}",
+            url.scheme(),
+            url.host_str().unwrap_or_default()
+        )
+    }
+}
+
+fn refuse_conflicting_directory_structures(
+    table_url: &ListingTableUrl,
+    entries: &[DiscoveredEntry],
+) -> Result<()> {
+    let mut bases: Vec<String> = Vec::new();
+    for (_, _, _, base) in entries {
+        let lowered = string_lowered(&base_display_path(table_url, base));
+        if !bases.contains(&lowered) {
+            bases.push(lowered);
+        }
+    }
+    if bases.len() < 2 {
+        return Ok(());
+    }
+    Err(Error::Iceberg(format!(
+        "[CONFLICTING_DIRECTORY_STRUCTURES] Conflicting directory structures detected.\n\
+         Suspicious paths:\n\n\t{}\n\n\
+         If provided paths are partition directories, please set \"basePath\" in the options \
+         of the data source to specify the root directory of the table.\n\
+         If there are multiple root directories, please load them separately and then union \
+         them. SQLSTATE: KD009",
+        bases.join("\n\t")
+    )))
 }
 
 fn normalize_file_dir_url(path: String) -> String {
@@ -633,26 +519,28 @@ pub(crate) async fn read_parquet_discovered(
             continue;
         }
         let depth = relative.len();
-        let specs = parse_relative_specs(&relative, meta.location.as_ref())?;
-        visible.push((meta, specs, depth));
+        let (specs, base) = parse_relative_specs(&relative, meta.location.as_ref())?;
+        visible.push((meta, specs, depth, base));
     }
     if visible.is_empty() {
         return read_parquet_listing_fallback(context, &resolved).await;
     }
-    let any_partitioned = visible.iter().any(|(_, specs, _)| !specs.is_empty());
-    let kept: Vec<DiscoveredEntry> = if any_partitioned {
+    let any_partitioned = visible.iter().any(|(_, specs, _, _)| !specs.is_empty());
+    let (kept, footer): (Vec<DiscoveredEntry>, Option<ObjectMeta>) = if any_partitioned {
+        refuse_conflicting_directory_structures(&table_url, &visible)?;
+        let footer = footer_file(&visible).cloned();
         let partitioned: Vec<DiscoveredEntry> = visible
             .into_iter()
-            .filter(|(_, specs, _)| !specs.is_empty())
+            .filter(|(_, specs, _, _)| !specs.is_empty())
             .collect();
-        refuse_zero_byte_parquet(&partitioned)?;
-        partitioned
+        (partitioned, footer)
     } else {
         let root_only: Vec<DiscoveredEntry> = visible
             .into_iter()
-            .filter(|(_, _, depth)| *depth == 1)
+            .filter(|(_, _, depth, _)| *depth == 1)
             .collect();
-        refuse_zero_byte_parquet(&root_only)?;
+        let footer = footer_file(&root_only).cloned();
+        refuse_zero_byte_footer(footer.as_ref())?;
         if !had_hidden_parquet {
             return read_parquet_listing_fallback(context, &resolved).await;
         }
@@ -661,11 +549,11 @@ pub(crate) async fn read_parquet_discovered(
                 "Error during planning: No files found at {resolved}"
             )));
         }
-        root_only
+        (root_only, footer)
     };
     let mut seen_norm: Vec<Vec<String>> = Vec::new();
     let mut display_by_norm: HashMap<Vec<String>, (Vec<String>, PathBuf)> = HashMap::new();
-    for (meta, specs, _) in &kept {
+    for (meta, specs, _, _) in &kept {
         let keys: Vec<String> = specs.iter().map(|(key, _)| key.clone()).collect();
         let norm: Vec<String> = if case_sensitive {
             keys.clone()
@@ -696,6 +584,7 @@ pub(crate) async fn read_parquet_discovered(
             &dir_by_list,
         )));
     }
+    refuse_zero_byte_footer(footer.as_ref())?;
     let canonical_names: Vec<String> = seen_norm
         .first()
         .and_then(|norm| display_by_norm.get(norm))
@@ -710,12 +599,20 @@ pub(crate) async fn read_parquet_discovered(
     for (col_index, name) in canonical_names.iter().enumerate() {
         let col_values: Vec<Option<&str>> = kept
             .iter()
-            .map(|(_, specs, _)| specs.get(col_index).and_then(|(_, val)| val.as_deref()))
+            .map(|(_, specs, _, _)| specs.get(col_index).and_then(|(_, val)| val.as_deref()))
             .collect();
         let data_type = infer_column_data_type(&col_values, session_zone, type_inference);
         partition_fields.push(Arc::new(Field::new(name, data_type, true)));
     }
-    let kept_metas: Vec<ObjectMeta> = kept.iter().map(|(meta, _, _)| meta.clone()).collect();
+    let scanned: Vec<DiscoveredEntry> = kept
+        .into_iter()
+        .filter(|(meta, _, _, _)| meta.size > 0)
+        .collect();
+    let mut kept_metas: Vec<ObjectMeta> =
+        scanned.iter().map(|(meta, _, _, _)| meta.clone()).collect();
+    if kept_metas.is_empty() {
+        kept_metas.extend(footer);
+    }
     let listing_options = ParquetReadOptions::default()
         .to_listing_options(&context.copied_config(), context.copied_table_options());
     let format: Arc<dyn FileFormat> =
@@ -764,9 +661,9 @@ pub(crate) async fn read_parquet_discovered(
         .iter()
         .map(|field| field.name().clone())
         .collect();
-    let partitioned_files: Vec<PartitionedFile> = kept
+    let partitioned_files: Vec<PartitionedFile> = scanned
         .into_iter()
-        .map(|(meta, specs, _)| {
+        .map(|(meta, specs, _, _)| {
             let values: Vec<ScalarValue> = partition_fields
                 .iter()
                 .enumerate()

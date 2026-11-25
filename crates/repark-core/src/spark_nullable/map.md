@@ -43,7 +43,7 @@ converter reads no `INT96` bounds, so the leaf is never pruned, as before. SQL `
 unset value for the session (`conf.unset` leaves the live value)
 ([card](../../../../task/roadmap/mid-term/parquet-int96-as-ntz-1-card-2026-11-22.md)).
 
-**PARQUET-PARTITION-DISCOVERY-1 (2026-11-24; Delta 1):** `partition.rs` and `partition_infer.rs` add Spark-compatible
+**PARQUET-PARTITION-DISCOVERY-1 (2026-11-24; Delta 2):** `partition.rs` and `partition_infer.rs` add Spark-compatible
 Hive partition discovery to the Parquet path-read seat (`ReparkSession::read_parquet` /
 `read_parquet_with_case_sensitivity`) over both local paths and S3 prefixes (shared `ObjectStore` listing;
 `plan_introspect.rs` recognizes `PartitionedParquetProvider` beside `ListingTable`). They reuse
@@ -53,15 +53,23 @@ leaving text and ORC discovery untouched. Rules pinned to live Spark 4.1.2:
   `_` and contains no `=` (so `_p=1/` and `_=1/` are partition directories while `_temporary/` is hidden); a file name
   is hidden iff it starts with `.` or `_` (so `_p=1/_hidden.parquet`, `_SUCCESS`, `.crc`, `.hidden.parquet`, and
   hidden 0-byte `_zero.parquet` are skipped).
-- Non-hidden 0-byte `.parquet` files are not skipped; they refuse with
-  `[FAILED_READ_FILE.CANNOT_READ_FILE_FOOTER]` (`SQLSTATE: KD001`) in both partitioned and unpartitioned directories.
+- Footer order (Spark `ParquetUtils.inferSchema` reads one footer, the first of `allFiles()` by path string): the
+  first visible file in byte order (root and base-directory files included when partitioned, root files only when
+  not) refuses with `[FAILED_READ_FILE.CANNOT_READ_FILE_FOOTER]` (`SQLSTATE: KD001`) when it holds 0 bytes; any
+  other 0-byte file is skipped from the scan (`isNonEmptyFile`) but still names its partition and its value feeds type
+  inference. The refusal comes after both conflict checks.
 - When no visible file has a partition spec, unpartitioned directories without hidden `.parquet` files take main's
   `ListingTable` fallback; when hidden `.parquet` files are present, only root-level files (`depth == 1`) are kept
   (never reading nested non-`=` subdirectories, refusing when no root-level `.parquet` files exist).
 - Partition spec extraction (`parse_relative_specs`) scans directory segments in reverse, taking only the trailing
   contiguous run of `key=value` directories above the file (skipping trailing non-`=` subdirectories like `a=1/b=2/sub/`,
-  stopping before a non-`=` separator like `a=1/sub/b=2/` -> `b` only). Root-level files alongside `k=v/` are ignored
-  (`keep_partitioned_only`). Leaf reads (`root/p=1`) and root names holding `=` (`tag=foo`) yield no partition columns.
+  stopping before a non-`=` separator like `a=1/sub/b=2/` -> `b` only). Leaf reads (`root/p=1`) and root names holding
+  `=` (`tag=foo`) yield no partition columns.
+- Base paths (Spark `PartitioningUtils.parsePartitions`): a file's directory has the base path where that walk stops
+  (the non-`=` segment, or the root); a directory without `key=value` segments is its own base path. When any file is
+  partitioned, every visible file's base path must match case-insensitively, or the read refuses with
+  `[CONFLICTING_DIRECTORY_STRUCTURES]` (`KD009`) before `CONFLICTING_PARTITION_COLUMN_NAMES`; files in the common base
+  directory (root files beside `k=v/`) are then left out, as Spark leaves them out.
 - Both partition column names and partition values unescape `%XX` sequences per byte (`char::from(byte)` in
   `partition_infer::unescape_spark_path_name`, matching Spark's `ExternalCatalogUtils.unescapePathName`: `a%2Fb=1` ->
   column `a/b`, `p=%C3%A9` -> `Ã©`, while raw UTF-8 `p=é` stays `é`).
@@ -83,8 +91,13 @@ leaving text and ORC discovery untouched. Rules pinned to live Spark 4.1.2:
   Parquet scan schema and a logical `Projection` places the partition column at the original file-column position
   using the partition name, inferred type, and directory value.
 - `PartitionedParquetProvider` wraps `FileScanConfigBuilder` + `FloatBoundsInexactFormat` + `TableSchema`, sets
-  `PartitionedFile.partition_values`, supports `Inexact` filter pushdown, and prunes files by flattening top-level
-  `AND` partition-only conjuncts and evaluating them sequentially per file (short-circuiting on `false`/`NULL`). Under
+  `PartitionedFile.partition_values`, supports `Inexact` filter pushdown, and prunes files in `partition_prune.rs`:
+  it first models Spark's `ConstantPropagation` (a top-level `partcol = literal` or `<=>` conjunct binds the column,
+  the last binding wins, bindings reach `AND` children and the `AND`s inside `OR` but not `NOT`; bound columns are
+  replaced inside comparisons other than the binding itself, with `!=` read as `NOT (=)`), then its `ConstantFolding`
+  (a conjunct left constant is evaluated once: the leading run short-circuits on `false`, later ones always run and
+  raise), then evaluates the remaining partition-only conjuncts sequentially per file (short-circuiting on
+  `false`/`NULL`). Under
   `PartitionPruningAnsiConfig { enabled: true }` (mirrored from `SparkAnsiConfig` in `extension.rs`,
   `session_runtime.rs`, and `temp_settings.rs`), runtime evaluation errors propagate even on 0-row partitions; under
   `enabled: false` or when `create_physical_expr` cannot lower an expression, files are kept conservatively. Returns
@@ -116,6 +129,13 @@ leaving text and ORC discovery untouched. Rules pinned to live Spark 4.1.2:
 - `partition.rs` — `PARTITION_COLUMN_TYPE_INFERENCE_KEY`, `PartitionColumnTypeInferenceConfig`,
   `PartitionPruningAnsiConfig`, `PartitionedParquetProvider`, `read_parquet_with_case_sensitivity`, and
   `set_partition_column_type_inference`.
+- `partition_layout_tests.rs` — Delta 2 Rust pins: the base-path rule (two sub-bases, root beside `sub/`, a `sub/`
+  file or 0-byte file, `a=1/sub/b=2` beside `a=2/sub/b=3`, directory conflict before names; root, hidden and
+  base-directory files answer; same mid base and case-only base differences answer), footer order (root, `Z` before
+  `a`, unpartitioned first refuse; later 0-byte files skip; a 0-byte leaf types `p` as string; a root file's schema
+  with only 0-byte partitions; names before footer), and binding-first pruning (answers and refusals, two columns).
+- `partition_prune.rs` — `prune_partitioned_files`: conjunct flattening, the `ConstantPropagation` and
+  `ConstantFolding` model, and per-file evaluation under `PartitionPruningAnsiConfig`.
 - `partition_infer.rs` — `unescape_spark_path_name`, Java integral `BigDecimal` / `Double` (incl. hex float and
   signed NaN) parsers, Spark 4.1.2 inference ladder (incl. `Date32`+`Timestamp` widening), and partition scalar
   materialization.

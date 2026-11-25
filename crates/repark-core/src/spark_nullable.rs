@@ -26,6 +26,7 @@ use object_store::{ObjectMeta, ObjectStore};
 mod extreme_bounds;
 pub mod partition;
 mod partition_infer;
+mod partition_prune;
 
 pub(crate) use partition::PartitionedParquetProvider;
 pub use partition::{
@@ -579,6 +580,9 @@ mod float_bounds_tests;
 
 #[cfg(test)]
 mod int96_tests;
+
+#[cfg(test)]
+mod partition_layout_tests;
 
 #[cfg(test)]
 mod partition_tests;
