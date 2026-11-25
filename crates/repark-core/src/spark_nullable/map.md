@@ -43,6 +43,27 @@ converter reads no `INT96` bounds, so the leaf is never pruned, as before. SQL `
 unset value for the session (`conf.unset` leaves the live value)
 ([card](../../../../task/roadmap/mid-term/parquet-int96-as-ntz-1-card-2026-11-22.md)).
 
+**FILE-EXTENSION-FILTER-1 (2026-11-25):** a Parquet path read (`spark.read.parquet`, `format("parquet").load`, the
+native `read_parquet`) lists files the way Spark's `InMemoryFileIndex` does. `ParquetReadOptions::default()` filtered
+the listing by the `.parquet` suffix, so a file named `b`, `b.PARQUET` or `b.bin` lost its rows silently, a single
+file path without the suffix was refused, and `_b.parquet` and `.b.parquet` were read where Spark skips them.
+`read_parquet_nullable` now infers and reads with an empty suffix, and `hidden_files.rs` keeps Spark's name rule
+instead: a name starting with `_` that holds no `=`, a name starting with `.`, or a name ending in `._COPYING_` is
+skipped. The rule reads every path segment below the listing root (the table URL's prefix, so a root directory named
+`_root/` is read and a `.p=3/` partition directory is skipped); a single-file path is judged by its own name, as Spark
+refuses `_b.parquet` read directly. Spark lists `_metadata` and `_common_metadata` in `inputFiles()` but never scans
+them (`isDataPath`); RePark skips them, so their rows match Spark and `inputFiles()` omits them, as on main.
+
+DataFusion 54.1.0 filters a listing only by suffix and glob (`datafusion-datasource-54.1.0/src/url.rs:296-302`), so the
+rule sits under it: `SparkListingTable` wraps the `ListingTable` and hands its `scan` a `SparkListingSession`, the same
+session with a runtime whose object-store registry wraps each store in `SparkListingStore`. That store drops hidden
+names from `list` and answers a `head` of a hidden single file with `NotFound`; every other call, and every read the
+executed plan makes (through the task context, not this session), goes to the real store. Listing, statistics,
+pruning, file grouping and `inputFiles()` stay DataFusion's own. The session's list-files cache is off
+(`../session.rs` `with_object_list_cache_limit(0)`), so a cached listing cannot bypass the rule. The table keeps no
+table reference, so its file-statistics caching is unchanged. `../plan_introspect.rs` reads through the wrapper for
+the S3 overwrite check and the semantic hash. Evidence: `task/wo/file-extension-filter-1/`.
+
 ## Files
 
 - `extreme_bounds.rs` — `without_type_extreme_bounds`, `drop_type_extreme_bounds`, `has_type_extreme_bound`: a min at
@@ -59,6 +80,13 @@ unset value for the session (`conf.unset` leaves the live value)
   every NaN back, `max` answers NaN and `min` the smallest number, on a
   constant and a spread file, one and two row groups. Removing the per-file demotion, the per-scan demotion or the
   factory registration, or the row-group check, each turns a pin red. The aggregate dynamic filter (NAN-MINMAX-1 N1): three files `[3,4]`, `[NULL,NULL | 1,2]` and `[5,6]` answer `max(d), min(d)` 6.0, 1.0 and `min(d), max(id)` 1.0, 8 in 10 of 10 runs (red with the default removed: `min` 3.0); the umbrella key at `true` is refused on four `SET` forms and at build, `false` is accepted, and the specific key turns the filter on at runtime and at build.
+
+- `hidden_files.rs` — `spark_hidden_name` and `spark_hidden_below` (the name rule over each segment below the root),
+  `SparkListingTable`, `SparkListingSession`, and the registry and store wrappers that apply the rule to a listing.
+- `hidden_files_tests.rs` — the name table (Spark's writer markers, `_metadata`, `_k=1.parquet`, `._COPYING_`), the
+  segment table (partition directories, hidden roots, single files), and `read_parquet` over a flat directory with
+  every marker, partition directories, single files with any suffix and hidden names, a hidden root directory, a
+  glob, and the wrapped listing's S3 overwrite check.
 
 - `int96_tests.rs` — a low-level `INT96` file (2025, year 2999 and 1960 instants, a NULL) beside an `INT64`
   not-adjusted leaf: `read_parquet` and `CREATE EXTERNAL TABLE … STORED AS PARQUET` read `Timestamp(Microsecond,

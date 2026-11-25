@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::hash::{BuildHasher, Hasher};
 use std::sync::Arc;
 
+use datafusion::catalog::TableProvider;
 use datafusion::common::TableReference;
 use datafusion::common::tree_node::TreeNodeRecursion;
 use datafusion::datasource::default_table_source::source_as_provider;
@@ -23,6 +24,7 @@ use crate::plan_canonical::{
     RelTable, build_relations, user_shaped_comparisons, write_expr, write_exprs, write_opt_expr,
     write_sort,
 };
+use crate::spark_nullable::hidden_files::SparkListingTable;
 
 #[must_use]
 pub fn input_files(plan: &Arc<dyn ExecutionPlan>) -> Vec<String> {
@@ -75,7 +77,7 @@ pub(crate) fn plan_reads_s3_prefix(plan: &LogicalPlan, bucket: &str, prefix: &st
                     pending.push(inner.into_owned());
                 }
                 if let Ok(provider) = source_as_provider(&scan.source)
-                    && let Some(table) = provider.downcast_ref::<ListingTable>()
+                    && let Some(table) = listing_table(provider.as_ref())
                 {
                     found = found
                         || table
@@ -88,6 +90,14 @@ pub(crate) fn plan_reads_s3_prefix(plan: &LogicalPlan, bucket: &str, prefix: &st
         });
     }
     found
+}
+
+fn listing_table(provider: &(dyn TableProvider + 'static)) -> Option<&ListingTable> {
+    provider.downcast_ref::<ListingTable>().or_else(|| {
+        provider
+            .downcast_ref::<SparkListingTable>()
+            .map(SparkListingTable::listing)
+    })
 }
 
 fn scan_url_hits_prefix(url: &ListingTableUrl, bucket: &str, prefix: &str) -> bool {
@@ -462,7 +472,7 @@ pub(crate) fn write_table_source<S: BuildHasher>(
         hash.write(b"OpaqueSource");
         return;
     };
-    if let Some(table) = provider.downcast_ref::<ListingTable>() {
+    if let Some(table) = listing_table(provider.as_ref()) {
         hash.write(b"Listing");
         hash.write_usize(table.table_paths().len());
         for url in table.table_paths() {
