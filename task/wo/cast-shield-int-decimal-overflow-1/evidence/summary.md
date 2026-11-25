@@ -40,7 +40,7 @@ the shape `A AND <cast> = k`, where `A` removes the overflowing rows. DataFusion
 ## Pruning and EXPLAIN
 
 - **EXPLAIN equals main** for every query without an integer-to-decimal narrowing cast: Parquet and Iceberg, both modes.
-- **Scan metrics equal the first head build** (`8caf3105`) for every cast query. An overflowing-cast predicate reads 4
+- **Scan metrics equal the first head build** for every cast query. An overflowing-cast predicate reads 4
   of 4 row groups and 8 of 8 Iceberg files, which is Spark's read set: Spark pushes only `IsNotNull`.
 - **A guarded conjunction keeps pruning on its other conjunct:** 2 of 4 row groups by `id IN (...)`, and the Iceberg
   predicate `id IN (...)`.
