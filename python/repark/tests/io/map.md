@@ -46,6 +46,7 @@ pins.
 - [test_r2_read_formats2.py](test_r2_read_formats2.py) — R2 — writer option matrix / path modes / partitionBy honesty pins (Arrow path).
 - [test_s3_path_write_1.py](test_s3_path_write_1.py) — Moto pins for the 38 W-PATH-S3-* oracle cells in ``u12-spark.json``.
 - [test_plain_dynamic_overwrite_guard_1.py](test_plain_dynamic_overwrite_guard_1.py) — PLAIN-DYNAMIC-OVERWRITE-GUARD-1: effective DYNAMIC partitioned path overwrites refuse with the scratch tree byte-identical (seed intact or target absent; a red build reports the change) (four formats, both spellings, S3 dispatch spy; Delta 1: inputs covering every partition, an empty directory, `partitionBy` lists and keywords, `option("path")`, builder conf, `newSession`); `unset` and the STATIC, append, ignore, error and unpartitioned branches unchanged.
+- [test_partitionby_null_write_1.py](test_partitionby_null_write_1.py) — PARTITIONBY-NULL-WRITE-1: 80 Spark 4.1.2 cells (integers, booleans, dates, NULL/empty/special strings, two levels, all-NULL; Parquet, CSV, JSON and text; `partitionBy().<format>()` and `format().partitionBy().save()`; error, overwrite and append) check which rows land in which partition directory; the NULL, empty and escaping cells are red on main, the no-NULL, text and refusal cells green on both.
 - [test_session_sources.py](test_session_sources.py) — Declared source mounts: `sources()` lists them with redacted properties and `ping` resolves through the mount.
 - [test_source_url_redact_1_fn.py](test_source_url_redact_1_fn.py) — SOURCE-URL-REDACT-1: URL passwords are masked on the builder, `repark.toml` and `conf.set` doors.
 - [test_source_url_redact_2.py](test_source_url_redact_2.py) — SOURCE-URL-REDACT-2: config values and refusals never echo a credential (three shapes on every door).
@@ -68,6 +69,7 @@ pins.
 - [parquet_int96_as_ntz_1_oracle.json](parquet_int96_as_ntz_1_oracle.json) — Spark 4.1.2 answers and cell definitions read by `test_parquet_int96_as_ntz_1.py`.
 - [_record_parquet_int96_as_ntz_1.py](_record_parquet_int96_as_ntz_1.py) — writes the fixtures (`--fixtures`), records the oracle (`--rewrite`) or re-verifies it on PySpark 4.1.2 (exit 1 on drift).
 - [facade_orc_oracle.json](facade_orc_oracle.json) — Recorded Spark oracle read by `test_io_orc_1.py`.
+- [partitionby_null_write_1_spark.json](partitionby_null_write_1_spark.json) — Spark 4.1.2 directories and row ids per cell (both ANSI modes equal), read by `test_partitionby_null_write_1.py`.
 
 ## Path expressions
 

@@ -407,9 +407,10 @@ class DataFrameWriter:
                     'Use mode("overwrite") to replace the path, or write to a directory path.'
                 )
             self._validate_path_append_schema(destination, stored_as=stored_as)
-        partition_clause = writer_layout.partitioned_by_sql_clause(
+        hive_partitions = writer_layout._resolved_partition_columns(
             list(self._dataframe.columns), self._partition_columns
         )
+        partition_clause = writer_layout._partition_clause(hive_partitions)
         named = f"-{destination.name}" if destination.name else ""
         staging = destination.parent / f"repark-staging-{uuid.uuid4().hex}{named}"
         escaped_staging = escape_sql_single_quotes(str(staging))
@@ -424,7 +425,9 @@ class DataFrameWriter:
                 None,
                 "_repark_writer_",
                 duplicate_tolerant=stored_as == "CSV",
+                hive_partitions=hive_partitions,
             )
+            writer_layout._spell_partition_dirs(staging, hive_partitions)
             if not staging.exists():
                 staging.mkdir(parents=True, exist_ok=True)
             self._materialize_empty_path_write(staging, stored_as=stored_as)
