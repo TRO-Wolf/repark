@@ -594,9 +594,8 @@ async fn g3e8_delete_not_in_empty_subquery_deletes_every_row() {
     );
 }
 
-/// Quoted target + FROM-less: same product spelling, different target forms.
 #[tokio::test]
-async fn g3e8_delete_not_in_quoted_and_fromless_execute() {
+async fn g3e8_delete_not_in_quoted_target_executes() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = g3e8_setup(&wh).await;
     execute(
@@ -606,20 +605,6 @@ async fn g3e8_delete_not_in_quoted_and_fromless_execute() {
     )
     .await
     .expect("quoted-target NOT IN must execute");
-    assert_eq!(
-        table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
-        vec![(2, "b".to_string())],
-    );
-
-    let wh = TempDir::new().unwrap();
-    let (ctx, catalogs) = g3e8_setup(&wh).await;
-    execute(
-        &ctx,
-        &catalogs,
-        "DELETE ice.sales.tgt WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
-    )
-    .await
-    .expect("FROM-less NOT IN must execute");
     assert_eq!(
         table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
         vec![(2, "b".to_string())],
@@ -703,20 +688,6 @@ async fn g3e8_delete_exists_uncorrelated_and_correlated_execute() {
         table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
         vec![(2, "b".to_string())],
     );
-
-    let wh = TempDir::new().unwrap();
-    let (ctx, catalogs) = g3e8_setup(&wh).await;
-    execute(
-        &ctx,
-        &catalogs,
-        "DELETE ice.sales.tgt WHERE EXISTS (SELECT 1 FROM ice.sales.keys)",
-    )
-    .await
-    .expect("FROM-less uncorrelated EXISTS must execute");
-    assert_eq!(
-        table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
-        Vec::<(i32, String)>::new(),
-    );
 }
 
 /// Correlated `DELETE … IN` matches correlated `EXISTS`.
@@ -732,21 +703,6 @@ async fn g3e8_delete_correlated_in_deletes_exactly_the_matching_row() {
     )
     .await
     .expect("correlated IN DELETE must execute");
-    assert_eq!(
-        table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
-        vec![(1, "a".to_string()), (3, "c".to_string())],
-    );
-
-    let wh = TempDir::new().unwrap();
-    let (ctx, catalogs) = g3e8_setup(&wh).await;
-    execute(
-        &ctx,
-        &catalogs,
-        "DELETE ice.sales.tgt WHERE id IN \
-         (SELECT k.id FROM ice.sales.keys k WHERE k.id = ice.sales.tgt.id)",
-    )
-    .await
-    .expect("FROM-less correlated IN must execute");
     assert_eq!(
         table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
         vec![(1, "a".to_string()), (3, "c".to_string())],
@@ -1082,33 +1038,18 @@ async fn g3e8_subquery_valve_precedes_the_mor_multi_spec_valve() {
     );
 }
 
-/// The FROM-less `DELETE <table> WHERE …` family exercises the executing-parse valve (L1 M-1).
 #[tokio::test]
-async fn g3e8_fromless_delete_in_subquery_deletes_exactly_the_matching_row() {
+async fn g3e8_fromless_delete_refuses_before_any_row_moves() {
     for sql in [
+        "DELETE ice.sales.tgt WHERE id = 2",
+        "DELETE ice.sales.tgt",
         "DELETE ice.sales.tgt WHERE id IN (SELECT id FROM ice.sales.keys)",
         "delete ice.sales.tgt where id in (select id from ice.sales.keys)",
-    ] {
-        let wh = TempDir::new().unwrap();
-        let (ctx, catalogs) = g3e8_setup(&wh).await;
-        execute(&ctx, &catalogs, sql)
-            .await
-            .unwrap_or_else(|error| panic!("FROM-less IN must execute, sql={sql:?}: {error}"));
-        assert_eq!(
-            table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
-            vec![(1, "a".to_string()), (3, "c".to_string())],
-            "FROM-less IN must delete only id=2, sql={sql:?}"
-        );
-    }
-}
-
-/// Residual FROM-less subquery spellings stay refused at the executing parse (F-A).
-#[tokio::test]
-async fn g3e8_fromless_delete_subquery_family_all_refuse() {
-    for sql in [
-        // F9 — FROM-less residual (IN / NOT IN / [NOT] EXISTS / correlated IN now execute)
+        "DELETE ice.sales.tgt WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
+        "DELETE ice.sales.tgt WHERE EXISTS (SELECT 1 FROM ice.sales.keys)",
         "DELETE ice.sales.tgt WHERE id IN (SELECT max(id) FROM ice.sales.keys)",
         "DELETE ice.sales.tgt WHERE id = ANY (SELECT id FROM ice.sales.keys)",
+        "DELETE `ice`.sales.tgt WHERE id = 2",
     ] {
         let wh = TempDir::new().unwrap();
         let (ctx, catalogs) = g3e8_setup(&wh).await;
@@ -1116,24 +1057,16 @@ async fn g3e8_fromless_delete_subquery_family_all_refuse() {
         assert_eq!(
             table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
             g3e8_seed(),
-            "a FROM-less subquery DELETE must not touch a row, sql={sql:?}, outcome={outcome:?}"
+            "a FROM-less DELETE must not touch a row, sql={sql:?}, outcome={outcome:?}"
         );
         let Err(err) = outcome else {
-            panic!("G3-E8 must refuse the FROM-less form: {sql}")
+            panic!("the FROM-less form must refuse: {sql}")
         };
-        assert_g3e8_message(&err.to_string(), "DELETE", sql);
+        let text = err.to_string();
+        assert!(
+            text.contains("[PARSE_SYNTAX_ERROR] Syntax error at or near '")
+                && text.contains("': missing 'FROM'."),
+            "must refuse with Spark's parse error, sql={sql:?}, got {text}"
+        );
     }
-}
-
-/// The adjacent negative for the FROM-less family.
-#[tokio::test]
-async fn g3e8_fromless_non_subquery_delete_still_executes() {
-    let wh = TempDir::new().unwrap();
-    let (ctx, catalogs) = g3e8_setup(&wh).await;
-    run(&ctx, &catalogs, "DELETE ice.sales.tgt WHERE id = 2").await;
-    assert_eq!(
-        table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
-        vec![(1, "a".to_string()), (3, "c".to_string())],
-        "a FROM-less DELETE with a plain predicate must still delete exactly the matched row"
-    );
 }

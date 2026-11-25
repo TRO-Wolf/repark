@@ -609,18 +609,33 @@ async fn backtick_ident_survives_the_door() {
 }
 
 #[tokio::test]
-async fn wildcard_exclude_reads_as_except() {
+async fn wildcard_exclude_refuses_and_wildcard_except_reads() {
     let ctx = production_ctx(false);
-    let batches = execute(
+    let refused = execute(
         &ctx,
         &CatalogRegistry::new(),
         "SELECT * EXCLUDE (b) FROM (SELECT 1 AS a, 2 AS b) t",
+    )
+    .await
+    .map(|_| ())
+    .expect_err("Spark's parser refuses `* EXCLUDE (…)`");
+    assert!(
+        refused
+            .to_string()
+            .contains("[PARSE_SYNTAX_ERROR] Syntax error at or near '('."),
+        "{refused}"
+    );
+    let batches = execute(
+        &ctx,
+        &CatalogRegistry::new(),
+        "SELECT * EXCEPT (b) FROM (SELECT 1 AS a, 2 AS b) t",
     )
     .await
     .unwrap()
     .collect()
     .await
     .unwrap();
+    assert_eq!(batches[0].schema().fields().len(), 1);
     assert_eq!(batches[0].schema().field(0).name(), "a");
     assert_eq!(
         batches[0]
@@ -631,6 +646,66 @@ async fn wildcard_exclude_reads_as_except() {
             .value(0),
         1
     );
+}
+
+async fn struct_field_outcome(sql: &str) -> std::result::Result<Vec<RecordBatch>, String> {
+    let ctx = production_ctx(false);
+    let frame = execute(&ctx, &CatalogRegistry::new(), sql)
+        .await
+        .map_err(|error| error.to_string())?;
+    frame.collect().await.map_err(|error| error.to_string())
+}
+
+#[tokio::test]
+async fn struct_field_access_resolves_every_sibling_and_evaluates_constant_ones() {
+    let unresolved =
+        struct_field_outcome("SELECT named_struct('a', 1, 'b', no_such_col_xyz).a AS v").await;
+    assert!(
+        unresolved
+            .as_ref()
+            .is_err_and(|text| text.contains("no_such_col_xyz")),
+        "{unresolved:?}"
+    );
+    let nested = struct_field_outcome(
+        "SELECT named_struct('s', named_struct('a', 1, 'b', no_such_col_xyz)).s.a AS v",
+    )
+    .await;
+    assert!(
+        nested
+            .as_ref()
+            .is_err_and(|text| text.contains("no_such_col_xyz")),
+        "{nested:?}"
+    );
+    let arity = struct_field_outcome("SELECT named_struct('a', 1, 'b', abs(1, 2)).a AS v").await;
+    assert!(arity.is_err(), "{arity:?}");
+    let folded =
+        struct_field_outcome("SELECT named_struct('a', 1, 'b', CAST('notanint' AS INT)).a AS v")
+            .await;
+    assert!(
+        folded.as_ref().is_err_and(|text| text.contains("notanint")),
+        "{folded:?}"
+    );
+}
+
+#[tokio::test]
+async fn struct_field_access_never_evaluates_a_column_sibling() {
+    let batches = struct_field_outcome(
+        "SELECT named_struct('a', a, 'b', CAST(s AS INT)).a AS v \
+         FROM (VALUES (7, 'notanint')) t(a, s)",
+    )
+    .await
+    .expect("a sibling that reads a column is analysed, never evaluated");
+    let column = batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<Int32Array>()
+        .expect("Int32");
+    assert_eq!(column.value(0), 7);
+    let batches =
+        struct_field_outcome("SELECT named_struct('a', 1, 'b', 2.5D, 'c', 'x').a AS v").await;
+    let batches = batches.expect("literal siblings fold");
+    assert_eq!(batches[0].schema().field(0).name(), "v");
+    assert!(!batches[0].schema().field(0).is_nullable());
 }
 
 #[tokio::test]
@@ -721,17 +796,32 @@ async fn struct_field_access_on_call_result() {
 }
 
 #[test]
-fn fromless_delete_rewrites_to_delete_from() {
-    let rewritten =
-        crate::spark_literals::canonicalize("DELETE ice.sales.tgt WHERE id = 1").expect("rewrites");
-    assert_eq!(rewritten.as_ref(), "DELETE FROM ice.sales.tgt WHERE id = 1");
-    let rewritten =
-        crate::spark_literals::canonicalize("WHEN MATCHED THEN DELETE OUTPUT DELETED.*")
-            .expect("rewrites");
-    assert_eq!(
-        rewritten.as_ref(),
-        "WHEN MATCHED THEN DELETE OUTPUT DELETED.*"
-    );
+fn fromless_delete_refuses_with_the_spark_parse_error() {
+    for (sql, near) in [
+        ("DELETE ice.sales.tgt WHERE id = 1", "'ice'"),
+        ("delete `ice`.sales.tgt", "'`ice`'"),
+        ("  DELETE\n ice.sales.tgt WHERE id IN (SELECT 1)", "'ice'"),
+    ] {
+        let error = crate::spark_literals::canonicalize(sql).expect_err("refuses");
+        let repark_common::Error::Parse(message) = repark_core::engine_err(error) else {
+            panic!("expected a Parse error for {sql:?}");
+        };
+        assert_eq!(
+            message,
+            format!(
+                "[PARSE_SYNTAX_ERROR] Syntax error at or near {near}: missing 'FROM'. \
+                 SQLSTATE: 42601"
+            )
+        );
+    }
+    for sql in [
+        "DELETE FROM ice.sales.tgt WHERE id = 1",
+        "WHEN MATCHED THEN DELETE OUTPUT DELETED.*",
+        "MERGE INTO t USING s ON t.id = s.id WHEN MATCHED THEN DELETE",
+    ] {
+        let rewritten = crate::spark_literals::canonicalize(sql).expect("parses");
+        assert_eq!(rewritten.as_ref(), sql);
+    }
 }
 
 #[test]

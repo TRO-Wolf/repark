@@ -1,6 +1,6 @@
 use datafusion::error::{DataFusionError, Result};
 use datafusion::sql::sqlparser::parser::ParserError;
-use datafusion::sql::sqlparser::tokenizer::{Location, Token, TokenWithSpan};
+use datafusion::sql::sqlparser::tokenizer::{Location, Token, TokenWithSpan, Word};
 
 use super::spark_literals::{LiteralRegion, requote_generic};
 
@@ -44,7 +44,12 @@ pub(crate) fn plan_suffix_regions(tokens: &[TokenWithSpan]) -> Result<Vec<Litera
             }
         } else if is_exponent_double(digits) {
             match adjacent_suffix(tokens, index) {
-                Some(found) if is_identifying_integer_suffix(&tokens[found.index].token) => {
+                Some(found)
+                    if !found.via_period
+                        && is_bare_word(&tokens[found.index].token)
+                        && (is_identifying_integer_suffix(&tokens[found.index].token)
+                            || suffix_target(&tokens[found.index].token).is_none()) =>
+                {
                     let Token::Word(word) = &tokens[found.index].token else {
                         index += 1;
                         continue;
@@ -55,7 +60,9 @@ pub(crate) fn plan_suffix_regions(tokens: &[TokenWithSpan]) -> Result<Vec<Litera
                         replacement: format!("`{digits}{}`", word.value),
                     });
                 }
-                Some(found) => {
+                Some(found)
+                    if !found.via_period && suffix_target(&tokens[found.index].token).is_some() =>
+                {
                     let target = suffix_target(&tokens[found.index].token).unwrap_or("DOUBLE");
                     regions.push(LiteralRegion {
                         start: tokens[index].span.start,
@@ -63,7 +70,7 @@ pub(crate) fn plan_suffix_regions(tokens: &[TokenWithSpan]) -> Result<Vec<Litera
                         replacement: suffix_replacement(digits, target, &signed)?,
                     });
                 }
-                None => {
+                _ => {
                     regions.push(LiteralRegion {
                         start: tokens[index].span.start,
                         end: tokens[index].span.end,
@@ -96,16 +103,17 @@ pub(crate) fn plan_suffix_regions(tokens: &[TokenWithSpan]) -> Result<Vec<Litera
 struct AdjacentSuffix {
     index: usize,
     end: Location,
+    via_period: bool,
 }
 
 fn adjacent_suffix(tokens: &[TokenWithSpan], number: usize) -> Option<AdjacentSuffix> {
     let mut end = tokens[number].span.end;
     let mut cursor = skip_whitespace(tokens, number + 1);
-    if matches!(
+    let via_period = matches!(
         tokens.get(cursor).map(|token| &token.token),
         Some(Token::Period)
-    ) && tokens[cursor].span.start == end
-    {
+    ) && tokens[cursor].span.start == end;
+    if via_period {
         end = tokens[cursor].span.end;
         cursor = skip_whitespace(tokens, cursor + 1);
     }
@@ -116,6 +124,7 @@ fn adjacent_suffix(tokens: &[TokenWithSpan], number: usize) -> Option<AdjacentSu
     matches!(candidate.token, Token::Word(_)).then_some(AdjacentSuffix {
         index: cursor,
         end: candidate.span.end,
+        via_period,
     })
 }
 
@@ -196,6 +205,10 @@ fn unary_minus_start(tokens: &[TokenWithSpan], number: usize) -> Option<Location
 
 fn is_exponent_double(digits: &str) -> bool {
     digits.bytes().any(|byte| byte == b'e' || byte == b'E') && digits.parse::<f64>().is_ok()
+}
+
+fn is_bare_word(token: &Token) -> bool {
+    matches!(token, Token::Word(word) if word.quote_style.is_none())
 }
 
 fn is_identifying_integer_suffix(token: &Token) -> bool {
@@ -404,23 +417,17 @@ pub(crate) fn plan_zero_x_hex_ident_regions(
     regions
 }
 
-pub(crate) fn plan_delete_from_regions(tokens: &[TokenWithSpan]) -> Vec<LiteralRegion> {
-    let mut index = 0;
-    while matches!(
-        tokens.get(index).map(|with_span| &with_span.token),
-        Some(Token::Whitespace(_))
-    ) {
-        index += 1;
-    }
+pub(crate) fn refuse_fromless_delete(tokens: &[TokenWithSpan]) -> Result<()> {
+    let index = skip_whitespace(tokens, 0);
     let Some(Token::Word(delete)) = tokens.get(index).map(|with_span| &with_span.token) else {
-        return Vec::new();
+        return Ok(());
     };
     if delete.quote_style.is_some() || !delete.value.eq_ignore_ascii_case("DELETE") {
-        return Vec::new();
+        return Ok(());
     }
     let next = skip_whitespace(tokens, index + 1);
     let Some(Token::Word(word)) = tokens.get(next).map(|with_span| &with_span.token) else {
-        return Vec::new();
+        return Ok(());
     };
     if word.quote_style.is_none() {
         let upper = word.value.to_ascii_uppercase();
@@ -437,21 +444,37 @@ pub(crate) fn plan_delete_from_regions(tokens: &[TokenWithSpan]) -> Vec<LiteralR
                 | "OUTPUT"
                 | "RETURNING"
         ) {
-            return Vec::new();
+            return Ok(());
         }
     }
-    vec![LiteralRegion {
-        start: tokens[index].span.end,
-        end: tokens[index].span.end,
-        replacement: " FROM".to_string(),
-    }]
+    let near = format!("'{}': missing 'FROM'", quoted_word_text(word));
+    Err(parse_syntax_error(&near))
+}
+
+fn quoted_word_text(word: &Word) -> String {
+    match word.quote_style {
+        Some(quote) => format!("{quote}{}{quote}", word.value),
+        None => word.value.clone(),
+    }
+}
+
+fn parse_syntax_error(near: &str) -> DataFusionError {
+    DataFusionError::SQL(
+        Box::new(ParserError::ParserError(
+            repark_common::spark_error::message(
+                repark_common::spark_error::PARSE_SYNTAX_ERROR,
+                &[("near", near)],
+            ),
+        )),
+        None,
+    )
 }
 
 pub(crate) fn plan_keyword_regions(
     tokens: &[TokenWithSpan],
     sql: &str,
 ) -> Result<Vec<LiteralRegion>> {
-    let mut regions = plan_drop_temporary_regions(tokens);
+    let mut regions = plan_drop_temporary_regions(tokens)?;
     regions.extend(timestamp_ltz_literal::plan_timestamp_ltz_literal_regions(
         tokens,
     ));
@@ -461,74 +484,63 @@ pub(crate) fn plan_keyword_regions(
     Ok(regions)
 }
 
-fn plan_drop_temporary_regions(tokens: &[TokenWithSpan]) -> Vec<LiteralRegion> {
-    let mut regions = Vec::new();
-    let mut index = 0;
-    while index < tokens.len() {
-        let Token::Word(drop) = &tokens[index].token else {
-            index += 1;
-            continue;
-        };
-        if drop.quote_style.is_some() || !drop.value.eq_ignore_ascii_case("DROP") {
-            index += 1;
-            continue;
-        }
-        let candidate = skip_whitespace(tokens, index + 1);
-        let Some(Token::Word(temporary)) = tokens.get(candidate).map(|with_span| &with_span.token)
-        else {
-            index += 1;
-            continue;
-        };
-        if temporary.quote_style.is_some() || !temporary.value.eq_ignore_ascii_case("TEMPORARY") {
-            index += 1;
-            continue;
-        }
+fn plan_drop_temporary_regions(tokens: &[TokenWithSpan]) -> Result<Vec<LiteralRegion>> {
+    let index = skip_whitespace(tokens, 0);
+    let Some(Token::Word(drop)) = tokens.get(index).map(|with_span| &with_span.token) else {
+        return Ok(Vec::new());
+    };
+    if drop.quote_style.is_some() || !drop.value.eq_ignore_ascii_case("DROP") {
+        return Ok(Vec::new());
+    }
+    let candidate = skip_whitespace(tokens, index + 1);
+    let Some(Token::Word(temporary)) = tokens.get(candidate).map(|with_span| &with_span.token)
+    else {
+        return Ok(Vec::new());
+    };
+    if temporary.quote_style.is_some() || !temporary.value.eq_ignore_ascii_case("TEMPORARY") {
+        return Ok(Vec::new());
+    }
+    let object = skip_whitespace(tokens, candidate + 1);
+    let Some(Token::Word(kind)) = tokens.get(object).map(|with_span| &with_span.token) else {
+        return Ok(Vec::new());
+    };
+    if kind.quote_style.is_none() && kind.value.eq_ignore_ascii_case("FUNCTION") {
         let word = &tokens[candidate];
-        regions.push(LiteralRegion {
+        return Ok(vec![LiteralRegion {
             start: word.span.start,
             end: word.span.end,
             replacement: String::new(),
-        });
-        index = candidate + 1;
+        }]);
     }
-    regions
+    let upper = kind.value.to_ascii_uppercase();
+    if kind.quote_style.is_none() && matches!(upper.as_str(), "VARIABLE" | "VAR") {
+        return Ok(Vec::new());
+    }
+    Err(parse_syntax_error(&format!("'{}'", quoted_word_text(kind))))
 }
 
-pub(crate) fn plan_wildcard_except_regions(tokens: &[TokenWithSpan]) -> Vec<LiteralRegion> {
-    let mut regions = Vec::new();
-    let mut index = 0;
-    while index < tokens.len() {
-        if !matches!(tokens[index].token, Token::Mul) {
-            index += 1;
+pub(crate) fn refuse_wildcard_exclude(tokens: &[TokenWithSpan]) -> Result<()> {
+    for (index, star) in tokens.iter().enumerate() {
+        if !matches!(star.token, Token::Mul) {
             continue;
         }
         let word_at = skip_whitespace(tokens, index + 1);
         let Some(Token::Word(exclude)) = tokens.get(word_at).map(|with_span| &with_span.token)
         else {
-            index += 1;
             continue;
         };
         if exclude.quote_style.is_some() || !exclude.value.eq_ignore_ascii_case("EXCLUDE") {
-            index += 1;
             continue;
         }
         let cursor = skip_whitespace(tokens, word_at + 1);
-        if !matches!(
+        if matches!(
             tokens.get(cursor).map(|with_span| &with_span.token),
             Some(Token::LParen)
         ) {
-            index += 1;
-            continue;
+            return Err(parse_syntax_error("'('"));
         }
-        let word = &tokens[word_at];
-        regions.push(LiteralRegion {
-            start: word.span.start,
-            end: word.span.end,
-            replacement: "EXCEPT".to_string(),
-        });
-        index = cursor + 1;
     }
-    regions
+    Ok(())
 }
 
 pub(super) fn collect_inners(
@@ -776,5 +788,118 @@ mod tests {
             panic!("expected a Parse error");
         };
         assert_eq!(message, expected);
+    }
+
+    fn canonical(sql: &str) -> String {
+        crate::spark_literals::canonicalize(sql)
+            .map(std::borrow::Cow::into_owned)
+            .unwrap_or_else(|error| format!("ERR {}", repark_core::engine_err(error)))
+    }
+
+    #[test]
+    fn exponent_then_identifier_characters_reads_as_one_identifier() {
+        for (sql, expected) in [
+            ("SELECT 1e2foo AS v", "SELECT `1e2foo` AS v"),
+            ("SELECT 1e2Dx AS v", "SELECT `1e2Dx` AS v"),
+            ("SELECT 1E2_x AS v", "SELECT `1E2_x` AS v"),
+            ("SELECT -1e2foo AS v", "SELECT -`1e2foo` AS v"),
+            ("SELECT 7 AS 1e2foo", "SELECT 7 AS `1e2foo`"),
+        ] {
+            assert_eq!(canonical(sql), expected, "{sql}");
+        }
+    }
+
+    #[test]
+    fn exponent_then_a_period_keeps_the_field_access() {
+        let double = canonical("SELECT 1e2 AS v");
+        assert_eq!(double, "SELECT CAST(100 AS DOUBLE) AS v");
+        for (sql, field) in [
+            ("SELECT 1e2.foo AS v", ".foo"),
+            ("SELECT 1e2.D AS v", ".D"),
+            ("SELECT 1e2.BD AS v", ".BD"),
+        ] {
+            assert_eq!(
+                canonical(sql),
+                format!("SELECT CAST(100 AS DOUBLE){field} AS v"),
+                "{sql}"
+            );
+        }
+    }
+
+    #[test]
+    fn exponent_typed_suffixes_and_spaced_aliases_keep_their_rewrites() {
+        assert_eq!(
+            canonical("SELECT 1e2D AS v"),
+            "SELECT CAST(100 AS DOUBLE) AS v"
+        );
+        assert_eq!(
+            canonical("SELECT 1e2 foo"),
+            "SELECT CAST(100 AS DOUBLE) foo"
+        );
+        assert_eq!(
+            canonical("SELECT 1e2`foo`"),
+            "SELECT CAST(100 AS DOUBLE)`foo`"
+        );
+        assert_eq!(canonical("SELECT 1e2L AS v"), "SELECT `1e2L` AS v");
+        assert!(canonical("SELECT 1e2BD AS v").contains("AS DECIMAL(3,0))"));
+        assert!(canonical("SELECT 1e2F AS v").contains("AS FLOAT)"));
+    }
+
+    #[test]
+    fn drop_temporary_rewrites_only_a_leading_drop_temporary_function() {
+        assert_eq!(
+            canonical("DROP TEMPORARY FUNCTION IF EXISTS f"),
+            "DROP  FUNCTION IF EXISTS f"
+        );
+        for sql in [
+            "SELECT drop temporary FROM (SELECT 1 AS drop) t",
+            "SELECT drop\n  temporary FROM (SELECT 1 AS drop) t",
+            "DROP TEMPORARY VARIABLE IF EXISTS v",
+        ] {
+            assert_eq!(canonical(sql), sql);
+        }
+        for (sql, near) in [
+            ("DROP TEMPORARY VIEW IF EXISTS v", "'VIEW'"),
+            ("drop temporary table t", "'table'"),
+        ] {
+            assert_eq!(
+                canonical(sql),
+                format!("ERR [PARSE_SYNTAX_ERROR] Syntax error at or near {near}. SQLSTATE: 42601"),
+                "{sql}"
+            );
+        }
+    }
+
+    #[test]
+    fn wildcard_exclude_with_a_column_list_refuses_like_spark() {
+        for sql in [
+            "SELECT * EXCLUDE (b) FROM t",
+            "SELECT t.* exclude (a, b), 3 AS c FROM t",
+        ] {
+            assert_eq!(
+                canonical(sql),
+                "ERR [PARSE_SYNTAX_ERROR] Syntax error at or near '('. SQLSTATE: 42601",
+                "{sql}"
+            );
+        }
+        for sql in [
+            "SELECT * EXCEPT (b) FROM t",
+            "SELECT * EXCLUDE b FROM t",
+            "SELECT 2 * exclude AS v FROM t",
+        ] {
+            assert_eq!(canonical(sql), sql);
+        }
+    }
+
+    #[test]
+    fn struct_field_access_passes_every_sibling_to_the_display_wrapper() {
+        let rewritten = canonical("SELECT named_struct('a', 1, 'b', no_such_col, 'c', 2.5D).a");
+        assert!(
+            rewritten.ends_with(", (1), (no_such_col), (CAST(2.5 AS DOUBLE)))"),
+            "{rewritten}"
+        );
+        let nested =
+            canonical("SELECT named_struct('s', named_struct('a', 1, 'b', x), 'c', y).s.a");
+        assert!(nested.ends_with(", (1), (y), (x))"), "{nested}");
     }
 }

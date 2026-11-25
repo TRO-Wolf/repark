@@ -8,6 +8,7 @@ use datafusion::common::{Result, ScalarValue};
 use datafusion::error::DataFusionError;
 use datafusion::logical_expr::expr::Alias;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
+use datafusion::logical_expr::simplify::{ExprSimplifyResult, SimplifyContext};
 use datafusion::logical_expr::{
     ColumnarValue, Expr, LogicalPlan, Operator, ScalarUDF, ScalarUDFImpl, Signature, Volatility,
 };
@@ -428,9 +429,28 @@ struct SparkAs {
 impl SparkAs {
     fn new() -> Self {
         Self {
-            signature: Signature::any(2, Volatility::Immutable),
+            signature: Signature::variadic_any(Volatility::Immutable),
         }
     }
+}
+
+fn folds_to_a_constant(expr: &Expr) -> bool {
+    !expr.is_volatile()
+        && !expr
+            .exists(|node| {
+                Ok(matches!(
+                    node,
+                    Expr::Column(_)
+                        | Expr::OuterReferenceColumn(..)
+                        | Expr::ScalarSubquery(_)
+                        | Expr::Exists(_)
+                        | Expr::InSubquery(_)
+                        | Expr::Placeholder(_)
+                        | Expr::AggregateFunction(_)
+                        | Expr::WindowFunction(_)
+                ))
+            })
+            .unwrap_or(true)
 }
 
 impl PartialEq for SparkAs {
@@ -495,6 +515,21 @@ impl ScalarUDFImpl for SparkAs {
         args.args.get(1).cloned().ok_or_else(|| {
             DataFusionError::Execution(format!("'{SPARK_AS_NAME}' expects a value argument"))
         })
+    }
+
+    fn simplify(&self, args: Vec<Expr>, _info: &SimplifyContext) -> Result<ExprSimplifyResult> {
+        if args.iter().skip(2).all(folds_to_a_constant) {
+            return Ok(ExprSimplifyResult::Original(args));
+        }
+        let kept = args
+            .into_iter()
+            .enumerate()
+            .filter(|(position, arg)| *position < 2 || folds_to_a_constant(arg))
+            .map(|(_, arg)| arg)
+            .collect();
+        Ok(ExprSimplifyResult::Simplified(Expr::ScalarFunction(
+            datafusion::logical_expr::expr::ScalarFunction::new_udf(spark_as_udf(), kept),
+        )))
     }
 }
 
