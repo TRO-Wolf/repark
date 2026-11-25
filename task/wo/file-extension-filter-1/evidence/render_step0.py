@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -25,7 +26,8 @@ def cell_text(entry: dict[str, Any] | None) -> str:
     if err is not None:
         cond = err.get("cond") or ""
         first = err["first"]
-        for marker in ("/tmp/", "file:///tmp/"):
+        root = tempfile.gettempdir().rstrip("/") + "/"
+        for marker in (root, "file://" + root):
             if marker in first:
                 first = first.split(marker)[0] + "…"
         label = cond if cond else first[:60]
