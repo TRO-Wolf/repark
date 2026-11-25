@@ -34,6 +34,6 @@ awaits the owner's rating. Each card row records its own status.
   `INSERT OVERWRITE` with an invalid constant cast wipes the table where Spark refuses.
 - [SPARK-DOOR-OVER-ACCEPT-SYNTAX-1](spark-door-over-accept-syntax-1-card-2026-11-24.md) (S3) — **card:** `1e2foo`,
   `named_struct(…).a` with a bad sibling, `* EXCLUDE` and `DELETE` without `FROM` answer where Spark refuses.
-  **Fixed on branch** (2026-11-24); five moved cells wait for a ruling.
+  **Fixed on branch** (2026-11-24; struct seat per ruling 1, option C).
 
 Up: [../map.md](../map.md).

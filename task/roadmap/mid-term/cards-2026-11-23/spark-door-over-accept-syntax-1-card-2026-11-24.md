@@ -1,7 +1,7 @@
 # Card SPARK-DOOR-OVER-ACCEPT-SYNTAX-1: the Spark door answers some statements Spark rejects
 
 **Date:** 2026-11-24. **Filed by:** the orchestrator (`claude-opus-5-5`), from an outside review of the SQL text
-rewrites, checked here against Spark. **Severity:** S3 (owner, 2026-11-24). **Status:** fixed on branch `fix/spark-door-over-accept-syntax-1` (2026-11-24); five moved cells wait for a ruling (below).
+rewrites, checked here against Spark. **Severity:** S3 (owner, 2026-11-24). **Status:** fixed on branch `fix/spark-door-over-accept-syntax-1` (2026-11-24; struct seat per orchestrator ruling 1, option C).
 
 ## Measured
 
@@ -37,26 +37,34 @@ Measured on 122 cells (750 door cells) across `spark.sql`, temp-view bodies, `F.
 which Spark 4.1.2 refuses at `'VIEW'` / `'TABLE'`, answered.
 
 - The exponent fallback reads `1e2foo` as one identifier and keeps `1e2.foo` a field access.
-- The struct splice passes every sibling; constant siblings evaluate, column siblings are dropped
-  after analysis, as Spark prunes them.
+- The struct splice passes every sibling for name resolution: an unknown name refuses in both ANSI
+  modes; with ANSI on a constant sibling evaluates (`CAST_INVALID_INPUT`, `DIVIDE_BY_ZERO`); a sibling
+  RePark cannot type (other than a function signature) leaves the access answering as before; the
+  rest drop, as Spark prunes them.
 - `* EXCLUDE (…)`, `DELETE <table>` and `DROP TEMPORARY VIEW` / `TABLE` refuse with Spark's
   `PARSE_SYNTAX_ERROR`; `DROP TEMPORARY FUNCTION` still drops nothing; `drop temporary` keeps its alias.
 
-**Ruling needed:** five cells that equal Spark on main refuse at head, because the siblings now plan and
-evaluate. Each sibling also refuses on its own on main: `named_struct('a', 1, 'b', 'x' + 1).a` with
-ANSI off (four doors; RePark cannot plan `'x' + 1` with ANSI off), and
-`F.expr("named_struct('a', 1, 'b', 1 / 0).a")` with ANSI off (`F.expr("1 / 0")` raises
-`DIVIDE_BY_ZERO` with ANSI off).
+**Ruling 1 (orchestrator, 2026-11-24): option C.** The first head moved five cells that equal Spark on
+main (`named_struct('a', 1, 'b', 'x' + 1).a` with ANSI off on four doors, and
+`F.expr("named_struct('a', 1, 'b', 1 / 0).a")` with ANSI off) to a refusal; at head they answer `1`
+again, as Spark does, and no cell that equals Spark on main moves. `DROP TEMPORARY VIEW` / `TABLE`:
+Spark 4.1.2 raises `[PARSE_SYNTAX_ERROR] Syntax error at or near 'VIEW'` (`'TABLE'`); head raises the
+same.
 
 ### Still unlike Spark (measured at head)
 
+- **String arithmetic (present on main):** RePark cannot plan `'x' + 1`. `SELECT 'x' + 1` refuses with
+  `Cannot coerce arithmetic expression Utf8 + Int64` in both ANSI modes (Spark: `NULL` with ANSI off,
+  `CAST_INVALID_INPUT` with ANSI on). So `named_struct('a', 1, 'b', 'x' + 1).a` with ANSI on answers
+  `1` on `spark.sql`, views, `F.expr` and `selectExpr`, as on main, where Spark raises `CAST_INVALID_INPUT`.
+- **`F.expr` division with ANSI off (present on main):** `F.expr("1 / 0")` raises `DIVIDE_BY_ZERO`;
+  Spark, `spark.sql` and `selectExpr` answer `NULL`.
 - **Refusal class:** unresolved identifiers (`1e2foo`, `1e2Dx`, `-1e2foo`, a struct sibling) raise the
   door's `AnalysisException: Schema error: No field named …` on `spark.sql`, temp views and `F.expr`
   (Spark `UNRESOLVED_COLUMN`); field access on a scalar (`1e2.foo`, `1e2.D`, `1e2.BD`) raises the door's
   `Cannot access field` / `Dot access not supported` (Spark `INVALID_EXTRACT_BASE_FIELD_TYPE`);
   `1.5e10foo` raises `No field named` (Spark `INVALID_EXTRACT_BASE_FIELD_TYPE`); `abs(1, 2)` as a
-  sibling raises `AnalysisException` (Spark `WRONG_NUM_ARGS`); `'x' + 1` as a sibling with ANSI on
-  raises `Cannot coerce` (Spark `CAST_INVALID_INPUT`).
+  sibling raises `AnalysisException` (Spark `WRONG_NUM_ARGS`).
 - **`F.expr` takes no alias:** `F.expr("drop temporary")`, ``F.expr("1e2`foo`")``, `F.expr("1e2 AS
   foo")`, `F.expr("*")`, `F.expr("* EXCEPT (b)")` refuse; Spark answers.
 - **Display:** an unaliased `named_struct('a', 1, 'b', 'x').a` is named `named_struct('a', 1, 'b', 'x').a`;
