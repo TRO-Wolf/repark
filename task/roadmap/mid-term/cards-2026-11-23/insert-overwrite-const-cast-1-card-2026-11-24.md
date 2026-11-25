@@ -43,6 +43,10 @@ The guard acts only where the answer is certain. Everything else stays exactly a
   listed type. The guard then runs RePark's cast on the value and refuses only with that cast's error, so it never
   refuses a value RePark's cast accepts.
 - **Where:** once per statement, before the door wipes, replaces or commits; the table is unchanged.
+- **Cached frames (delta 1):** after `spark.sql("SELECT 'x' AS s").cache()`, Spark's cache manager swaps the matching
+  fragment of the source for the cached relation, does not fold the cast, and writes. RePark does not match cached
+  plans, so the guard stands down while the session holds any cached frame (a `__repark_cache_` view: `cache()`,
+  `persist()`, `catalog.cacheTable`). `unpersist()` and `uncacheTable` remove the view, and the guard acts again.
 - **Size:** `crates/repark-spark/src/insert_overwrite/const_cast.rs` holds 294 product lines (plus its unit tests); the
   doors add 14 lines of wiring. The Spark door plans `CAST(s AS TIMESTAMP)` as
   `to_timestamp(__repark_decimal_cast_nullable__(s))`; the guard looks through that identity marker (delta 1).
@@ -57,11 +61,14 @@ main (the head re-measure is recorded with the PR).
   TABLE ... AS SELECT`, `writeTo().append()` / `createOrReplace()` and a `saveAsTable` append succeed where Spark
   raises (the RTAS forms replace the table with an empty one).
 - **Shapes outside the chain, on every overwrite door:** `UNION ALL`, joins, `GROUP BY`, `DISTINCT`, windows, `EXISTS`,
-  scalar subqueries, `LIMIT`, SQL temp views and catalog views. Main wipes for `DOUBLE`, `FLOAT`, `TIMESTAMP` and
-  `TIMESTAMP_NTZ` and refuses with the generic W03 text for the integral, `DECIMAL`, `BOOLEAN` and `DATE` types.
-- **`VALUES` sources:** Spark does not raise there (it evaluates the filter over the inline rows first). Main matches
-  Spark for `TIMESTAMP` and `TIMESTAMP_NTZ` and raises at analysis for `DOUBLE` and `FLOAT` (`SparkFloatStringify`).
-  `LIMIT 0` behaves the same way.
+  scalar subqueries, `LIMIT`, SQL temp views and catalog views. On the whole-table SQL door main wipes for `DOUBLE`,
+  `FLOAT`, `TIMESTAMP` and `TIMESTAMP_NTZ` and refuses with the generic W03 text for the integral, `DECIMAL`, `BOOLEAN`
+  and `DATE` types. On static `PARTITION` and `writeTo().overwrite(...)` main wipes for every type (measured with a
+  join source for `INT`, `DATE`, `BOOLEAN` and `DECIMAL(10,2)`).
+- **`VALUES` sources:** Spark does not raise there (it evaluates the filter over the inline rows first). A `VALUES`
+  column (`FROM VALUES ('x') AS v(s)`) writes on main as in Spark. Only a literal cast over a `VALUES` leaf
+  (`SELECT CAST('x' AS DOUBLE) FROM VALUES (1)`) raises at analysis on main for `DOUBLE` and `FLOAT`
+  (`SparkFloatStringify`); `LIMIT 0` behaves the same way.
 - **Values outside the table:** blank, padded, signed or digit-bearing strings, non-ASCII letters, control characters,
   and `nan` / `inf` / `infinity` with a `d` or `f` suffix (Spark raises; RePark's cast accepts them). Main wipes.
   So does a value Spark rejects by grammar alone, such as `'1'` to `DATE` or `TIMESTAMP`.
@@ -72,7 +79,15 @@ main (the head re-measure is recorded with the PR).
   keeps its rows. The guard runs after it, so these answers do not move.
 - **Decimal from double:** `CAST(1e20 AS DECIMAL(10,2))`, through a subquery or as a literal, wipes where Spark raises
   `[NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION]`: not a string literal.
-- **BY NAME and any-schema tables:** an overwrite routed by name (`insert_by_name.rs`) is not guarded.
+- **Whole-table BY NAME and any-schema tables:** a whole-table overwrite routed by name (`insert_by_name.rs`) is not
+  guarded. A BY NAME overwrite with a static `PARTITION` spec delegates to the partition path, so it is guarded.
+- **An unrelated cached frame:** the guard stands down while the session holds any cached frame (below), so with an
+  unrelated cache such as `SELECT 7 AS n` the overwrite writes as on main, where Spark raises.
+- **Error class on the partition path:** `CAST('x' AS TIMESTAMP)` into an `INT` or `DOUBLE` partitioned column raises
+  `[CAST_INVALID_INPUT]`, where Spark raises `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]`: the guard runs before
+  the store's type check. The rows are kept, as in Spark; main wiped.
+- **Depth:** the scope test reads at most 64 plan nodes (`MAX_DEPTH`). A DataFrame with 60 chained `select`s over the
+  card source is outside it and wipes as on main, where Spark raises (50 chained `select`s refuse).
 - **DataFrames built under other settings:** such a frame is a closed scan, so it is outside the guard.
 - **ANSI off:** unchanged; main's W03 check still refuses some empty overwrites Spark makes.
 - **#1431's false-refusal families:** outer joins over unions, `OFFSET` or CTEs, 7-digit years, control-character

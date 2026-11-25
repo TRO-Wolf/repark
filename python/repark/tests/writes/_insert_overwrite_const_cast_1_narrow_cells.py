@@ -159,6 +159,20 @@ CARD_DOORS: tuple[str, ...] = (
     "v1_save_as_table_overwrite",
 )
 
+CACHE_DOORS: tuple[str, ...] = (
+    "sql_overwrite",
+    "sql_static_part",
+    "v1_insert_into_overwrite",
+    "v2_overwrite_condition",
+    "v1_save_as_table_overwrite",
+)
+
+CACHE_SOURCES: dict[str, str] = {
+    "matching": "SELECT 'x' AS s",
+    "unpersisted": "SELECT 'x' AS s",
+    "unrelated": "SELECT 7 AS n",
+}
+
 CONTROL_DOORS: tuple[str, ...] = (
     "ctl_insert_into",
     "ctl_sql_rtas",
@@ -193,6 +207,11 @@ def build_cells() -> dict[str, Cell]:
         for type_key in ("DOUBLE", "TIMESTAMP", "INT"):
             source = template.format(T=TYPES[type_key], V="x", SRC="{SRC}")
             cells[f"outside/{name}/{type_key}"] = Cell("true", "sql_overwrite", type_key, source)
+    for mode in CACHE_SOURCES:
+        for door in CACHE_DOORS:
+            for type_key in ("DOUBLE", "TIMESTAMP"):
+                source = CARD.format(T=TYPES[type_key], V="x")
+                cells[f"cache/{mode}/{door}/{type_key}"] = Cell("true", door, type_key, source)
     for name, (type_key, source) in ATTACKS.items():
         for door in ("sql_overwrite", "sql_static_part", "v1_insert_into_overwrite"):
             cells[f"attack/{name}/{door}"] = Cell("true", door, type_key, source)
@@ -214,6 +233,8 @@ GUARDED_TYPES: frozenset[str] = frozenset({"DOUBLE", "FLOAT", "TIMESTAMP", "NTZ"
 
 def guarded(key: str, cell: Cell) -> bool:
     kind = key.split("/", 1)[0]
+    if kind == "cache":
+        return key.split("/")[1] == "unpersisted"
     if kind not in ("card", "door", "shape") or cell.ansi != "true":
         return False
     if cell.door not in CARD_DOORS or cell.type_key not in GUARDED_TYPES:
@@ -298,12 +319,26 @@ def act(spark: Any, functions: Any, cell: Cell, table: str, source: str) -> None
         raise ValueError(door)
 
 
+def cached_frame(spark: Any, key: str) -> Any:
+    kind, mode = key.split("/")[:2]
+    if kind != "cache":
+        return None
+    frame = spark.sql(CACHE_SOURCES[mode])
+    frame.cache()
+    frame.count()
+    if mode == "unpersisted":
+        frame.unpersist()
+        return None
+    return frame
+
+
 def run_cell(spark: Any, functions: Any, namespace: str, key: str, cell: Cell) -> dict[str, Any]:
     table = f"{namespace}.t_{hashlib.sha1(key.encode()).hexdigest()[:12]}"
     source = cell.source.format(SRC=f"{namespace}.src_x", L=f"{namespace}.left_ids")
     if cell.door != "ctl_read":
         seed(spark, table, cell)
     spark.conf.set("spark.sql.ansi.enabled", cell.ansi)
+    frame = cached_frame(spark, key)
     try:
         act(spark, functions, cell, table, source)
         outcome: dict[str, Any] = {"ok": True, "cls": None}
@@ -311,6 +346,8 @@ def run_cell(spark: Any, functions: Any, namespace: str, key: str, cell: Cell) -
         outcome = {"ok": False, "cls": error_class(str(error))}
     finally:
         spark.conf.set("spark.sql.ansi.enabled", "true")
+        if frame is not None:
+            frame.unpersist()
     partitioned = cell.door in PARTITIONED_DOORS
     outcome["rows"] = None if cell.door == "ctl_read" else table_rows(spark, table, partitioned)
     return outcome

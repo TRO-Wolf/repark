@@ -1228,6 +1228,536 @@
     ]
    }
   },
+  "cache/matching/sql_overwrite/DOUBLE": {
+   "expect": "main",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   }
+  },
+  "cache/matching/sql_overwrite/TIMESTAMP": {
+   "expect": "main",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   }
+  },
+  "cache/matching/sql_static_part/DOUBLE": {
+   "expect": "main",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": [
+     [
+      "1.5",
+      "2"
+     ]
+    ]
+   },
+   "spark": {
+    "cls": null,
+    "ok": true,
+    "rows": [
+     [
+      "1.5",
+      "2"
+     ]
+    ]
+   }
+  },
+  "cache/matching/sql_static_part/TIMESTAMP": {
+   "expect": "main",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": [
+     [
+      "2024-01-02 03:04:05",
+      "2"
+     ]
+    ]
+   },
+   "spark": {
+    "cls": null,
+    "ok": true,
+    "rows": [
+     [
+      "2024-01-02 03:04:05",
+      "2"
+     ]
+    ]
+   }
+  },
+  "cache/matching/v1_insert_into_overwrite/DOUBLE": {
+   "expect": "main",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   }
+  },
+  "cache/matching/v1_insert_into_overwrite/TIMESTAMP": {
+   "expect": "main",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   }
+  },
+  "cache/matching/v1_save_as_table_overwrite/DOUBLE": {
+   "expect": "main",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   }
+  },
+  "cache/matching/v1_save_as_table_overwrite/TIMESTAMP": {
+   "expect": "main",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   }
+  },
+  "cache/matching/v2_overwrite_condition/DOUBLE": {
+   "expect": "main",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   }
+  },
+  "cache/matching/v2_overwrite_condition/TIMESTAMP": {
+   "expect": "main",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   }
+  },
+  "cache/unpersisted/sql_overwrite/DOUBLE": {
+   "expect": "spark",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": "CAST_INVALID_INPUT",
+    "ok": false,
+    "rows": [
+     [
+      "1.5"
+     ]
+    ]
+   }
+  },
+  "cache/unpersisted/sql_overwrite/TIMESTAMP": {
+   "expect": "spark",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": "CAST_INVALID_INPUT",
+    "ok": false,
+    "rows": [
+     [
+      "2024-01-02 03:04:05"
+     ]
+    ]
+   }
+  },
+  "cache/unpersisted/sql_static_part/DOUBLE": {
+   "expect": "spark",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": [
+     [
+      "1.5",
+      "2"
+     ]
+    ]
+   },
+   "spark": {
+    "cls": "CAST_INVALID_INPUT",
+    "ok": false,
+    "rows": [
+     [
+      "1.5",
+      "1"
+     ],
+     [
+      "1.5",
+      "2"
+     ]
+    ]
+   }
+  },
+  "cache/unpersisted/sql_static_part/TIMESTAMP": {
+   "expect": "spark",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": [
+     [
+      "2024-01-02 03:04:05",
+      "2"
+     ]
+    ]
+   },
+   "spark": {
+    "cls": "CAST_INVALID_INPUT",
+    "ok": false,
+    "rows": [
+     [
+      "2024-01-02 03:04:05",
+      "1"
+     ],
+     [
+      "2024-01-02 03:04:05",
+      "2"
+     ]
+    ]
+   }
+  },
+  "cache/unpersisted/v1_insert_into_overwrite/DOUBLE": {
+   "expect": "spark",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": "CAST_INVALID_INPUT",
+    "ok": false,
+    "rows": [
+     [
+      "1.5"
+     ]
+    ]
+   }
+  },
+  "cache/unpersisted/v1_insert_into_overwrite/TIMESTAMP": {
+   "expect": "spark",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": "CAST_INVALID_INPUT",
+    "ok": false,
+    "rows": [
+     [
+      "2024-01-02 03:04:05"
+     ]
+    ]
+   }
+  },
+  "cache/unpersisted/v1_save_as_table_overwrite/DOUBLE": {
+   "expect": "spark",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": "CAST_INVALID_INPUT",
+    "ok": false,
+    "rows": [
+     [
+      "1.5"
+     ]
+    ]
+   }
+  },
+  "cache/unpersisted/v1_save_as_table_overwrite/TIMESTAMP": {
+   "expect": "spark",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": "CAST_INVALID_INPUT",
+    "ok": false,
+    "rows": [
+     [
+      "2024-01-02 03:04:05"
+     ]
+    ]
+   }
+  },
+  "cache/unpersisted/v2_overwrite_condition/DOUBLE": {
+   "expect": "spark",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": "CAST_INVALID_INPUT",
+    "ok": false,
+    "rows": [
+     [
+      "1.5"
+     ]
+    ]
+   }
+  },
+  "cache/unpersisted/v2_overwrite_condition/TIMESTAMP": {
+   "expect": "spark",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": "CAST_INVALID_INPUT",
+    "ok": false,
+    "rows": [
+     [
+      "2024-01-02 03:04:05"
+     ]
+    ]
+   }
+  },
+  "cache/unrelated/sql_overwrite/DOUBLE": {
+   "expect": "main",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": "CAST_INVALID_INPUT",
+    "ok": false,
+    "rows": [
+     [
+      "1.5"
+     ]
+    ]
+   }
+  },
+  "cache/unrelated/sql_overwrite/TIMESTAMP": {
+   "expect": "main",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": "CAST_INVALID_INPUT",
+    "ok": false,
+    "rows": [
+     [
+      "2024-01-02 03:04:05"
+     ]
+    ]
+   }
+  },
+  "cache/unrelated/sql_static_part/DOUBLE": {
+   "expect": "main",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": [
+     [
+      "1.5",
+      "2"
+     ]
+    ]
+   },
+   "spark": {
+    "cls": "CAST_INVALID_INPUT",
+    "ok": false,
+    "rows": [
+     [
+      "1.5",
+      "1"
+     ],
+     [
+      "1.5",
+      "2"
+     ]
+    ]
+   }
+  },
+  "cache/unrelated/sql_static_part/TIMESTAMP": {
+   "expect": "main",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": [
+     [
+      "2024-01-02 03:04:05",
+      "2"
+     ]
+    ]
+   },
+   "spark": {
+    "cls": "CAST_INVALID_INPUT",
+    "ok": false,
+    "rows": [
+     [
+      "2024-01-02 03:04:05",
+      "1"
+     ],
+     [
+      "2024-01-02 03:04:05",
+      "2"
+     ]
+    ]
+   }
+  },
+  "cache/unrelated/v1_insert_into_overwrite/DOUBLE": {
+   "expect": "main",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": "CAST_INVALID_INPUT",
+    "ok": false,
+    "rows": [
+     [
+      "1.5"
+     ]
+    ]
+   }
+  },
+  "cache/unrelated/v1_insert_into_overwrite/TIMESTAMP": {
+   "expect": "main",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": "CAST_INVALID_INPUT",
+    "ok": false,
+    "rows": [
+     [
+      "2024-01-02 03:04:05"
+     ]
+    ]
+   }
+  },
+  "cache/unrelated/v1_save_as_table_overwrite/DOUBLE": {
+   "expect": "main",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": "CAST_INVALID_INPUT",
+    "ok": false,
+    "rows": [
+     [
+      "1.5"
+     ]
+    ]
+   }
+  },
+  "cache/unrelated/v1_save_as_table_overwrite/TIMESTAMP": {
+   "expect": "main",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": "CAST_INVALID_INPUT",
+    "ok": false,
+    "rows": [
+     [
+      "2024-01-02 03:04:05"
+     ]
+    ]
+   }
+  },
+  "cache/unrelated/v2_overwrite_condition/DOUBLE": {
+   "expect": "main",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": "CAST_INVALID_INPUT",
+    "ok": false,
+    "rows": [
+     [
+      "1.5"
+     ]
+    ]
+   }
+  },
+  "cache/unrelated/v2_overwrite_condition/TIMESTAMP": {
+   "expect": "main",
+   "main": {
+    "cls": null,
+    "ok": true,
+    "rows": []
+   },
+   "spark": {
+    "cls": "CAST_INVALID_INPUT",
+    "ok": false,
+    "rows": [
+     [
+      "2024-01-02 03:04:05"
+     ]
+    ]
+   }
+  },
   "card/false/DOUBLE": {
    "expect": "main",
    "main": {
