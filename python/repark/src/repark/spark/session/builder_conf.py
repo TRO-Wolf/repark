@@ -11,6 +11,7 @@ from repark.spark._secrets import register_config_value
 from repark.spark.session import _funcs as _session_funcs
 from repark.spark.session.session_configuration import (
     DEFAULT_CATALOG_KEY,
+    PARTITION_COLUMN_TYPE_INFERENCE_KEY,
     PARTITION_OVERWRITE_MODE_KEY,
     SPARK_SQL_ANSI_ENABLED_KEY,
     SPARK_SQL_CASE_SENSITIVE_KEY,
@@ -257,6 +258,7 @@ class RuntimeConfig:
             SPARK_SQL_FAIL_AMBIGUOUS_SELF_JOIN_KEY,
             SPARK_SQL_SELF_JOIN_AUTO_RESOLVE_KEY,
             TIME_PARSER_POLICY_KEY,
+            PARTITION_COLUMN_TYPE_INFERENCE_KEY,
             SPARK_SQL_ANSI_DOUBLE_QUOTED_IDENTIFIERS_KEY,
             DECIMAL_TRUNCATE_LEGACY_KEY,
             _PICK_MINIMUM_PRECISION_KEY,
@@ -436,6 +438,7 @@ class RuntimeConfig:
             SPARK_SQL_FAIL_AMBIGUOUS_SELF_JOIN_KEY,
             SPARK_SQL_SELF_JOIN_AUTO_RESOLVE_KEY,
             PARTITION_OVERWRITE_MODE_KEY,
+            PARTITION_COLUMN_TYPE_INFERENCE_KEY,
             TIME_PARSER_POLICY_KEY,
         ):
             self._store().pop(key, None)

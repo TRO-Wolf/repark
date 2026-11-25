@@ -83,9 +83,11 @@ Measured on head, both ANSI modes:
 
 ## Seat
 
-- `crates/repark-core/src/spark_nullable.rs:48,60` (main): `ParquetReadOptions::default()`, whose file extension is
-  `.parquet`, so the listing drops every other name. Fixed through
+- `crates/repark-core/src/spark_nullable.rs:48,60` (main before #1430): `ParquetReadOptions::default()`, whose file
+  extension is `.parquet`, so the listing drops every other name. Fixed through
   `crates/repark-core/src/spark_nullable/hidden_files.rs`; the full inventory heads the evidence table.
-- #1430's partition seat filters by the same suffix; its verifier names `partition.rs:755-757` on that branch.
+- PARQUET-PARTITION-DISCOVERY-1's partition listing filtered by the same suffix (`partition.rs:513` on main
+  `9d566e21`), with its own hidden-name rule. Since the integration it lists every name and skips by
+  `hidden_files::spark_hidden_below`, the one home of the rule.
 
 Up: [map.md](map.md).
