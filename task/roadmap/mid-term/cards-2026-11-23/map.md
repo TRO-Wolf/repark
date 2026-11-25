@@ -6,8 +6,11 @@ awaits the owner's rating. Each card row records its own status.
 
 ## Cards
 
-- [PARQUET-PARTITION-DISCOVERY-1](parquet-partition-discovery-1-card-2026-11-23.md) (S1) — **card:**
-  `read.parquet` of a `key=value/` directory drops the partition columns, so a read-then-write copy loses them.
+- [PARQUET-PARTITION-DISCOVERY-1](parquet-partition-discovery-1-card-2026-11-23.md) (S1) — **fixed (2026-11-24):**
+  `read.parquet` and `format("parquet").load` now discover Hive partition columns with Spark 4.1.2 type inference,
+  `partitionColumnTypeInference.enabled`, overlap/conflict/case rules, hidden-file skipping, and partition-only file
+  pruning (residual options/globs/CSV/JSON/S3 list on the card); evidence in
+  [task/wo/parquet-partition-discovery-1/evidence/](../../../wo/parquet-partition-discovery-1/evidence/).
 - [ARROW-ERROR-NUL-ABORT-1](arrow-error-nul-abort-1-card-2026-11-23.md) (S2) — **card:** a cast error over
   text holding a NUL byte aborts the Python process.
 - [SQL-EXPLODE-1](sql-explode-1-card-2026-11-23.md) (S2 proposed) — **card:** `explode` / `explode_outer` in a SQL
