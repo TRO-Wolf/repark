@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use arrow::array::{Array, ArrayRef, BooleanArray, RecordBatch, RecordBatchOptions};
-use arrow::datatypes::{DataType, FieldRef, Schema};
+use arrow::datatypes::{DataType, FieldRef, Schema, SchemaRef};
 use datafusion::catalog::Session;
 use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
 use datafusion::common::{Column, DFSchema, ScalarValue};
@@ -127,7 +127,7 @@ fn without_nonnull_wrapper(expr: &Expr) -> &Expr {
 
 fn binding_of(
     expr: &Expr,
-    part_types: &HashMap<String, DataType>,
+    column_types: &HashMap<String, DataType>,
 ) -> Option<(String, ScalarValue, Expr)> {
     let comparison = without_nonnull_wrapper(expr);
     let Expr::BinaryExpr(BinaryExpr { left, op, right }) = comparison else {
@@ -141,7 +141,7 @@ fn binding_of(
         | (Expr::Literal(value, _), Expr::Column(column)) => (column, value),
         _ => return None,
     };
-    let data_type = part_types.get(&column.name)?;
+    let data_type = column_types.get(&column.name)?;
     (&value.data_type() == data_type)
         .then(|| (column.name.clone(), value.clone(), comparison.clone()))
 }
@@ -190,9 +190,9 @@ fn propagate(
     expr: &Expr,
     replace_children: bool,
     null_is_false: bool,
-    part_types: &HashMap<String, DataType>,
+    column_types: &HashMap<String, DataType>,
 ) -> (Option<Expr>, Bindings) {
-    if null_is_false && let Some((name, value, predicate)) = binding_of(expr, part_types) {
+    if null_is_false && let Some((name, value, predicate)) = binding_of(expr, column_types) {
         return (None, HashMap::from([(name, (value, predicate))]));
     }
     match expr {
@@ -201,8 +201,8 @@ fn propagate(
             op: Operator::And,
             right,
         }) => {
-            let (new_left, mut bindings) = propagate(left, false, null_is_false, part_types);
-            let (new_right, right_bindings) = propagate(right, false, null_is_false, part_types);
+            let (new_left, mut bindings) = propagate(left, false, null_is_false, column_types);
+            let (new_right, right_bindings) = propagate(right, false, null_is_false, column_types);
             bindings.extend(right_bindings);
             let changed = new_left.is_some() || new_right.is_some();
             let left_expr = new_left.unwrap_or_else(|| left.as_ref().clone());
@@ -222,8 +222,8 @@ fn propagate(
             op: Operator::Or,
             right,
         }) => {
-            let (new_left, _) = propagate(left, true, null_is_false, part_types);
-            let (new_right, _) = propagate(right, true, null_is_false, part_types);
+            let (new_left, _) = propagate(left, true, null_is_false, column_types);
+            let (new_right, _) = propagate(right, true, null_is_false, column_types);
             if new_left.is_none() && new_right.is_none() {
                 return (None, Bindings::new());
             }
@@ -233,7 +233,7 @@ fn propagate(
             (Some(rebuilt), Bindings::new())
         }
         Expr::Not(child) => {
-            let (new_child, _) = propagate(child, true, false, part_types);
+            let (new_child, _) = propagate(child, true, false, column_types);
             (
                 new_child.map(|inner| Expr::Not(Box::new(inner))),
                 Bindings::new(),
@@ -243,11 +243,14 @@ fn propagate(
     }
 }
 
-fn propagate_constants(conjuncts: Vec<Expr>, part_types: &HashMap<String, DataType>) -> Vec<Expr> {
+fn propagate_constants(
+    conjuncts: Vec<Expr>,
+    column_types: &HashMap<String, DataType>,
+) -> Vec<Expr> {
     let mut bindings = Bindings::new();
     let mut rewritten = Vec::with_capacity(conjuncts.len());
     for conjunct in conjuncts {
-        let (new_expr, found) = propagate(&conjunct, false, true, part_types);
+        let (new_expr, found) = propagate(&conjunct, false, true, column_types);
         bindings.extend(found);
         rewritten.push(new_expr.unwrap_or(conjunct));
     }
@@ -320,6 +323,7 @@ pub(super) fn prune_partitioned_files(
     state: &dyn Session,
     files: &[PartitionedFile],
     partition_fields: &[FieldRef],
+    table_schema: &SchemaRef,
     filters: &[Expr],
 ) -> DataFusionResult<Vec<PartitionedFile>> {
     if partition_fields.is_empty() || filters.is_empty() {
@@ -329,7 +333,8 @@ pub(super) fn prune_partitioned_files(
         .iter()
         .map(|field| field.name().as_str())
         .collect();
-    let part_types: HashMap<String, DataType> = partition_fields
+    let column_types: HashMap<String, DataType> = table_schema
+        .fields()
         .iter()
         .map(|field| (field.name().clone(), field.data_type().clone()))
         .collect();
@@ -338,7 +343,7 @@ pub(super) fn prune_partitioned_files(
         .map(strip_column_qualifiers)
         .collect();
     let ansi_enabled = partition_pruning_ansi_from_options(state.config_options());
-    let rewritten = propagate_constants(conjuncts, &part_types);
+    let rewritten = propagate_constants(conjuncts, &column_types);
     let Some(part_filters) = fold_constant_conjuncts(state, rewritten, &part_names, ansi_enabled)?
     else {
         return Ok(Vec::new());

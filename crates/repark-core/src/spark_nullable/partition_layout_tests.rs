@@ -290,4 +290,8 @@ async fn constant_propagation_prunes_before_raising() {
     assert_eq!(filtered(&session, root, "ab", partial).await.unwrap(), 1);
     let guard = cast_int("a").eq(lit(1i32)).and(col("b").eq(lit(1i32)));
     assert!(filtered(&session, root, "ab", guard).await.is_err());
+    let data_bound = cast(cast_int("p"), DataType::Int64)
+        .eq(col("id"))
+        .and(col("id").eq(lit(1i64)));
+    assert!(filtered(&session, root, "s1x", data_bound).await.is_err());
 }

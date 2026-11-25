@@ -355,7 +355,13 @@ impl TableProvider for PartitionedParquetProvider {
         filters: &[Expr],
         limit: Option<usize>,
     ) -> DataFusionResult<Arc<dyn ExecutionPlan>> {
-        let kept = prune_partitioned_files(state, &self.files, &self.partition_fields, filters)?;
+        let kept = prune_partitioned_files(
+            state,
+            &self.files,
+            &self.partition_fields,
+            &self.table_schema,
+            filters,
+        )?;
         if kept.is_empty() {
             let projected = match projection {
                 None => Arc::clone(&self.table_schema),
