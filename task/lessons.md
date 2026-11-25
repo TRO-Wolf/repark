@@ -665,3 +665,27 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   so `task/wo/map.md` and the 73 top-level work-order maps (`task/wo/<unit>/map.md`) stay.
 - *Why (2026-11-23):* 256 of the 330 tracked `map.md` files under `task/wo` sat below a work order's
   top level, and 696 Markdown links pointed at them.
+
+## 2026-11-25 — the lane kit and the v2 brief template
+
+- **Owner ruling, 2026-11-25, verbatim:** "Go with your recommendations, write the hand-off". It adopts the v2 plan
+  for briefs and lane tooling, with the hand-off's corrections. The decisions:
+
+  | # | Decision | Ruled |
+  |---|---|---|
+  | 1 | Time `release-fast`, `ci` and full `release` once; then `release-fast` for step 0, Spark comparisons and verification, and `--profile ci` once at final HEAD | Yes |
+  | 2 | A two-lane peak-RSS measurement of `cargo check` / clippy off `link.lock`, and of a locked linker | Measurement only; both stay under `link.lock` until the owner has seen the numbers |
+  | 3 | Prove a clean-worktree diff-only touch once against a clean build; one full touch when a lane takes over a target; record the product tree | Yes |
+  | 4 | One unattended facade run inside the builder; the lock-bound and `ci`-profile final gates run by the orchestrator after hand-back | Yes |
+  | 5 | A small repository PR (`make ci-lane`, a duplicate-map-row check) | Yes, without the ambient-clock gate until its past catches are counted |
+  | 6 | The orchestrator runs the plan | Yes, in waves: the kit, four measurements, a two-unit pilot, then the PR |
+  | 7 | Where the kit lives | A shared lane-kit directory outside the repository, never a session scratchpad |
+  | 8 | Who builds the kit | One Opus 5.5 xhigh builder and one Opus 5.5 verifier, taking both agent slots |
+
+- **DO keep the lock rules as they are until the measurements are in.** The 11-14 RAM ruling and the two-agent cap
+  stand.
+- **DO run cargo-backed gates per crate.** The repository's `rust-clippy`, `rust-panic-ban` and `rust-check` targets
+  pass `--workspace`, so lane tooling reads their flags from the `Makefile` and substitutes `-p <crate>`.
+- *Why (2026-11-25):* 18 of 20 PRs failed their first verification. Four builders stopped on the turn budget with
+  their gates queued behind the shared build lock. Hand-copied gate text was wrong twice (`--lib`, and clippy without
+  `-A clippy::disallowed_methods`).

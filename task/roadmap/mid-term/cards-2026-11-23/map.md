@@ -49,5 +49,7 @@ awaits the owner's rating. Each card row records its own status.
   with a nullable element declares a non-null result and crashes.
 - [SQL-PATH-PARQUET-DOORS-1](sql-path-parquet-doors-1-card-2026-11-25.md) (S2 proposed) — **card:** SQL reads of a
   Parquet path refuse where Spark reads them.
+- [FILTER-PROJECTION-SWAP-RAISE-1](filter-projection-swap-raise-1-card-2026-11-25.md) (S2 proposed) — **card:** under
+  ANSI, a Parquet read raises an error from a row its `WHERE` removes.
 
 Up: [../map.md](../map.md).
