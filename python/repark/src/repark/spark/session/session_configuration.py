@@ -31,6 +31,8 @@ SPARK_SQL_ANSI_ENABLED_KEY = "spark.sql.ansi.enabled"
 
 PARTITION_OVERWRITE_MODE_KEY = "spark.sql.sources.partitionOverwriteMode"
 
+PARTITION_COLUMN_TYPE_INFERENCE_KEY = "spark.sql.sources.partitionColumnTypeInference.enabled"
+
 
 SPARK_SQL_CASE_SENSITIVE_KEY = "spark.sql.caseSensitive"
 DEFAULT_CATALOG_KEY = "spark.sql.defaultCatalog"
@@ -56,6 +58,7 @@ TIME_PARSER_POLICY_KEY = "spark.sql.legacy.timeParserPolicy"
 
 _SQLCONF_DEFAULTS: dict[str, str] = {
     PARTITION_OVERWRITE_MODE_KEY: "STATIC",
+    PARTITION_COLUMN_TYPE_INFERENCE_KEY: "true",
     TIME_PARSER_POLICY_KEY: "CORRECTED",
     # Default app name where we control the default (Spark has no default appName).
     "spark.app.name": "repark",

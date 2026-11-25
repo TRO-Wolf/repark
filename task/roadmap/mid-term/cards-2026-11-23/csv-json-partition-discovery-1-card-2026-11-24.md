@@ -9,8 +9,8 @@ readers should share.
 ## Measured
 
 Measured on live Spark 4.1.2 and on main `514281bd4`. #1430 does not change these cells. The fixtures are a Spark
-`partitionBy("p")` write of four rows over `p=1/` and `p=2/`, in both ANSI modes. Each probe is in the
-PARQUET-PARTITION-DISCOVERY-1 evidence, `task/wo/parquet-partition-discovery-1/evidence/` on PR #1430's branch.
+`partitionBy("p")` write of four rows over `p=1/` and `p=2/`, in both ANSI modes. Each probe is in
+[the PARQUET-PARTITION-DISCOVERY-1 evidence](../../../wo/parquet-partition-discovery-1/evidence/summary.md).
 
 | Read | Query | Spark 4.1.2 | Main |
 |---|---|---|---|
