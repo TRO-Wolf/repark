@@ -1329,18 +1329,14 @@
    "tp/c33_semi",
    "t/d01_proj_null_and",
    "t/d02_proj_null_or",
-   "t/d03_nested_null_and",
    "t/d04_cast_first_nullcmp",
    "t/d05_join_inferred",
-   "t/d06_values_null_left",
    "t/d14_join_filter",
    "t/g09_proj_null_and",
    "tp/d01_proj_null_and",
    "tp/d02_proj_null_or",
-   "tp/d03_nested_null_and",
    "tp/d04_cast_first_nullcmp",
    "tp/d05_join_inferred",
-   "tp/d06_values_null_left",
    "tp/d14_join_filter",
    "tp/g09_proj_null_and"
   ],
@@ -1428,6 +1424,557 @@
    "tp/g11_ne",
    "tp/g12_lit_left"
   ]
+ },
+ "guard": {
+  "false": {
+   "chain30_agg_filter": {
+    "kind": "ok",
+    "nullable": [
+     false
+    ],
+    "rows": [
+     [
+      2
+     ]
+    ],
+    "types": [
+     "bigint"
+    ]
+   },
+   "chain30_filter": {
+    "kind": "ok",
+    "nullable": [
+     true
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "types": [
+     "int"
+    ]
+   },
+   "chain30_join_on": {
+    "kind": "ok",
+    "nullable": [
+     true
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "types": [
+     "int"
+    ]
+   },
+   "chain30_or_filter": {
+    "kind": "ok",
+    "nullable": [
+     true
+    ],
+    "rows": [
+     [
+      2
+     ],
+     [
+      3
+     ],
+     [
+      5
+     ]
+    ],
+    "types": [
+     "int"
+    ]
+   },
+   "chain30_projection": {
+    "kind": "ok",
+    "nullable": [
+     true,
+     true
+    ],
+    "rows": [
+     [
+      1,
+      true
+     ],
+     [
+      2,
+      false
+     ],
+     [
+      3,
+      false
+     ],
+     [
+      4,
+      true
+     ],
+     [
+      5,
+      false
+     ]
+    ],
+    "types": [
+     "int",
+     "boolean"
+    ]
+   },
+   "nested14_filter": {
+    "kind": "ok",
+    "nullable": [
+     true
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "types": [
+     "int"
+    ]
+   },
+   "null_left_agg_filter": {
+    "kind": "ok",
+    "nullable": [
+     false
+    ],
+    "rows": [
+     [
+      2
+     ]
+    ],
+    "types": [
+     "bigint"
+    ]
+   },
+   "null_left_filter": {
+    "kind": "ok",
+    "nullable": [
+     true
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "types": [
+     "int"
+    ]
+   },
+   "null_left_or_filter": {
+    "kind": "ok",
+    "nullable": [
+     true
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      4
+     ]
+    ],
+    "types": [
+     "int"
+    ]
+   },
+   "null_left_or_projection": {
+    "kind": "ok",
+    "nullable": [
+     true,
+     true
+    ],
+    "rows": [
+     [
+      1,
+      true
+     ],
+     [
+      2,
+      true
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      true
+     ],
+     [
+      5,
+      null
+     ]
+    ],
+    "types": [
+     "int",
+     "boolean"
+    ]
+   },
+   "null_left_projection": {
+    "kind": "ok",
+    "nullable": [
+     true,
+     true
+    ],
+    "rows": [
+     [
+      1,
+      true
+     ],
+     [
+      2,
+      false
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      true
+     ],
+     [
+      5,
+      null
+     ]
+    ],
+    "types": [
+     "int",
+     "boolean"
+    ]
+   },
+   "volatile_rand_agg_filter": {
+    "class": "INVALID_AGGREGATE_FILTER.NON_DETERMINISTIC",
+    "first": "[INVALID_AGGREGATE_FILTER.NON_DETERMINISTIC] The FILTER expression \"((rand(42) < -1.0) AND (CAST(bi AS DECIMAL(5,0)) > 0))\" in an aggregate function is invalid. Expected a deterministic FILTER expression. SQLSTATE: 42903; line 1 pos 7",
+    "kind": "error"
+   },
+   "volatile_rand_filter": {
+    "kind": "ok",
+    "nullable": [
+     true
+    ],
+    "rows": [],
+    "types": [
+     "int"
+    ]
+   },
+   "volatile_rand_projection": {
+    "kind": "ok",
+    "nullable": [
+     true,
+     true
+    ],
+    "rows": [
+     [
+      1,
+      false
+     ],
+     [
+      2,
+      false
+     ],
+     [
+      3,
+      false
+     ],
+     [
+      4,
+      false
+     ],
+     [
+      5,
+      false
+     ]
+    ],
+    "types": [
+     "int",
+     "boolean"
+    ]
+   },
+   "volatile_uuid_filter": {
+    "kind": "ok",
+    "nullable": [
+     true
+    ],
+    "rows": [],
+    "types": [
+     "int"
+    ]
+   }
+  },
+  "true": {
+   "chain30_agg_filter": {
+    "kind": "ok",
+    "nullable": [
+     false
+    ],
+    "rows": [
+     [
+      2
+     ]
+    ],
+    "types": [
+     "bigint"
+    ]
+   },
+   "chain30_filter": {
+    "kind": "ok",
+    "nullable": [
+     true
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "types": [
+     "int"
+    ]
+   },
+   "chain30_join_on": {
+    "class": "NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION",
+    "first": "[NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION]  200000 cannot be represented as Decimal(5, 0). If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error, and return NULL instead. SQLSTATE: 22003",
+    "kind": "error"
+   },
+   "chain30_or_filter": {
+    "kind": "ok",
+    "nullable": [
+     true
+    ],
+    "rows": [
+     [
+      2
+     ],
+     [
+      3
+     ],
+     [
+      5
+     ]
+    ],
+    "types": [
+     "int"
+    ]
+   },
+   "chain30_projection": {
+    "kind": "ok",
+    "nullable": [
+     true,
+     true
+    ],
+    "rows": [
+     [
+      1,
+      true
+     ],
+     [
+      2,
+      false
+     ],
+     [
+      3,
+      false
+     ],
+     [
+      4,
+      true
+     ],
+     [
+      5,
+      false
+     ]
+    ],
+    "types": [
+     "int",
+     "boolean"
+    ]
+   },
+   "nested14_filter": {
+    "kind": "ok",
+    "nullable": [
+     true
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "types": [
+     "int"
+    ]
+   },
+   "null_left_agg_filter": {
+    "kind": "ok",
+    "nullable": [
+     false
+    ],
+    "rows": [
+     [
+      2
+     ]
+    ],
+    "types": [
+     "bigint"
+    ]
+   },
+   "null_left_filter": {
+    "kind": "ok",
+    "nullable": [
+     true
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      4
+     ]
+    ],
+    "types": [
+     "int"
+    ]
+   },
+   "null_left_or_filter": {
+    "class": "NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION",
+    "first": "[NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION]  200000 cannot be represented as Decimal(5, 0). If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error, and return NULL instead. SQLSTATE: 22003",
+    "kind": "error"
+   },
+   "null_left_or_projection": {
+    "class": "NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION",
+    "first": "[NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION]  200000 cannot be represented as Decimal(5, 0). If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error, and return NULL instead. SQLSTATE: 22003",
+    "kind": "error"
+   },
+   "null_left_projection": {
+    "class": "NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION",
+    "first": "[NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION]  200000 cannot be represented as Decimal(5, 0). If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error, and return NULL instead. SQLSTATE: 22003",
+    "kind": "error"
+   },
+   "volatile_rand_agg_filter": {
+    "class": "INVALID_AGGREGATE_FILTER.NON_DETERMINISTIC",
+    "first": "[INVALID_AGGREGATE_FILTER.NON_DETERMINISTIC] The FILTER expression \"((rand(42) < -1.0) AND (CAST(bi AS DECIMAL(5,0)) > 0))\" in an aggregate function is invalid. Expected a deterministic FILTER expression. SQLSTATE: 42903; line 1 pos 7",
+    "kind": "error"
+   },
+   "volatile_rand_filter": {
+    "kind": "ok",
+    "nullable": [
+     true
+    ],
+    "rows": [],
+    "types": [
+     "int"
+    ]
+   },
+   "volatile_rand_projection": {
+    "kind": "ok",
+    "nullable": [
+     true,
+     true
+    ],
+    "rows": [
+     [
+      1,
+      false
+     ],
+     [
+      2,
+      false
+     ],
+     [
+      3,
+      false
+     ],
+     [
+      4,
+      false
+     ],
+     [
+      5,
+      false
+     ]
+    ],
+    "types": [
+     "int",
+     "boolean"
+    ]
+   },
+   "volatile_uuid_filter": {
+    "kind": "ok",
+    "nullable": [
+     true
+    ],
+    "rows": [],
+    "types": [
+     "int"
+    ]
+   }
+  }
+ },
+ "guard_pinned": {
+  "false": {
+   "defect": [
+    "null_left_or_filter",
+    "null_left_or_projection"
+   ],
+   "kept": [
+    "chain30_agg_filter",
+    "chain30_filter",
+    "chain30_join_on",
+    "chain30_or_filter",
+    "chain30_projection",
+    "nested14_filter",
+    "null_left_agg_filter",
+    "null_left_filter",
+    "null_left_projection",
+    "volatile_rand_filter",
+    "volatile_rand_projection",
+    "volatile_uuid_filter"
+   ]
+  },
+  "true": {
+   "defect": [
+    "chain30_join_on",
+    "null_left_or_filter",
+    "null_left_or_projection",
+    "null_left_projection"
+   ],
+   "kept": [
+    "chain30_agg_filter",
+    "chain30_filter",
+    "chain30_or_filter",
+    "chain30_projection",
+    "nested14_filter",
+    "null_left_agg_filter",
+    "null_left_filter",
+    "volatile_rand_filter",
+    "volatile_rand_projection",
+    "volatile_uuid_filter"
+   ]
+  }
  },
  "modes": {
   "false": {

@@ -15,6 +15,7 @@ from _record_cast_shield_int_decimal_overflow_1 import (
     fable_cells,
     fable_result,
     flatten_writes,
+    guard_cells,
     kernel_cells,
     make_frames,
     neighbour_cells,
@@ -126,4 +127,27 @@ def test_conjunction_and_or_shapes_answer_as_spark(
         got = fable_result(fable_measured[key])
         if expected != got:
             misses[key] = {"sql": ORACLE["fable"][key]["sql"], "spark": expected, "repark": got}
+    assert not misses, json.dumps(misses, indent=1, sort_keys=True)[:4000]
+
+
+@pytest.fixture(scope="module", params=ANSI_MODES)
+def guard_measured(request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory) -> Any:
+    ansi = request.param
+    root = tmp_path_factory.mktemp(f"castshield-guard-{ansi}")
+    session = repark_session(root / "wh", root / "src_wh", ansi)
+    try:
+        return ansi, guard_cells(session)
+    finally:
+        session.stop()
+
+
+@pytest.mark.parametrize("kind", ["defect", "kept"])
+def test_guard_shapes_answer_as_spark(guard_measured: Any, kind: str) -> None:
+    ansi, cells = guard_measured
+    expected = ORACLE["guard"][ansi]
+    misses = {
+        key: {"spark": expected[key], "repark": cells.get(key)}
+        for key in ORACLE["guard_pinned"][ansi][kind]
+        if not same_answer(expected[key], cells.get(key))
+    }
     assert not misses, json.dumps(misses, indent=1, sort_keys=True)[:4000]

@@ -728,6 +728,65 @@ def fable_result(cell: dict[str, Any]) -> dict[str, Any]:
     return {"kind": "ok", "rows": sorted(rows, key=repr)}
 
 
+GUARD_ROWS: list[tuple[Any, ...]] = [
+    (1, 1, True),
+    (2, 123456, False),
+    (3, None, None),
+    (4, 7, True),
+    (5, 200000, None),
+]
+
+
+def guard_terms(count: int, join: str, template: str) -> str:
+    return join.join(template.format(i=i) for i in range(count))
+
+
+def guard_statements() -> dict[str, str]:
+    fits = "CAST(bi + {i} AS DECIMAL(5,0)) > -1"
+    equals = "CAST(bi + {i} AS DECIMAL(5,0)) = -1"
+    nest = f"{CAST} > 0"
+    for i in range(14):
+        nest = f"(id <> {i + 100} {'AND' if i % 2 else 'OR'} {nest})"
+    return {
+        "null_left_filter": f"SELECT id FROM g WHERE a AND {CAST} > 0",
+        "null_left_agg_filter": f"SELECT count(*) FILTER (WHERE a AND {CAST} > 0) AS c FROM g",
+        "null_left_projection": f"SELECT id, a AND {CAST} > 0 AS r FROM g",
+        "null_left_or_projection": f"SELECT id, (NOT a) OR {CAST} > 0 AS r FROM g",
+        "null_left_or_filter": f"SELECT id FROM g WHERE (NOT a) OR {CAST} > 0",
+        "volatile_rand_filter": f"SELECT id FROM g WHERE rand(42) < -1.0 AND {CAST} > 0",
+        "volatile_uuid_filter": f"SELECT id FROM g WHERE uuid() IS NULL AND {CAST} > 0",
+        "volatile_rand_projection": f"SELECT id, rand(42) < -1.0 AND {CAST} > 0 AS r FROM g",
+        "volatile_rand_agg_filter": (
+            f"SELECT count(*) FILTER (WHERE rand(42) < -1.0 AND {CAST} > 0) AS c FROM g"
+        ),
+        "chain30_filter": (
+            f"SELECT id FROM g WHERE id IN (1, 4) AND {guard_terms(30, ' AND ', fits)}"
+        ),
+        "chain30_projection": (
+            f"SELECT id, (id IN (1, 4) AND {guard_terms(30, ' AND ', fits)}) AS r FROM g"
+        ),
+        "chain30_or_filter": (
+            f"SELECT id FROM g WHERE id IN (2, 3, 5) OR {guard_terms(30, ' OR ', equals)}"
+        ),
+        "chain30_agg_filter": (
+            "SELECT count(*) FILTER (WHERE id IN (1, 4) AND "
+            f"{guard_terms(30, ' AND ', fits)}) AS c FROM g"
+        ),
+        "chain30_join_on": (
+            "SELECT l.id FROM g l JOIN g r ON l.id = r.id AND l.a AND "
+            f"{guard_terms(30, ' AND ', fits.replace('bi', 'r.bi'))}"
+        ),
+        "nested14_filter": f"SELECT id FROM g WHERE id IN (1, 4) AND {nest}",
+    }
+
+
+def guard_cells(spark: Any) -> dict[str, Any]:
+    spark.createDataFrame(GUARD_ROWS, "id INT, bi BIGINT, a BOOLEAN").createOrReplaceTempView("g")
+    return {
+        key: collect(lambda q=sql: spark.sql(q), False) for key, sql in guard_statements().items()
+    }
+
+
 def fable_cells(spark: Any, root: Path) -> dict[str, Any]:
     path = root / "fable.parquet"
     if not path.exists():
@@ -783,7 +842,7 @@ def build_fixture(step0: Path, out: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "action", choices=["setup", "run", "native", "readback", "fable", "fixture"]
+        "action", choices=["setup", "run", "native", "readback", "fable", "guard", "fixture"]
     )
     parser.add_argument("--engine", choices=["spark", "repark"], default="repark")
     parser.add_argument("--ansi", choices=["true", "false"], default="true")
@@ -800,6 +859,15 @@ def main() -> None:
         return
     if args.action == "fixture":
         build_fixture(args.root, args.out)
+        return
+    if args.action == "guard":
+        opener = spark_session if args.engine == "spark" else repark_session
+        session = opener(args.root / "guard-wh", args.root / "guard-wh", args.ansi)
+        try:
+            result = guard_cells(session)
+        finally:
+            session.stop()
+        args.out.write_text(json.dumps(result, indent=1, sort_keys=True), encoding="utf-8")
         return
     if args.action == "fable":
         session = spark_session(args.root / "fable-wh", args.root / "fable-wh", "true")
