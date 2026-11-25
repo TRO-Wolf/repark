@@ -247,6 +247,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `Column` (kept out of `column.py`, which is at its exact line baseline):
   `between` / `eqNullSafe` (extracted for headroom), `isin`, `isNaN`, `astype`,
   `name`, `outer`, `withField`, `dropFields`.
+  **MAKE-DT-INTERVAL-OVERFLOW-1 (2026-11-25):** `_logical_key_type` answers `DayTimeIntervalType()`
+  for the `interval day to second` logical key (Arrow `Duration(µs)`) where `DataFrame.schema` falls
+  back, and `StringType()` for every other unmatched key, as before.
   **Critic round (2026-09-14, R-4):** `isin` builds one native `IN`-list expression
   (empty list → `lit(False)`), `isNaN` calls the `repark_isnan` engine UDF, and
   `withField` / `dropFields` build the `update_fields` engine expression immediately
@@ -733,8 +736,6 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   estimators and feature/evaluation surfaces live in [ml/map.md](ml/map.md).
 - `types.py` — Spark SQL data types, DDL/JSON conversion, schema inspection, interval
   support, metadata, and Python-value verification.
-  **MAKE-DT-INTERVAL-OVERFLOW-1 (2026-11-25):** the Python fallback of `_arrow_type_to_repark`
-  types `duration[us]` as `DayTimeIntervalType()`, as the native table does.
   **FACADE-4 step 1 (2026-09-14):** the conversion surfaces (`fromDDL`/`_parse_datatype_string`,
   `StructType.toDDL`, `_arrow_type_to_repark`, `struct_type_from_arrow`, `repark_type_to_arrow`)
   thin to descriptor build + one `_native` call over `repark_spark::type_table`; the public classes

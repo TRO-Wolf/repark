@@ -11,7 +11,7 @@ record is
 
 | area | files | charter |
 |---|---|---|
-| core | [core.py](core.py), [__init__.py](__init__.py) | DataFrame methods, plan glue, re-exports |
+| core | [core.py](core.py), [__init__.py](__init__.py) | DataFrame methods, plan glue, re-exports; `schema` sends an unmatched logical key to `column_fields._logical_key_type` (MAKE-DT-INTERVAL-OVERFLOW-1) |
 | transforms | [colregex.py](colregex.py), [replace_expr.py](replace_expr.py), [sampling.py](sampling.py), [statistics.py](statistics.py), [actions_export.py](actions_export.py), [rows_export.py](rows_export.py), [display.py](display.py), [explain.py](explain.py) | transforms, stats, display, explain, exports |
 | joins | [joins_columns.py](joins_columns.py), [join_attr_tokens.py](join_attr_tokens.py), [cogroup.py](cogroup.py), [grouped_arrow.py](grouped_arrow.py), [grouped_pivot.py](grouped_pivot.py), [grouped_udf.py](grouped_udf.py), [subquery.py](subquery.py) | joins, grouping, pivot, cogroup, subquery; `join_attr_tokens._rewrite_attr_tokens_local` scans via `filter_quote._iter_spark_sql_spans` and inserts a newline before `)` when `--` comments appear (FILTER-STRING-ESCAPED-QUOTE-1, 2026-11-24) |
 | plans | [plan_collapse.py](plan_collapse.py), [plan_introspect.py](plan_introspect.py), [frame_nodes.py](frame_nodes.py), [unemitted_ids.py](unemitted_ids.py), [repartition_ops.py](repartition_ops.py), [streaming_batch.py](streaming_batch.py), [polars_cells.py](polars_cells.py) | plan rewrites, introspection, frame nodes |

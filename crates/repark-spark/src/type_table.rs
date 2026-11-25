@@ -197,6 +197,7 @@ pub fn arrow_name_at_depth(
                 .collect();
             format!("struct<{}>", parts.join(","))
         }
+        ArrowDataType::Duration(TimeUnit::Microsecond) => "interval day to second".to_string(),
         ArrowDataType::Null => "void".to_string(),
         other => format!("{other:?}"),
     }
