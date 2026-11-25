@@ -22,7 +22,8 @@ PARQUET-PARTITION-DISCOVERY-1 (#1430), which keeps the same extension filter.
 
 - `crates/repark-core/src/spark_nullable.rs:48,60`: `ParquetReadOptions::default()`, whose file extension is
   `.parquet`, so the listing drops every other name.
-- #1430's partition seat filters by the same suffix; its verifier names `partition.rs:755-757` on that branch.
+- PARQUET-PARTITION-DISCOVERY-1's partition listing filters by the same suffix:
+  `crates/repark-core/src/spark_nullable/partition.rs:513`.
 
 ## First step
 
