@@ -193,9 +193,8 @@ fn ansi_interval_type(text: &str) -> Option<SparkDataType> {
         text,
     )?;
     let start = captures.get(1)?.as_str().to_lowercase();
-    let end = captures
-        .get(2)
-        .map_or_else(|| start.clone(), |field| field.as_str().to_lowercase());
+    let end_field = captures.get(2);
+    let end = end_field.map_or_else(|| start.clone(), |field| field.as_str().to_lowercase());
     for (fields, year_month) in [
         (&DAY_TIME_FIELDS[..], false),
         (&YEAR_MONTH_FIELDS[..], true),
@@ -203,7 +202,7 @@ fn ansi_interval_type(text: &str) -> Option<SparkDataType> {
         let start_at = fields.iter().position(|field| *field == start);
         let end_at = fields.iter().position(|field| *field == end);
         if let (Some(start_at), Some(end_at)) = (start_at, end_at) {
-            if start_at > end_at {
+            if start_at > end_at || (end_field.is_some() && start_at == end_at) {
                 return None;
             }
             return Some(if year_month {

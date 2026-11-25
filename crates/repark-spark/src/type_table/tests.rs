@@ -145,6 +145,11 @@ fn ansi_interval_ddl_spellings_parse() {
         "interval second to day",
         "interval year to second",
         "interval week",
+        "interval day to day",
+        "interval year to year",
+        "interval month to month",
+        "interval second to second",
+        "t interval hour to hour",
     ] {
         assert!(parse_ddl(ddl).is_err(), "{ddl} refuses");
     }
