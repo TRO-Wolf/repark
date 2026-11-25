@@ -43,8 +43,9 @@ awaits the owner's rating. Each card row records its own status.
   reads of a `key=value/` directory drop the partition columns.
 - [MAKE-DT-INTERVAL-OVERFLOW-1](make-dt-interval-overflow-1-card-2026-11-25.md) (S1) — **card:** `make_dt_interval`
   answers NULL on overflow, where Spark raises or answers, and types its result as a string.
-- [FILE-EXTENSION-FILTER-1](file-extension-filter-1-card-2026-11-25.md) (S1) — **card:** Parquet directory reads skip
-  files whose names do not end in `.parquet`.
+- [FILE-EXTENSION-FILTER-1](file-extension-filter-1-card-2026-11-25.md) (S1) — **built** on
+  `fix/file-extension-filter-1`, not merged: Parquet path reads list every name Spark lists and skip Spark's hidden
+  names; delta 1: append validation skips the same names; integrated with #1430's discovery listing.
 - [CAST-STRING-GRAMMAR-1](cast-string-grammar-1-card-2026-11-25.md) (S2 proposed) — **card:** string casts to `DATE`,
   `TIMESTAMP_NTZ`, `DOUBLE` and `DECIMAL` refuse text Spark accepts.
 - [TRY-CAST-PUSHED-PROJECTION-1](try-cast-pushed-projection-1-card-2026-11-25.md) (S2 proposed) — **card:** a shared

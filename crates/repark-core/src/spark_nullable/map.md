@@ -43,24 +43,34 @@ converter reads no `INT96` bounds, so the leaf is never pruned, as before. SQL `
 unset value for the session (`conf.unset` leaves the live value)
 ([card](../../../../task/roadmap/mid-term/parquet-int96-as-ntz-1-card-2026-11-22.md)).
 
+**FILE-EXTENSION-FILTER-1 (2026-11-25):** a Parquet path read lists files as Spark's `InMemoryFileIndex` does: every
+suffix (main's `.parquet` filter lost `b`, `b.PARQUET`, `b.bin` silently), skipping a name that starts with `_` and
+holds no `=`, starts with `.`, or ends in `._COPYING_`, on every segment below the root; a single-file path is judged
+by its own name (`_b.parquet` read alone refuses, as on Spark); `_root/` as the root is read. `_metadata` and
+`_common_metadata` are skipped (Spark lists but never scans them). `hidden_files.rs` is the rule's one home: the
+discovery listing (`partition.rs`) and the fallback both use `spark_hidden_below`. The fallback
+(`read_parquet_spark_listing`, for globs, single files and unpartitioned directories) scans through
+`SparkListingTable`, which hands DataFusion's `ListingTable` a session whose stores drop hidden names from `list`
+and answer `NotFound` to a `head` of a hidden file (DataFusion 54.1.0 filters only by suffix and glob,
+`url.rs:296-302`); statistics, pruning, grouping, `inputFiles()` and execution stay DataFusion's own. The list-files
+cache is off (`../session.rs`), so no cached listing bypasses the rule. Evidence: `task/wo/file-extension-filter-1/`.
+
 **PARQUET-PARTITION-DISCOVERY-1 (2026-11-24; Delta 2):** `partition.rs` and `partition_infer.rs` add Spark-compatible
 Hive partition discovery to the Parquet path-read seat (`ReparkSession::read_parquet` /
 `read_parquet_with_case_sensitivity`) over both local paths and S3 prefixes (shared `ObjectStore` listing;
 `plan_introspect.rs` recognizes `PartitionedParquetProvider` beside `ListingTable`). They reuse
 `../partition_discovery.rs`'s `__HIVE_DEFAULT_PARTITION__` and `CONFLICTING_PARTITION_COLUMN_NAMES` formatter while
 leaving text and ORC discovery untouched. Rules pinned to live Spark 4.1.2:
-- Hidden path rule (Spark `InMemoryFileIndex`): a directory segment is hidden iff it starts with `.`, or starts with
-  `_` and contains no `=` (so `_p=1/` and `_=1/` are partition directories while `_temporary/` is hidden); a file name
-  is hidden iff it starts with `.` or `_` (so `_p=1/_hidden.parquet`, `_SUCCESS`, `.crc`, `.hidden.parquet`, and
-  hidden 0-byte `_zero.parquet` are skipped).
+- Hidden path rule: `hidden_files::spark_hidden_below` (FILE-EXTENSION-FILTER-1) on every segment, so `_p=1/` is a
+  partition directory, `_temporary/`, `.p=1/`, `_SUCCESS`, `.crc` and `_zero.parquet` are skipped, and every other
+  file name is listed whatever its suffix.
 - Footer order (Spark `ParquetUtils.inferSchema` reads one footer, the first of `allFiles()` by path string): the
   first visible file in byte order (root and base-directory files included when partitioned, root files only when
   not) refuses with `[FAILED_READ_FILE.CANNOT_READ_FILE_FOOTER]` (`SQLSTATE: KD001`) when it holds 0 bytes; any
   other 0-byte file is skipped from the scan (`isNonEmptyFile`) but still names its partition and its value feeds type
   inference. The refusal comes after both conflict checks.
-- When no visible file has a partition spec, unpartitioned directories without hidden `.parquet` files take main's
-  `ListingTable` fallback; when hidden `.parquet` files are present, only root-level files (`depth == 1`) are kept
-  (never reading nested non-`=` subdirectories, refusing when no root-level `.parquet` files exist).
+- When no visible file has a partition spec, the root files' footer rule runs and the read takes the Spark-listing
+  fallback, which reads root files only.
 - Partition spec extraction (`parse_relative_specs`) scans directory segments in reverse, taking only the trailing
   contiguous run of `key=value` directories above the file (skipping trailing non-`=` subdirectories like `a=1/b=2/sub/`,
   stopping before a non-`=` separator like `a=1/sub/b=2/` -> `b` only). Leaf reads (`root/p=1`) and root names holding
@@ -121,6 +131,13 @@ leaving text and ORC discovery untouched. Rules pinned to live Spark 4.1.2:
   every NaN back, `max` answers NaN and `min` the smallest number, on a
   constant and a spread file, one and two row groups. Removing the per-file demotion, the per-scan demotion or the
   factory registration, or the row-group check, each turns a pin red. The aggregate dynamic filter (NAN-MINMAX-1 N1): three files `[3,4]`, `[NULL,NULL | 1,2]` and `[5,6]` answer `max(d), min(d)` 6.0, 1.0 and `min(d), max(id)` 1.0, 8 in 10 of 10 runs (red with the default removed: `min` 3.0); the umbrella key at `true` is refused on four `SET` forms and at build, `false` is accepted, and the specific key turns the filter on at runtime and at build.
+
+- `hidden_files.rs` — `spark_hidden_name` and `spark_hidden_below` (the name rule over each segment below the root),
+  `SparkListingTable`, `SparkListingSession`, and the registry and store wrappers that apply the rule to a listing.
+- `hidden_files_tests.rs` — the name table (Spark's writer markers, `_metadata`, `_k=1.parquet`, `._COPYING_`), the
+  segment table (partition directories, hidden roots, single files), and `read_parquet` over a flat directory with
+  every marker, partition directories (`_q=3/` beside `p=1/` conflicts, as on Spark), single files with any suffix and hidden names, a hidden root directory, a
+  glob, and the wrapped listing's S3 overwrite check. The S3 append pins are `../session/tests/hidden_append.rs`.
 
 - `int96_tests.rs` — a low-level `INT96` file (2025, year 2999 and 1960 instants, a NULL) beside an `INT64`
   not-adjusted leaf: `read_parquet` and `CREATE EXTERNAL TABLE … STORED AS PARQUET` read `Timestamp(Microsecond,

@@ -280,8 +280,9 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   **Re-verify 4 fold:** keys under the same, a sibling and an unrelated prefix survive a failing
   400k-row append with their bytes; a failing root append keeps a foreign prefix.
   **PARTITIONBY-NULL-WRITE-1:** NULL, empty, `a:b` and `é` keys land where Spark 4.1.2 writes them.
-- `dynamic_overwrite_guard.rs` — **PLAIN-DYNAMIC-OVERWRITE-GUARD-1 (2026-11-22):** DYNAMIC refuses
-  a partitioned `write_path` overwrite, objects intact, before bucket lookup.
+- `dynamic_overwrite_guard.rs` — PLAIN-DYNAMIC-OVERWRITE-GUARD-1: DYNAMIC refuses a partitioned `write_path`
+  overwrite, objects intact, before bucket lookup.
+- `hidden_append.rs` — FILE-EXTENSION-FILTER-1: S3 appends beside hidden keys; overwrite.
 - `text_write_format.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** compiler/validator/renderer
   pins against the Spark oracle: every error class per pattern kind, DST-gap and LMT-seconds default
   renders, the offset-letter matrix, and the SELECT builder (star fast path, wrapping, partition
