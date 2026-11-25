@@ -173,7 +173,10 @@ pub(super) fn context_with_df_54_1_rule_guards(
         extension.configure_analyzer_rules(analyzer_rules_with_df_54_1_rule_guards()?)?;
     let analyzer_rules = dialect.configure_analyzer_rules(analyzer_rules)?;
     let mut analyzer_rules = scalar_nullable::insert_before_coercion(analyzer_rules)?;
-    let mut optimizer_rules = unnest_safe_optimizer_rules(extension.signed_zero_policy());
+    let mut optimizer_rules = unnest_safe_optimizer_rules(
+        extension.signed_zero_policy(),
+        extension.shields_integer_decimal_casts(),
+    );
     let seat = config.get_extension::<crate::extension::FrameViewSeat>();
     if let Some(seat) = &seat {
         analyzer_rules.insert(0, seat.rule());
@@ -223,7 +226,9 @@ pub(super) fn finish_session_build(
     ));
     context.add_analyzer_rule(Arc::new(OptimizerSeatConfig));
     signed_zero::install_literal_seat(context, extension.signed_zero_policy());
-    context.add_analyzer_rule(Arc::new(cast_shield::CastShieldRule));
+    context.add_analyzer_rule(Arc::new(cast_shield::CastShieldRule::new(
+        extension.shields_integer_decimal_casts(),
+    )));
     context.add_analyzer_rule(scalar_nullable::analyzer_rule());
 }
 
@@ -237,6 +242,7 @@ pub(super) fn analyzer_rules_with_df_54_1_rule_guards()
 /// DataFusion's recommended rule list with `push_down_leaf_projections` wrapped.
 fn unnest_safe_optimizer_rules(
     policy: crate::extension::SignedZeroPolicy,
+    integer_decimal: bool,
 ) -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
     let mut rules: Vec<Arc<dyn OptimizerRule + Send + Sync>> =
         vec![Arc::new(attr_id::StripAttributeIds)];
@@ -254,7 +260,7 @@ fn unnest_safe_optimizer_rules(
             }
             "simplify_expressions" => {
                 rules.push(Arc::new(scalar_nullable::ReparkScalarSubqueryNullability));
-                rules.push(Arc::new(cast_shield::CastShieldRule));
+                rules.push(Arc::new(cast_shield::CastShieldRule::new(integer_decimal)));
                 rules.push(signed_zero::literal_optimizer_seat(policy));
                 rules.push(rule);
                 rules.push(signed_zero::literal_optimizer_seat(policy));
@@ -266,7 +272,7 @@ fn unnest_safe_optimizer_rules(
         }
     }
     rules.push(signed_zero::key_seat(policy));
-    rules.push(Arc::new(cast_shield::CastShieldRule));
+    rules.push(Arc::new(cast_shield::CastShieldRule::new(integer_decimal)));
     rules.push(Arc::new(cast_shield::StatsBarrierRule));
     rules
 }

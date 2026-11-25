@@ -6,9 +6,13 @@ use datafusion::common::ScalarValue;
 use datafusion::common::tree_node::TreeNode;
 use datafusion::datasource::MemTable;
 
-use super::udf::{CAST_SHIELD_NAME, cast_preimage, is_lossless, is_narrowing};
+use super::udf::{
+    CAST_SHIELD_NAME, cast_preimage, is_integer_decimal_narrowing, is_lossless, is_narrowing,
+};
 use super::{IN_RANGE_LIMIT, shield_plan};
 use crate::ReparkSession;
+use crate::extension::SessionExtension;
+use crate::session::ReparkSessionBuilder;
 
 const DEC: DataType = DataType::Decimal128(10, 2);
 
@@ -147,18 +151,6 @@ fn the_narrowing_predicate_is_exact_by_type() {
         (DEC, DataType::Decimal128(9, 2), true),
         (DEC, DataType::Decimal128(12, 2), false),
         (DEC, DataType::Float64, false),
-        (DataType::Int64, DataType::Decimal128(5, 0), true),
-        (DataType::Int64, DataType::Decimal128(18, 0), true),
-        (DataType::Int64, DataType::Decimal128(19, 0), false),
-        (DataType::Int64, DataType::Decimal128(20, 2), true),
-        (DataType::Int64, DataType::Decimal128(21, 2), false),
-        (DataType::Int32, DataType::Decimal128(9, 0), true),
-        (DataType::Int32, DataType::Decimal128(10, 1), true),
-        (DataType::Int32, DataType::Decimal128(11, 1), false),
-        (DataType::Int16, DataType::Decimal128(4, 0), true),
-        (DataType::Int16, DataType::Decimal128(5, 0), false),
-        (DataType::Int8, DataType::Decimal128(3, 1), true),
-        (DataType::Int8, DataType::Decimal128(3, 0), false),
         (DataType::Float64, DataType::Int32, false),
         (DataType::Utf8, DataType::Int32, false),
         (
@@ -174,6 +166,31 @@ fn the_narrowing_predicate_is_exact_by_type() {
             "{source} -> {target}"
         );
     }
+    let integer_decimal = [
+        (DataType::Int64, DataType::Decimal128(5, 0), true),
+        (DataType::Int64, DataType::Decimal128(18, 0), true),
+        (DataType::Int64, DataType::Decimal128(19, 0), false),
+        (DataType::Int64, DataType::Decimal128(20, 2), true),
+        (DataType::Int64, DataType::Decimal128(21, 2), false),
+        (DataType::Int32, DataType::Decimal128(9, 0), true),
+        (DataType::Int32, DataType::Decimal128(10, 1), true),
+        (DataType::Int32, DataType::Decimal128(11, 1), false),
+        (DataType::Int16, DataType::Decimal128(4, 0), true),
+        (DataType::Int16, DataType::Decimal128(5, 0), false),
+        (DataType::Int8, DataType::Decimal128(3, 1), true),
+        (DataType::Int8, DataType::Decimal128(3, 0), false),
+        (DEC, DataType::Decimal128(5, 0), false),
+        (DataType::Int64, DataType::Int32, false),
+    ];
+    for (source, target, narrowing) in integer_decimal {
+        assert_eq!(
+            is_integer_decimal_narrowing(&source, &target),
+            narrowing,
+            "{source} -> {target}"
+        );
+    }
+    assert!(!is_narrowing(&DataType::Int64, &DataType::Decimal128(5, 0)));
+    assert!(!is_narrowing(&DataType::Int8, &DataType::Decimal128(3, 1)));
     assert!(is_lossless(&DataType::Int32, &DataType::Int64));
     assert!(is_lossless(&DataType::Int32, &DataType::Decimal128(11, 1)));
     assert!(!is_lossless(&DataType::Int32, &DataType::Decimal128(9, 0)));
@@ -181,8 +198,16 @@ fn the_narrowing_predicate_is_exact_by_type() {
     assert!(!is_lossless(&DEC, &DataType::Int64));
 }
 
-fn integer_session() -> ReparkSession {
-    let session = ReparkSession::builder().build().expect("core session");
+struct SparkDoorShield;
+
+impl SessionExtension for SparkDoorShield {
+    fn shields_integer_decimal_casts(&self) -> bool {
+        true
+    }
+}
+
+fn integer_session(builder: ReparkSessionBuilder) -> ReparkSession {
+    let session = builder.build().expect("core session");
     let schema = Arc::new(Schema::new(vec![
         Field::new("id", DataType::Int64, false),
         Field::new("b", DataType::Int64, true),
@@ -210,7 +235,8 @@ fn integer_session() -> ReparkSession {
 
 #[tokio::test]
 async fn integer_to_decimal_overflow_is_not_moved_onto_the_constant() {
-    let session = integer_session();
+    let session =
+        integer_session(ReparkSession::builder().with_extension(Arc::new(SparkDoorShield)));
     let cases: [(&str, &[i64]); 6] = [
         ("TRY_CAST(b AS DECIMAL(5,0)) < 1", &[]),
         ("TRY_CAST(b AS DECIMAL(5,0)) = 1", &[1]),
@@ -242,6 +268,20 @@ async fn integer_to_decimal_overflow_is_not_moved_onto_the_constant() {
         .expect("explain");
     let shown = format!("{:?}", frame.collect().await.expect("explain rows"));
     assert!(shown.contains(CAST_SHIELD_NAME), "{shown}");
+}
+
+#[tokio::test]
+async fn the_integer_to_decimal_shield_is_off_without_the_spark_door() {
+    let session = integer_session(ReparkSession::builder());
+    let cases: [(&str, &[i64]); 3] = [
+        ("TRY_CAST(b AS DECIMAL(5,0)) < 1", &[3]),
+        ("TRY_CAST(b AS DECIMAL(5,0)) <> 1", &[2, 3]),
+        ("CAST(b AS DECIMAL(5,0)) = 1", &[1]),
+    ];
+    for (predicate, expected) in cases {
+        let sql = format!("SELECT id FROM t WHERE {predicate}");
+        assert_eq!(ids(&session, &sql).await, expected, "{predicate}");
+    }
 }
 
 fn seeded_session() -> ReparkSession {

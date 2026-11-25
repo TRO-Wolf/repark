@@ -479,6 +479,10 @@ pub trait SessionExtension: Send + Sync {
         SignedZeroPolicy::default()
     }
 
+    fn shields_integer_decimal_casts(&self) -> bool {
+        false
+    }
+
     /// Register runtime objects on the freshly built [`SessionContext`].
     /// # Errors
     /// A registration failure is a DataFusion error; `build()` folds it via [`engine_err`].
