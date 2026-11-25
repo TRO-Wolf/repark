@@ -258,6 +258,40 @@ fn decimal_to_decimal_overflows(
     }
 }
 
+fn integral_to_decimal_overflows(source: &DataType, precision: u8, scale: i8) -> bool {
+    let digits = match source {
+        DataType::Int8 => 3,
+        DataType::Int16 => 5,
+        DataType::Int32 => 10,
+        DataType::Int64 => 19,
+        _ => return false,
+    };
+    i32::from(precision) - i32::from(scale) < digits
+}
+
+fn is_in_range_decimal_literal(operand: &Expr, precision: u8, scale: i8) -> bool {
+    let Expr::Literal(scalar, _) = operand else {
+        return false;
+    };
+    let value = match scalar {
+        ScalarValue::Int8(Some(inner)) => i128::from(*inner),
+        ScalarValue::Int16(Some(inner)) => i128::from(*inner),
+        ScalarValue::Int32(Some(inner)) => i128::from(*inner),
+        ScalarValue::Int64(Some(inner)) => i128::from(*inner),
+        _ => return false,
+    };
+    let (Ok(shift), Some(limit)) = (
+        u32::try_from(scale),
+        10i128.checked_pow(u32::from(precision)),
+    ) else {
+        return false;
+    };
+    10i128
+        .checked_pow(shift)
+        .and_then(|factor| value.checked_mul(factor))
+        .is_some_and(|scaled| scaled.unsigned_abs() < limit.unsigned_abs())
+}
+
 fn is_synthetic_suffix_literal(expr: &Expr) -> bool {
     let Expr::ScalarFunction(function) = expr else {
         return false;
@@ -319,6 +353,18 @@ fn cast_udf_for(
             ))));
         }
         return None;
+    }
+    if let DataType::Decimal128(to_precision, to_scale) = target
+        && integral_to_decimal_overflows(plain, *to_precision, *to_scale)
+    {
+        if is_in_range_decimal_literal(operand, *to_precision, *to_scale) {
+            return None;
+        }
+        return Some(Arc::new(ScalarUDF::from(SparkNarrowDecimal::new(
+            *to_precision,
+            *to_scale,
+            named,
+        ))));
     }
     if matches!(plain, DataType::Float32 | DataType::Float64) {
         return narrow_integral_udf(target, named, true);

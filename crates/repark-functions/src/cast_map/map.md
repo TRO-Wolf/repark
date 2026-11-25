@@ -32,6 +32,9 @@ the module's tests.
   Spark 4.1.2 `fractional_to_integral` (`java_float_text` without `F`, `java_double_text` with `D` for finite only,
   JVM saturate-to-i32-then-wrap for TINYINT/SMALLINT/INT and saturate-to-i64 for BIGINT, `2^63` accepted as `i64::MAX`
   in both ANSI modes, `NaN -> 0`). Dictionary inputs decode before narrowing; `Null` sources return typed null arrays.
+  **CAST-SHIELD-INT-DECIMAL-OVERFLOW-1 (2026-11-25):** `integral_to_decimal` (signed integers only; other sources keep
+  Arrow's cast) rescales through `rescale_decimal` from scale 0, NULL on overflow in legacy and `Try`, and
+  `NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION` (`decimal_overflow`, the value printed as an integer) in ANSI.
 - `rewrite.rs` — `rewrite_map_casts`: tokenizes the statement with the Spark dialect (strings, quoted identifiers and
   comments, `/*! … */` hints included, stay opaque), finds each `CAST(` / `TRY_CAST(` whose top-level `AS` target names
   `MAP <`, and splices the UDF call in by byte span so every other byte of the statement stays
@@ -65,6 +68,11 @@ the module's tests.
   child nullability and never narrow it at the physical layer (working around DataFusion 54.1's `TryCastExpr` /
   `NegativeExpr::return_field` bug); `SparkStringIntegral` and `SparkNarrowDecimal` unconditionally return nullable.
   `narrow_cast_parts` joins `string_integral_cast_parts` for the empty `INSERT OVERWRITE` guard.
+  **CAST-SHIELD-INT-DECIMAL-OVERFLOW-1 (2026-11-25):** a user `CAST` from TINYINT/SMALLINT/INT/BIGINT to a
+  `DECIMAL(p,s)` with `p - s` below the source's digit count (3/5/10/19) rewrites to `__repark_narrow_to_decimal_<p>_<s>__`
+  (`integral_to_decimal_overflows`); an integer literal whose value fits (`is_in_range_decimal_literal`) keeps the plain
+  cast so it still folds, and `TRY_CAST` stays `Expr::TryCast` for the shield. The empty `INSERT OVERWRITE` guard
+  judges the new call as the cast it replaced, through `narrow_cast_parts`.
   pins: `python/repark/tests/types/test_string_cast_lenient_int_1.py`,
   `python/repark/tests/types/test_ansi_off_narrowing_overflow_1.py`
 - `narrow_tests.rs` — **ANSI-OFF-NARROWING-OVERFLOW-1 (2026-11-23):** Rust unit pins for the narrowing numeric kernel
@@ -73,7 +81,8 @@ the module's tests.
   saturation + `2^63` + `NaN` + `±Inf` + `-0.0`, nullability per source kind + logical nullable operands over `NOT NULL`
   columns, dictionary inputs, `TRY_CAST` untouched, `ARROW_CAST_OPERAND` bypass, synthetic vs cast `SUFFIX_LITERAL`,
   `Values` guard, non-overflowing decimal and in-range literal bypass, subquery outer `IS NULL`, join key distinct
-  names, coercion idempotence).
+  names, coercion idempotence). CAST-SHIELD-INT-DECIMAL-OVERFLOW-1: the integer-to-decimal kernel (NULL, scale, ANSI
+  text) and the seam (which casts rewrite, the in-range literal, `TRY_CAST`, `narrow_cast_parts`).
 - `tests.rs` — the module's `#[cfg(test)]` suite: target parsing across case, spacing and
   nesting; malformed and map-free targets rejected; statements without a map cast untouched
   (string literals and comments included); the splice keeps surrounding text, nested and

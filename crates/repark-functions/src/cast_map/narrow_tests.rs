@@ -718,3 +718,176 @@ fn zero_decimal_with_extreme_negative_scale_narrows_to_zero() {
         assert_eq!(ints.value(0), 0);
     }
 }
+
+#[test]
+fn integral_to_decimal_nulls_on_overflow_and_raises_numeric_value_out_of_range_in_ansi() {
+    let source: ArrayRef = Arc::new(Int64Array::from(vec![
+        Some(1),
+        Some(-99_999),
+        Some(123_456),
+        Some(i64::MIN),
+        None,
+    ]));
+    let target = DataType::Decimal128(5, 0);
+    for mode in [Mode::Legacy, Mode::Try] {
+        let out = narrow_numeric(&source, &target, mode).unwrap();
+        let decimals = out.as_any().downcast_ref::<Decimal128Array>().unwrap();
+        assert_eq!(decimals.data_type(), &target);
+        assert_eq!(decimals.value(0), 1);
+        assert_eq!(decimals.value(1), -99_999);
+        assert!(decimals.is_null(2));
+        assert!(decimals.is_null(3));
+        assert!(decimals.is_null(4));
+    }
+    let error = narrow_numeric(&source, &target, Mode::Ansi)
+        .unwrap_err()
+        .to_string();
+    assert!(
+        error.contains(
+            "[NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION]  123456 cannot be represented as \
+             Decimal(5, 0). If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass \
+             this error, and return NULL instead. SQLSTATE: 22003"
+        ),
+        "{error}"
+    );
+
+    let tiny: ArrayRef = Arc::new(Int8Array::from(vec![Some(-99), Some(-100), Some(127)]));
+    let scaled = DataType::Decimal128(3, 1);
+    let out = narrow_numeric(&tiny, &scaled, Mode::Legacy).unwrap();
+    let decimals = out.as_any().downcast_ref::<Decimal128Array>().unwrap();
+    assert_eq!(decimals.value(0), -990);
+    assert!(decimals.is_null(1));
+    assert!(decimals.is_null(2));
+    let error = narrow_numeric(&tiny, &scaled, Mode::Ansi)
+        .unwrap_err()
+        .to_string();
+    assert!(
+        error.contains("]  -100 cannot be represented as Decimal(3, 1)."),
+        "{error}"
+    );
+
+    let fits: ArrayRef = Arc::new(Int16Array::from(vec![Some(i16::MIN), Some(i16::MAX)]));
+    let out = narrow_numeric(&fits, &DataType::Decimal128(7, 2), Mode::Ansi).unwrap();
+    let decimals = out.as_any().downcast_ref::<Decimal128Array>().unwrap();
+    assert_eq!(decimals.value(0), -3_276_800);
+    assert_eq!(decimals.value(1), 3_276_700);
+}
+
+fn integer_decimal_context(ansi: bool) -> SessionContext {
+    let ctx = narrow_context(ansi);
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("b", DataType::Int64, false),
+        Field::new("t", DataType::Int8, true),
+    ]));
+    let batch = RecordBatch::try_new(
+        Arc::clone(&schema),
+        vec![
+            Arc::new(Int64Array::from(vec![123_456i64, 1])),
+            Arc::new(Int8Array::from(vec![Some(127i8), Some(12)])),
+        ],
+    )
+    .unwrap();
+    ctx.register_table(
+        "t",
+        Arc::new(MemTable::try_new(schema, vec![vec![batch]]).unwrap()),
+    )
+    .unwrap();
+    ctx
+}
+
+#[tokio::test]
+async fn analyzer_rewrites_only_integer_to_decimal_casts_that_can_overflow() {
+    let ctx = integer_decimal_context(false);
+    let sql = "SELECT CAST(b AS DECIMAL(5,0)) AS a, CAST(b AS DECIMAL(19,0)) AS l, \
+               CAST(t AS DECIMAL(3,1)) AS s, CAST(1 AS DECIMAL(5,0)) AS k, \
+               CAST(123456 AS DECIMAL(5,0)) AS o, TRY_CAST(b AS DECIMAL(5,0)) AS tc FROM t";
+    let frame = ctx.sql(sql).await.unwrap();
+    let state = ctx.state();
+    let analyzed = state
+        .analyzer()
+        .execute_and_check(
+            frame.logical_plan().clone(),
+            state.config_options(),
+            |_, _| {},
+        )
+        .unwrap();
+    let shown = analyzed.display_indent().to_string();
+    assert!(
+        shown.contains("__repark_narrow_to_decimal_5_0__(t.b)"),
+        "{shown}"
+    );
+    assert!(
+        shown.contains("__repark_narrow_to_decimal_3_1__(t.t)"),
+        "{shown}"
+    );
+    assert!(
+        shown.contains("__repark_narrow_to_decimal_5_0__(Int64(123456))"),
+        "{shown}"
+    );
+    assert!(
+        !shown.contains("__repark_narrow_to_decimal_19_0__"),
+        "{shown}"
+    );
+    assert!(
+        !shown.contains("__repark_narrow_to_decimal_5_0__(Int64(1))"),
+        "{shown}"
+    );
+    assert!(
+        shown.contains("TRY_CAST(t.b AS Decimal128(5, 0))"),
+        "{shown}"
+    );
+    let out_schema = analyzed.schema();
+    assert!(out_schema.field(0).is_nullable());
+    assert!(!out_schema.field(1).is_nullable());
+    assert_eq!(out_schema.field(0).name(), "a");
+
+    let batches = frame.collect().await.unwrap();
+    let batch = &batches[0];
+    let cell = |column: usize, row: usize| {
+        array_value_to_string(batch.column(column).as_ref(), row).unwrap()
+    };
+    assert_eq!(cell(0, 0), "");
+    assert_eq!(cell(0, 1), "1");
+    assert_eq!(cell(1, 0), "123456");
+    assert_eq!(cell(2, 0), "");
+    assert_eq!(cell(2, 1), "12.0");
+    assert_eq!(cell(3, 0), "1");
+    assert_eq!(cell(4, 0), "");
+    assert_eq!(cell(5, 0), "");
+}
+
+#[tokio::test]
+async fn ansi_integer_to_decimal_overflow_raises_and_parts_read_the_target() {
+    let ansi = integer_decimal_context(true);
+    let error = ansi
+        .sql("SELECT CAST(b AS DECIMAL(5,0)) AS a FROM t")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap_err()
+        .to_string();
+    assert!(
+        error.contains("[NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION]  123456 cannot be"),
+        "{error}"
+    );
+    let parts = ansi
+        .sql("SELECT CAST(t AS DECIMAL(3,1)) FROM t")
+        .await
+        .unwrap();
+    let analyzed = ansi
+        .state()
+        .analyzer()
+        .execute_and_check(
+            parts.logical_plan().clone(),
+            ansi.state().config_options(),
+            |_, _| {},
+        )
+        .unwrap();
+    let datafusion::logical_expr::LogicalPlan::Projection(projection) = &analyzed else {
+        panic!("{analyzed}");
+    };
+    let expr = projection.expr[0].clone().unalias();
+    let (_, target) = narrow_cast_parts(&expr).unwrap();
+    assert_eq!(target, DataType::Decimal128(3, 1));
+}

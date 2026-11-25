@@ -1,5 +1,6 @@
 mod empty_dml;
 mod exec;
+mod narrow_guard;
 mod planner;
 mod rewrite;
 mod try_cast_nullable;

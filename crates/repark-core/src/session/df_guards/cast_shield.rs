@@ -15,7 +15,10 @@ mod udf;
 
 pub(crate) use stats_barrier::{StatsBarrierRule, stats_barrier_udf};
 pub use udf::cast_shield_udf;
-use udf::{cast_parts, cast_preimage, cast_shield_call, is_lossless, is_narrowing, shielded_cast};
+use udf::{
+    cast_parts, cast_preimage, cast_shield_call, is_integer_decimal_narrowing, is_lossless,
+    is_narrowing, shielded_cast,
+};
 
 const RULE_NAME: &str = "repark_cast_shield";
 
@@ -24,11 +27,19 @@ const DECIMAL_TO_DOUBLE_NAME: &str = "__repark_decimal_to_double__";
 pub(crate) const IN_RANGE_LIMIT: usize = 32;
 
 #[derive(Debug, Default)]
-pub(crate) struct CastShieldRule;
+pub(crate) struct CastShieldRule {
+    integer_decimal: bool,
+}
+
+impl CastShieldRule {
+    pub(crate) fn new(integer_decimal: bool) -> Self {
+        Self { integer_decimal }
+    }
+}
 
 impl AnalyzerRule for CastShieldRule {
     fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
-        shield_plan(plan).data()
+        shield_plan_with(plan, self.integer_decimal).data()
     }
 
     fn name(&self) -> &str {
@@ -50,15 +61,22 @@ impl OptimizerRule for CastShieldRule {
         plan: LogicalPlan,
         _config: &dyn OptimizerConfig,
     ) -> Result<Transformed<LogicalPlan>> {
-        shield_plan(plan)
+        shield_plan_with(plan, self.integer_decimal)
     }
 }
 
 pub(crate) fn shield_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+    shield_plan_with(plan, false)
+}
+
+pub(crate) fn shield_plan_with(
+    plan: LogicalPlan,
+    integer_decimal: bool,
+) -> Result<Transformed<LogicalPlan>> {
     if !plan_has_candidate(&plan)? {
         return Ok(Transformed::no(plan));
     }
-    plan.transform_up_with_subqueries(shield_node)
+    plan.transform_up_with_subqueries(|node| shield_node(node, integer_decimal))
 }
 
 fn plan_has_candidate(plan: &LogicalPlan) -> Result<bool> {
@@ -144,7 +162,7 @@ fn node_schema(plan: &LogicalPlan) -> Result<DFSchema> {
     Ok(schema)
 }
 
-fn shield_node(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+fn shield_node(plan: LogicalPlan, integer_decimal: bool) -> Result<Transformed<LogicalPlan>> {
     if !node_has_candidate(&plan)? {
         return Ok(Transformed::no(plan));
     }
@@ -152,7 +170,8 @@ fn shield_node(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     let preserver = NamePreserver::new(&plan);
     let rewritten = plan.map_expressions(|expr| {
         let saved = preserver.save(&expr);
-        let shielded = expr.transform_up(|node| Ok(shield_comparison(node, &schema)))?;
+        let shielded =
+            expr.transform_up(|node| Ok(shield_comparison(node, &schema, integer_decimal)))?;
         Ok(shielded.update_data(|node| saved.restore(node)))
     })?;
     if rewritten.transformed {
@@ -187,9 +206,9 @@ fn reads_input(expr: &Expr) -> bool {
     .unwrap_or(true)
 }
 
-fn shield_operand(expr: &Expr, schema: &DFSchema) -> Option<Expr> {
+fn shield_operand(expr: &Expr, schema: &DFSchema, integer_decimal: bool) -> Option<Expr> {
     if let (Some(argument), Expr::ScalarFunction(call)) = (decimal_to_double_argument(expr), expr) {
-        let shielded = shield_operand(argument, schema)?;
+        let shielded = shield_operand(argument, schema, integer_decimal)?;
         return Some(Expr::ScalarFunction(ScalarFunction::new_udf(
             Arc::clone(&call.func),
             vec![shielded],
@@ -197,13 +216,15 @@ fn shield_operand(expr: &Expr, schema: &DFSchema) -> Option<Expr> {
     }
     let (operand, target) = cast_parts(expr)?;
     let source = operand.get_type(schema).ok()?;
-    if is_narrowing(&source, target) {
+    if is_narrowing(&source, target)
+        || (integer_decimal && is_integer_decimal_narrowing(&source, target))
+    {
         return reads_input(operand).then(|| cast_shield_call(expr.clone()));
     }
     if !is_lossless(&source, target) {
         return None;
     }
-    let inner = Box::new(shield_operand(operand, schema)?);
+    let inner = Box::new(shield_operand(operand, schema, integer_decimal)?);
     Some(match expr {
         Expr::TryCast(cast) => Expr::TryCast(TryCast {
             expr: inner,
@@ -217,14 +238,14 @@ fn shield_operand(expr: &Expr, schema: &DFSchema) -> Option<Expr> {
     })
 }
 
-fn shield_comparison(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
+fn shield_comparison(expr: Expr, schema: &DFSchema, integer_decimal: bool) -> Transformed<Expr> {
     match expr {
         Expr::BinaryExpr(BinaryExpr { left, op, right }) if is_comparison(op) => {
             let new_left = is_constant_side(&right)
-                .then(|| shield_operand(&left, schema))
+                .then(|| shield_operand(&left, schema, integer_decimal))
                 .flatten();
             let new_right = is_constant_side(&left)
-                .then(|| shield_operand(&right, schema))
+                .then(|| shield_operand(&right, schema, integer_decimal))
                 .flatten();
             if new_left.is_none() && new_right.is_none() {
                 return Transformed::no(Expr::BinaryExpr(BinaryExpr { left, op, right }));
@@ -236,12 +257,12 @@ fn shield_comparison(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
             }))
         }
         Expr::InList(in_list) if in_list.list.iter().all(is_constant_side) => {
-            shield_in_list(in_list, schema)
+            shield_in_list(in_list, schema, integer_decimal)
         }
         Expr::Between(between)
             if is_constant_side(&between.low) && is_constant_side(&between.high) =>
         {
-            match shield_operand(&between.expr, schema) {
+            match shield_operand(&between.expr, schema, integer_decimal) {
                 Some(shielded) => Transformed::yes(Expr::Between(Between {
                     expr: Box::new(shielded),
                     ..between
@@ -253,8 +274,8 @@ fn shield_comparison(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     }
 }
 
-fn shield_in_list(in_list: InList, schema: &DFSchema) -> Transformed<Expr> {
-    let shielded = shield_operand(&in_list.expr, schema);
+fn shield_in_list(in_list: InList, schema: &DFSchema, integer_decimal: bool) -> Transformed<Expr> {
+    let shielded = shield_operand(&in_list.expr, schema, integer_decimal);
     let changed = shielded.is_some();
     let in_list = InList {
         expr: shielded.map_or(in_list.expr, Box::new),

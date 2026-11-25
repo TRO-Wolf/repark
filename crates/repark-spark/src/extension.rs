@@ -164,6 +164,10 @@ impl SessionExtension for SparkExtension {
         }
     }
 
+    fn shields_integer_decimal_casts(&self) -> bool {
+        true
+    }
+
     fn configure_analyzer_rules(
         &self,
         rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,

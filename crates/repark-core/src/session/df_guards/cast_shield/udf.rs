@@ -181,6 +181,15 @@ pub(crate) fn is_narrowing(source: &DataType, target: &DataType) -> bool {
 }
 
 #[must_use]
+pub(crate) fn is_integer_decimal_narrowing(source: &DataType, target: &DataType) -> bool {
+    match target {
+        DataType::Decimal128(to_precision, to_scale) => integer_digits(source)
+            .is_some_and(|digits| i32::from(*to_precision) - i32::from(*to_scale) < digits),
+        _ => false,
+    }
+}
+
+#[must_use]
 pub(crate) fn is_lossless(source: &DataType, target: &DataType) -> bool {
     if source == target {
         return true;

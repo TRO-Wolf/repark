@@ -21,9 +21,17 @@ statistics barrier lives here too, beside the shield it shares `node_schema` and
   whose integer digits, plus one when rounding drops a digit, exceed the target's) decline, so the cast runs per
   row. The narrowing predicate is sketch §3's, with "integer digits exceed the target's" read as "`10^(p-s)-1`
   exceeds the target's maximum". The lossless predicate (the chain the rule walks through) is widening only.
+  **CAST-SHIELD-INT-DECIMAL-OVERFLOW-1 (2026-11-25, Ruling 1: Spark door only, through `CastShieldRule::new` and the
+  extension's `shields_integer_decimal_casts`; `is_integer_decimal_narrowing`):** an integer to `DECIMAL(p,s)` cast whose `p - s` is below the
+  source's digit count (TINYINT 3, SMALLINT 5, INT 10, BIGINT 19) is narrowing too, for `CAST` and `TRY_CAST` alike,
+  so DataFusion's `unwrap_cast_in_comparison` no longer turns `CAST(b AS DECIMAL(5,0)) < 1` into `b < 1` (which
+  dropped the raise with ANSI on and kept overflow rows with ANSI off or under `TRY_CAST`). It has no preimage (the
+  source is not a decimal), so such a comparison reads every file and row group, as Spark's scan does.
 - [tests.rs](tests.rs) — the `preimage` table (truncation, half away from zero both signs, declines), the
   narrowing and lossless predicates, answers on a core session, the select-list names and idempotence, the `IN`
-  cap, and the four ruling-1 shapes red with the optimizer placement stripped and green with it.
+  cap, and the four ruling-1 shapes red with the optimizer placement stripped and green with it. CAST-SHIELD-INT-DECIMAL-OVERFLOW-1:
+  the integer-to-decimal rows of the narrowing table, `integer_to_decimal_overflow_is_not_moved_onto_the_constant` (switch on)
+  and `the_integer_to_decimal_shield_is_off_without_the_spark_door` (the native door as on main).
 - [stats_barrier.rs](stats_barrier.rs) — `StatsBarrierRule` (`repark_stats_barrier`), the last optimizer rule, wraps the
   operand of every `CAST` whose value order the cast does not keep in `__repark_stats_barrier__(x)`, an identity UDF
   (same type, nullability and kernel). DataFusion 54.1.0 carries a column's statistics through a `CastExpr` by casting
