@@ -749,7 +749,7 @@ impl ReparkSession {
         let view = unique_view_name();
         let copy_target = object_store_s3::write_target_url(&scheme, &bucket, &prefix_text);
         let parts = self.copy_inner_parts(frame, &format, &view, options, &resolved_partitions)?;
-        let spec_options_sql = with_text_write_id(parts.spec_options_sql, &view);
+        let spec_options_sql = with_text_write_id(parts.spec_options_sql.clone(), &view);
         let options_clause = merge_spec_options(options_clause, &spec_options_sql);
         let copy_sql = copy_statement(&parts, &copy_target, &resolved_partitions, &options_clause);
         let written = hive_dirs::hive_partition_frame(frame.clone(), &resolved_partitions)
