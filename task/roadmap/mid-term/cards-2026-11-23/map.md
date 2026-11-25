@@ -34,7 +34,7 @@ awaits the owner's rating. Each card row records its own status.
   `INSERT OVERWRITE` with an invalid constant cast wipes the table where Spark refuses.
 - [SPARK-DOOR-OVER-ACCEPT-SYNTAX-1](spark-door-over-accept-syntax-1-card-2026-11-24.md) (S3) — **card:** `1e2foo`,
   `named_struct(…).a` with a bad sibling, `* EXCLUDE` and `DELETE` without `FROM` answer where Spark refuses.
-  **Fixed on branch** (2026-11-24; struct seat per ruling 1, option C).
+  **Fixed on branch** for four seats (2026-11-24, PR #1434); the struct seat stays as on main (delta 1).
 - [CSV-JSON-PARTITION-DISCOVERY-1](csv-json-partition-discovery-1-card-2026-11-24.md) (S1) — **card:** CSV and JSON
   reads of a `key=value/` directory drop the partition columns.
 - [MAKE-DT-INTERVAL-OVERFLOW-1](make-dt-interval-overflow-1-card-2026-11-25.md) (S1) — **card:** `make_dt_interval`

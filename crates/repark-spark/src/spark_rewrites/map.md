@@ -24,7 +24,7 @@ path stay in `spark_literals.rs`.
   `DELETE <table>` with Spark's `PARSE_SYNTAX_ERROR … missing 'FROM'` before any write
   (it used to insert `FROM`, which deleted rows Spark never touches). The DROP TEMPORARY
   planner drops the word only in a statement-start `DROP TEMPORARY FUNCTION` (pyspark's
-  `temp_func` emits it); `DROP TEMPORARY VIEW` / `TABLE` refuse with Spark's
+  `temp_func` emits it), after an optional leading `EXPLAIN [EXTENDED | CODEGEN | COST | FORMATTED]`; `DROP TEMPORARY VIEW` / `TABLE` refuse with Spark's
   `PARSE_SYNTAX_ERROR`, `DROP TEMPORARY VARIABLE` stays as written, and a column aliased
   `temporary` keeps its alias. `refuse_wildcard_exclude` refuses `* EXCLUDE (…)` with
   Spark's `PARSE_SYNTAX_ERROR` at `'('`; Spark's own `* EXCEPT (…)` parses natively, and the
