@@ -49,5 +49,8 @@ awaits the owner's rating. Each card row records its own status.
   with a nullable element declares a non-null result and crashes.
 - [SQL-PATH-PARQUET-DOORS-1](sql-path-parquet-doors-1-card-2026-11-25.md) (S2 proposed) — **card:** SQL reads of a
   Parquet path refuse where Spark reads them.
+- [PARTITIONBY-NULL-WRITE-1](partitionby-null-write-1-card-2026-11-25.md) (S1, owner 2026-11-25) — **card:** a
+  partitioned Parquet, CSV or JSON path write stored a NULL partition as the type's default (`p=0`); fixed on its
+  branch, PR open; #1430 is parked on it.
 
 Up: [../map.md](../map.md).
