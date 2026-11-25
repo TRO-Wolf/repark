@@ -41,7 +41,7 @@ awaits the owner's rating. Each card row records its own status.
   answers NULL on overflow, where Spark raises or answers, and types its result as a string.
 - [FILE-EXTENSION-FILTER-1](file-extension-filter-1-card-2026-11-25.md) (S1) — **built** on
   `fix/file-extension-filter-1`, not merged: Parquet path reads list every name Spark lists and skip Spark's hidden
-  names; built on main ahead of the parked #1430.
+  names; built on main ahead of the parked #1430. Delta 1: append validation skips the same names.
 - [CAST-STRING-GRAMMAR-1](cast-string-grammar-1-card-2026-11-25.md) (S2 proposed) — **card:** string casts to `DATE`,
   `TIMESTAMP_NTZ`, `DOUBLE` and `DECIMAL` refuse text Spark accepts.
 - [TRY-CAST-PUSHED-PROJECTION-1](try-cast-pushed-projection-1-card-2026-11-25.md) (S2 proposed) — **card:** a shared

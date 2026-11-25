@@ -44,6 +44,16 @@ directory that holds a non-Parquet file with an ordinary name (`README.txt`) is 
 the other files. Every marker Spark's writers leave (`_SUCCESS`, `_committed_*`, `_started_*`, `.crc`,
 `._COPYING_`) is still skipped; no cell that equalled Spark on main moved.
 
+**Delta 1 (2026-11-25), the write paths.** The first verifier found an S3 `append` refused when the prefix held
+`_b.parquet` or `.c.parquet`: append validation read every existing `.parquet` key through the new listing, which
+refuses a hidden single key. Spark never reads existing files on append. S3 and local append validation now skip
+the names Spark's listing skips, so an append beside `_b.parquet`, `.c.parquet` (also when not Parquet or of another
+schema), `_temporary/…` or only hidden files succeeds, as on Spark; a visible file of another schema still refuses,
+as on main. Overwrite (S3 deletes every key under the prefix, local replaces the directory), ignore,
+error-if-exists and rollback are unchanged and equal Spark. Pinned on an in-memory S3 bucket
+(`hidden_files_tests.rs`) and measured locally on Spark, main and head
+([write-paths.md](../../../wo/file-extension-filter-1/evidence/write-paths.md)).
+
 ## Still unlike Spark
 
 Measured on head, both ANSI modes:
@@ -63,6 +73,9 @@ Measured on head, both ANSI modes:
   `ignoreCorruptFiles`: Spark answers; RePark refuses each loudly, as on main.
 - **Unwired doors:** `spark.read.load(p)` with the default format, SQL ``SELECT * FROM parquet.`p` `` and `CREATE
   TEMPORARY VIEW … USING parquet OPTIONS (path …)` refuse on every cell, as on main.
+- **Append schema checks:** RePark refuses an append beside a visible file of another schema (Spark writes it), and
+  an append into a directory whose `_temporary/` holds a non-Parquet `part-*.parquet` now succeeds where Spark's
+  committer fails and removes the directory (main refused the append).
 - **Neighbours, not fixed (a different seat, `crates/repark-core/src/read_options.rs:56,86`):** CSV and JSON reads
   drop `b`, `b.CSV`/`b.JSON` and `b.bin` (rows lost silently) and read `_b.csv`, `.b.csv`, `_b.json` and `.b.json`,
   which Spark skips. Text and ORC (their own listing, `text_glob.rs:5`) read `b.txt._COPYING_` and `b.orc._COPYING_`,
