@@ -19,7 +19,7 @@ use crate::partition_timestamp::{
     looks_like_timestamp, parse_timestamp_ntz_micros, parse_wall_naive,
 };
 
-const HIVE_DEFAULT_PARTITION: &str = "__HIVE_DEFAULT_PARTITION__";
+pub(crate) const HIVE_DEFAULT_PARTITION: &str = "__HIVE_DEFAULT_PARTITION__";
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum PartitionValue {
@@ -521,7 +521,7 @@ pub(crate) fn invalid_partition_message(raw: &str, display: &str, column: &str) 
     )
 }
 
-fn conflicting_names_message(
+pub(crate) fn conflicting_names_message(
     lists: &[Vec<String>],
     dir_by_list: &HashMap<Vec<String>, PathBuf>,
 ) -> String {
