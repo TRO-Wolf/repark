@@ -680,7 +680,7 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   | 5 | A small repository PR (`make ci-lane`, a duplicate-map-row check) | Yes, without the ambient-clock gate until its past catches are counted |
   | 6 | The orchestrator runs the plan | Yes, in waves: the kit, four measurements, a two-unit pilot, then the PR |
   | 7 | Where the kit lives | A shared lane-kit directory outside the repository, never a session scratchpad |
-  | 8 | Who builds the kit | One Opus 5.5 xhigh builder and one Opus 5.5 verifier, taking both agent slots |
+  | 8 | Who builds the kit | One Opus 5.5 xhigh builder, then one Opus 5.5 verifier, in one agent slot; the other slot keeps draining review rounds, and no new product builder starts until the kit is verified (amended the same day) |
 
 - **DO keep the lock rules as they are until the measurements are in.** The 11-14 RAM ruling and the two-agent cap
   stand.
