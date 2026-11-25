@@ -115,7 +115,7 @@ def _sample(
             order_sql = ", ".join(_quote_ident_sql(c) for c in order_fields)
             order_clause = f"ORDER BY {order_sql}" if order_sql else ""
             planned = frame._session.sql_built(
-                f"SELECT * EXCLUDE (__repark_rn) FROM ("
+                f"SELECT * EXCEPT (__repark_rn) FROM ("
                 f"  SELECT *, row_number() OVER ({order_clause}) AS __repark_rn FROM {view}"
                 f") WHERE (abs((CAST(__repark_rn AS BIGINT) + {plan_seed}) "
                 f"* 1103515245 + 12345) % 1000000) "
@@ -166,7 +166,7 @@ def _random_split(
         else:
             seed_expr = str(int(seed))
             bucket_sql = (
-                f"SELECT * EXCLUDE (__repark_rn), "
+                f"SELECT * EXCEPT (__repark_rn), "
                 f"(abs((CAST(__repark_rn AS BIGINT) + {seed_expr}) "
                 f"* 1103515245 + 12345) % 1000000) "
                 f"/ 1000000.0 AS __repark_split_u FROM ("
@@ -185,7 +185,7 @@ def _random_split(
                 else:
                     predicate = f"__repark_split_u >= {lower} AND __repark_split_u < {upper}"
                 part = frame._session.sql_built(
-                    f"SELECT * EXCLUDE (__repark_split_u) FROM {scored_name} WHERE {predicate}"
+                    f"SELECT * EXCEPT (__repark_split_u) FROM {scored_name} WHERE {predicate}"
                 )
                 child = frame._spawn(part)
                 if frame._display_names is not None and frame._engine_names is not None:
