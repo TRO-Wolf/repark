@@ -11,6 +11,7 @@
   (the table), [record_pin_cells.py](record_pin_cells.py) (writes the facade pin's Spark oracle).
 - **Sources:** a literal row, an in-memory frame (`createDataFrame`, NOT NULL schema; RePark refuses an infinite float
   there, so row 8 is absent), a Parquet file, and Iceberg tables with NOT NULL (`nn`) and nullable (`nl`) columns.
+- **Delta 1 consumers:** [consumers.md](consumers.md) (116 cells from [probe_consumers.py](probe_consumers.py)).
 - **Full table:** [domain-table.md](domain-table.md). Each cell compares the result column `r` only (type,
   nullability, rows), because RePark's `createDataFrame` reports `id` nullable.
 
