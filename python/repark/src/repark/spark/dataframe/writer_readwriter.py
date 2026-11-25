@@ -503,9 +503,7 @@ class DataFrameWriter:
             if destination_path.is_file():
                 part_files = [destination_path]
             else:
-                part_files = [
-                    item for item in destination_path.rglob("*.parquet") if item.is_file()
-                ]
+                part_files = writer_layout._visible_part_files(destination_path, "*.parquet")
             if not part_files:
                 return
             dest_type_by_case: dict[str, Any] = {}
@@ -549,7 +547,7 @@ class DataFrameWriter:
             if destination_path.is_file():
                 candidates = [destination_path]
             else:
-                candidates = [item for item in destination_path.rglob("*.csv") if item.is_file()]
+                candidates = writer_layout._visible_part_files(destination_path, "*.csv")
             if not candidates:
                 return
             header_on = True
@@ -582,7 +580,7 @@ class DataFrameWriter:
             if destination_path.is_file():
                 candidates = [destination_path]
             else:
-                candidates = [item for item in destination_path.rglob("*.json") if item.is_file()]
+                candidates = writer_layout._visible_part_files(destination_path, "*.json")
             for part_file in candidates:
                 for line in part_file.read_text(encoding="utf-8").splitlines():
                     stripped = line.strip()
