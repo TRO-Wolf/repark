@@ -114,11 +114,15 @@ Still unlike Spark there:
 - `interval X to X` and reversed ranges raise as Spark's `PARSE_SYNTAX_ERROR` does
   (`crates/repark-spark/src/type_table/parse.rs::ansi_interval_type`), on `fromDDL`, `_parse_datatype_string`,
   `read.schema` and `createDataFrame`.
+- A JSON schema's interval type name that is not in Spark's exact lower-case, single-spaced form
+  (`INTERVAL HOUR TO SECOND`, `interval  minute  to  second`, ` interval day`) refuses again with main's `ValueError`,
+  as Spark refuses it (`python/repark/src/repark/spark/types.py::_parse_datatype_json_value`). Delta 1 had lower-cased
+  the name before parsing, which moved four cells off Spark.
 - Still unlike Spark, refused on main: PySpark's `fromJson` reads interval type names by prefix, so it takes
   `interval day to day` (as `interval day`) and `interval year to day`; RePark refuses those 35 spellings.
   `Column.cast` and SQL `CAST` to any interval other than `interval day to second` refuse; `read.schema` with an
   interval field refuses on CSV, JSON and Parquet.
-- Pins: `python/repark/tests/types/test_make_dt_interval_ddl_schema.py` (112 tests; 73 red on the delta-1 head, 15 red
-  on main) and five more refusals in `crates/repark-spark/src/type_table/tests.rs`.
+- Pins: `python/repark/tests/types/test_make_dt_interval_ddl_schema.py` (124 tests; 19 red on main; the 12 JSON-door
+  tests, 6 red before the guard) and five more refusals in `crates/repark-spark/src/type_table/tests.rs`.
 
 Up: [map.md](map.md).
