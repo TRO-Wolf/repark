@@ -75,6 +75,8 @@ class DataFrameReader:
             message = str(error)
             if message.startswith("[CONFLICTING_PARTITION_COLUMN_NAMES]"):
                 attach_error_condition(error, "CONFLICTING_PARTITION_COLUMN_NAMES", "KD009")
+            elif message.startswith("[CONFLICTING_DIRECTORY_STRUCTURES]"):
+                attach_error_condition(error, "CONFLICTING_DIRECTORY_STRUCTURES", "KD009")
             elif message.startswith("[FAILED_READ_FILE.CANNOT_READ_FILE_FOOTER]"):
                 attach_error_condition(error, "FAILED_READ_FILE.CANNOT_READ_FILE_FOOTER", "KD001")
             raise
