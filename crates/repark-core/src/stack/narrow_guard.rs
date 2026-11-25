@@ -272,9 +272,10 @@ fn chain(
             .into_iter()
             .partition(Expr::is_volatile);
     let parts: Vec<Expr> = volatile.into_iter().chain(steady).collect();
-    match guard_parts(parts, Operator::And, condition, schema)? {
-        Some(guarded) => Ok(Transformed::yes(guarded)),
-        None => internal_err!("a guarded predicate lost its conjuncts"),
+    if let Some(guarded) = guard_parts(parts, Operator::And, condition, schema)? {
+        Ok(Transformed::yes(guarded))
+    } else {
+        internal_err!("a guarded predicate lost its conjuncts")
     }
 }
 
@@ -285,9 +286,10 @@ fn truth(expr: Expr, condition: Option<&Expr>, schema: &DFSchema) -> Result<Tran
     match expr {
         Expr::BinaryExpr(BinaryExpr { op, .. }) if is_lazy_connective(op) => {
             let parts = split_binary_owned(expr, op);
-            match guard_parts(parts, op, condition, schema)? {
-                Some(guarded) => Ok(Transformed::yes(guarded)),
-                None => internal_err!("a guarded connective lost its operands"),
+            if let Some(guarded) = guard_parts(parts, op, condition, schema)? {
+                Ok(Transformed::yes(guarded))
+            } else {
+                internal_err!("a guarded connective lost its operands")
             }
         }
         other => plain(other, condition, schema),
