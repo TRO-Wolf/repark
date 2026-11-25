@@ -24,6 +24,7 @@ pub struct StatementWriteOptions {
     pub output_spec_id: Option<i32>,
     pub source_by_name: bool,
     pub verbatim_override: Option<bool>,
+    pub cached_frames: bool,
 }
 
 impl StatementWriteOptions {

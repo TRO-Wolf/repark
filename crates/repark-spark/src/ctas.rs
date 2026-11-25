@@ -208,6 +208,7 @@ pub(crate) async fn execute_ctas(
             catalogs,
             &ctas.query_sql,
             crate::insert_overwrite::const_cast::Door::SaveAsTable,
+            options,
         )
         .await?;
     }

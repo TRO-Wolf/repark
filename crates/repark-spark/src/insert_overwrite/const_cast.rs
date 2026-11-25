@@ -10,8 +10,11 @@ use datafusion::prelude::{SessionContext, col, lit};
 use datafusion::sql::sqlparser::ast::{ObjectName, Query, Visit, Visitor};
 use datafusion::sql::sqlparser::dialect::GenericDialect;
 use datafusion::sql::sqlparser::parser::Parser;
-use repark_core::CatalogRegistry;
+use repark_core::{CatalogRegistry, TempViewSession};
 
+use crate::write_options::StatementWriteOptions;
+
+const CACHE_VIEW_PREFIX: &str = "__repark_cache_";
 const WRITER_VIEW: &str = "_repark_writer_";
 const WRITER_V2_VIEW: &str = "_repark_writer_v2_";
 const PROBE: &str = "__repark_const_cast_probe";
@@ -38,20 +41,31 @@ enum Value {
     Other,
 }
 
+pub(crate) fn session_holds_cache(temp_views: Option<&dyn TempViewSession>) -> bool {
+    temp_views.is_some_and(|views| {
+        views.list_temp_view_names().map_or(true, |names| {
+            names.iter().any(|name| name.starts_with(CACHE_VIEW_PREFIX))
+        })
+    })
+}
+
 pub(crate) async fn refuse_overwrite(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     source: &Query,
+    options: &StatementWriteOptions,
 ) -> Result<()> {
-    refuse_constant_cast(ctx, catalogs, &source.to_string(), Door::Overwrite).await
+    refuse_constant_cast(ctx, catalogs, &source.to_string(), Door::Overwrite, options).await
 }
 
 pub(crate) async fn refuse_overwrite_where(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     source: &Query,
+    options: &StatementWriteOptions,
 ) -> Result<()> {
-    refuse_constant_cast(ctx, catalogs, &source.to_string(), Door::OverwriteWhere).await
+    let door = Door::OverwriteWhere;
+    refuse_constant_cast(ctx, catalogs, &source.to_string(), door, options).await
 }
 
 pub(crate) async fn refuse_constant_cast(
@@ -59,8 +73,10 @@ pub(crate) async fn refuse_constant_cast(
     catalogs: &CatalogRegistry,
     source_sql: &str,
     door: Door,
+    options: &StatementWriteOptions,
 ) -> Result<()> {
-    if !repark_functions::ansi::spark_ansi_enabled_from_options(ctx.state().config().options())
+    if options.cached_frames
+        || !repark_functions::ansi::spark_ansi_enabled_from_options(ctx.state().config().options())
         || !reads_only_literals(source_sql, door)
     {
         return Ok(());
@@ -301,7 +317,57 @@ mod tests {
     use datafusion::logical_expr::{LogicalPlan, LogicalPlanBuilder, cast, table_scan, try_cast};
     use datafusion::prelude::{col, lit};
 
-    use super::{Door, constant_casts, reads_only_literals, spark_cast_raises};
+    use super::{
+        Door, constant_casts, reads_only_literals, session_holds_cache, spark_cast_raises,
+    };
+
+    struct Views(Option<Vec<&'static str>>);
+
+    impl repark_core::TempViewSession for Views {
+        fn create_or_replace_temp_view_from(
+            &self,
+            _name: &str,
+            _frame: &datafusion::prelude::DataFrame,
+        ) -> repark_common::Result<()> {
+            Ok(())
+        }
+
+        fn resolve_temp_view_home_ref(
+            &self,
+            _: &str,
+        ) -> repark_common::Result<Option<Vec<String>>> {
+            Ok(None)
+        }
+
+        fn temp_view_home(&self) -> repark_common::Result<Vec<String>> {
+            Ok(Vec::new())
+        }
+
+        fn list_temp_view_names(&self) -> repark_common::Result<Vec<String>> {
+            self.0
+                .as_ref()
+                .map(|names| names.iter().map(ToString::to_string).collect())
+                .ok_or_else(|| repark_common::Error::Analysis("no home".to_string()))
+        }
+
+        fn drop_temp_view(&self, _name: &str) -> repark_common::Result<bool> {
+            Ok(false)
+        }
+    }
+
+    #[test]
+    fn any_cached_frame_stands_the_guard_down() {
+        let cached = Views(Some(vec!["tv_x", "__repark_cache_ab12"]));
+        let plain = Views(Some(vec![
+            "tv_x",
+            "_repark_writer_ab12",
+            "__repark_ckpt_ab12",
+        ]));
+        assert!(session_holds_cache(Some(&cached)));
+        assert!(!session_holds_cache(Some(&plain)));
+        assert!(session_holds_cache(Some(&Views(None))));
+        assert!(!session_holds_cache(None));
+    }
 
     fn ltz() -> DataType {
         DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into()))
