@@ -66,7 +66,20 @@ class DataFrameReader:
                 "DataFrameReader.schema(...) is not applied on parquet reads yet "
                 "(use csv/json schema, or cast after read)"
             )
-        return self._session.read_parquet(path)
+        from repark.errors import PySparkException
+        from repark.spark._integral import attach_error_condition
+
+        try:
+            return self._session.read_parquet(path)
+        except PySparkException as error:
+            message = str(error)
+            if message.startswith("[CONFLICTING_PARTITION_COLUMN_NAMES]"):
+                attach_error_condition(error, "CONFLICTING_PARTITION_COLUMN_NAMES", "KD009")
+            elif message.startswith("[CONFLICTING_DIRECTORY_STRUCTURES]"):
+                attach_error_condition(error, "CONFLICTING_DIRECTORY_STRUCTURES", "KD009")
+            elif message.startswith("[FAILED_READ_FILE.CANNOT_READ_FILE_FOOTER]"):
+                attach_error_condition(error, "FAILED_READ_FILE.CANNOT_READ_FILE_FOOTER", "KD001")
+            raise
 
     def csv(
         self,
