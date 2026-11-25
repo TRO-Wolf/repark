@@ -213,10 +213,10 @@
         "simpleString": "string"
       },
       {
-        "class": "StringType",
+        "class": "DayTimeIntervalType",
         "name": "dur",
         "nullable": true,
-        "simpleString": "string"
+        "simpleString": "interval day to second"
       },
       {
         "class": "StringType",
