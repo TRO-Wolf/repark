@@ -706,6 +706,33 @@ fn decimal_to_decimal(source: &ArrayRef, target: &DataType, mode: Mode) -> Resul
     ))
 }
 
+fn integral_to_decimal(source: &ArrayRef, target: &DataType, mode: Mode) -> Result<ArrayRef> {
+    let signed = matches!(
+        source.data_type(),
+        DataType::Int8 | DataType::Int16 | DataType::Int32 | DataType::Int64
+    );
+    let (true, &DataType::Decimal128(to_precision, to_scale)) = (signed, target) else {
+        let options = CastOptions {
+            safe: mode.nulls_on_failure(),
+            ..CastOptions::default()
+        };
+        return Ok(cast_with_options(source.as_ref(), target, &options)?);
+    };
+    let wide = cast_with_options(source.as_ref(), &DataType::Int64, &CastOptions::default())?;
+    let values = wide.as_primitive::<Int64Type>();
+    let out: Decimal128Array = match mode {
+        Mode::Legacy | Mode::Try => values
+            .unary_opt(|value| rescale_decimal(i128::from(value), 0, to_precision, to_scale)),
+        Mode::Ansi => try_map_primitive::<Int64Type, Decimal128Type, _>(values, |value| {
+            rescale_decimal(i128::from(value), 0, to_precision, to_scale)
+                .ok_or_else(|| decimal_overflow(i128::from(value), 0, to_precision, to_scale))
+        })?,
+    };
+    Ok(Arc::new(
+        out.with_precision_and_scale(to_precision, to_scale)?,
+    ))
+}
+
 fn float32_literal(value: f32) -> String {
     java_float_text(value)
 }
@@ -889,6 +916,9 @@ pub(super) fn narrow_numeric(source: &ArrayRef, target: &DataType, mode: Mode) -
     }
     if is_decimal(from) && is_decimal(target) {
         return decimal_to_decimal(source, target, mode);
+    }
+    if is_integral(from) && is_decimal(target) {
+        return integral_to_decimal(source, target, mode);
     }
     let options = CastOptions {
         safe: mode.nulls_on_failure(),
