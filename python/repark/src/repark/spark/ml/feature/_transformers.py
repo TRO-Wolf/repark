@@ -1727,7 +1727,7 @@ joined AS (
   FROM {rid_view}
   LEFT JOIN filtered ON {rid_view}.{rid} = filtered.__rid
 )
-SELECT * EXCLUDE ({rid}) FROM joined ORDER BY {rid}
+SELECT * EXCEPT ({rid}) FROM joined ORDER BY {rid}
 """
         try:
             return _sql_on(host, sql)
@@ -1823,7 +1823,7 @@ joined AS (
   FROM {rid_view}
   LEFT JOIN filtered ON {rid_view}.{rid} = filtered.__rid
 )
-SELECT * EXCLUDE ({rid}) FROM joined ORDER BY {rid}
+SELECT * EXCEPT ({rid}) FROM joined ORDER BY {rid}
 """
         try:
             return _sql_on(host, sql)
@@ -2508,7 +2508,7 @@ joined AS (
   FROM {rid_view}
   LEFT JOIN counts ON {rid_view}.{rid} = counts.__rid
 )
-SELECT * EXCLUDE ({rid}) FROM joined ORDER BY {rid}
+SELECT * EXCEPT ({rid}) FROM joined ORDER BY {rid}
 """
         try:
             return _sql_on(host, sql)
