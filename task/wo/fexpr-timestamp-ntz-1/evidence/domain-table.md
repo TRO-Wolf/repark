@@ -1,6 +1,6 @@
 # task/wo/fexpr-timestamp-ntz-1/evidence/domain-table.md
 
-Measured cell-by-cell against live PySpark 4.1.2 + Iceberg 1.11.0, RePark `main` (`14d2404a6`), and branch head (`b9add8f73`) in both ANSI modes (`true`/`false`) across `America/New_York`, `Asia/Kolkata`, and `UTC`.
+Measured cell-by-cell against live PySpark 4.1.2 + Iceberg 1.11.0, RePark `main` (`14d2404a6`), and branch head (`b9add8f73`, re-measured identical on the final head `fb2c1e948`) in both ANSI modes (`true`/`false`) across `America/New_York`, `Asia/Kolkata`, and `UTC`.
 
 ## Summary by section
 

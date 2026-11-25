@@ -67,7 +67,7 @@ column or a zone change. That is not yet measured.
 
 ## Resolution 2026-11-24 (FEXPR-TIMESTAMP-NTZ-1, SEVERITY: S1 measured)
 
-**What was fixed** (branch `fix/fexpr-timestamp-ntz-1`, verified on `b9add8f73` across 1,771 domain cells — 510 fixed,
+**What was fixed** (branch `fix/fexpr-timestamp-ntz-1`, verified on `b9add8f73` and the final head `fb2c1e948` across 1,771 domain cells — 510 fixed,
 0 regressed — and 84/84 live Spark 4.1.2 Iceberg/Parquet cross-reads; pinned in `test_fexpr_timestamp_ntz_1.py`):
 
 - **Deferred `spark.sql.timestampType` in `build_expr_context`:** added `DeferredSparkTimestampTypeConfig`
@@ -85,7 +85,7 @@ column or a zone change. That is not yet measured.
   and `retarget_dml_ltz_store_casts` so Iceberg/DML writes into `TIMESTAMP` (LTZ) columns succeed under
   `spark.sql.timestampType=TIMESTAMP_NTZ`.
 
-## Still unlike Spark (measured on `b9add8f73`, out of scope for this unit)
+## Still unlike Spark (measured on `b9add8f73` and `fb2c1e948`, out of scope for this unit)
 
 1. **Unaliased column display names** (carded as
    [FEXPR-TIMESTAMP-DISPLAY-NAME-1](cards-2026-11-23/fexpr-timestamp-display-name-1-card-2026-11-24.md), S3 proposed):

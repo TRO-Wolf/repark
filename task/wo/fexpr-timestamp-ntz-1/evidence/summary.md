@@ -2,7 +2,7 @@
 
 ## Provenance
 
-- **RePark:** `main` at `14d2404a6` (measured on `57c92b411` release wheel; `14d2404a6` adds only one card row) and branch head `b9add8f73` (`fix/fexpr-timestamp-ntz-1`, release wheel built from `b9add8f73`).
+- **RePark:** `main` at `14d2404a6` (measured on `57c92b411` release wheel; `14d2404a6` adds only one card row) and branch head `b9add8f73` (`fix/fexpr-timestamp-ntz-1`, release wheel built from `b9add8f73`). Re-measured on the final head `fb2c1e948` (release wheel built from it): every domain cell and every Spark cross-read answer is identical to `b9add8f73`.
 - **Spark:** live PySpark 4.1.2 + Iceberg 1.11.0 (`local[2]`, Java 17), both ANSI modes (`spark.sql.ansi.enabled=true` and `false`), across `America/New_York`, `Asia/Kolkata`, and `UTC`.
 - **Scripts:** [probe_domain.py](probe_domain.py) (1,771-cell domain sweep across all doors, zones, ANSI modes, zone changes, mixing, Iceberg/Parquet writes, and live cross-reads), [analyze_domain.py](analyze_domain.py) (summary and regression checker).
 - **Full cell-by-cell table:** [domain-table.md](domain-table.md).
