@@ -565,12 +565,16 @@ def _build_rows() -> list[tuple[str, str, list[tuple[str, str, Any]]]]:
             "D11",
             "Arrow duration[us]",
             [
-                ("arrow_in", pa.duration("us"), "StringType:string"),
+                ("arrow_in", pa.duration("us"), "DayTimeIntervalType:interval day to second"),
                 ("rung", "1 day", ("string", "StringType:string", "string", "varchar")),
                 (
                     "reader",
                     _pa(pa.duration("us")),
-                    ([("c", "Duration(Microsecond)", True)], "struct<c:string>", [("c", "string")]),
+                    (
+                        [("c", "interval day to second", True)],
+                        "struct<c:interval day to second>",
+                        [("c", "interval day to second")],
+                    ),
                 ),
             ],
         ),

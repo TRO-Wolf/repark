@@ -3,7 +3,7 @@
 **Date:** 2026-11-25. **Filed by:** the orchestrator (`claude-opus-5-5`), from the separate shapes on the
 TRY-CAST-NONNULL-FIELD-1 card, re-measured here. **Severity:** S1 (owner, 2026-11-25): a silent wrong read. Where
 Spark raises, RePark answers NULL, and where Spark answers a large interval, RePark answers NULL too.
-**Status:** filed, not dispatched.
+**Status:** fixed on `fix/make-dt-interval-overflow-1` (head `c17c744af`), not merged.
 
 ## Measured
 
@@ -31,5 +31,34 @@ returns NULL when the day-time interval overflows and whose result the facade ty
 Measure the domain first: each argument at its overflow edge, negative values, fractional seconds, NULL and NaN
 arguments, every door, Parquet, Iceberg and in-memory sources, `dtypes` and the stored type of a CTAS. Then decide
 whether a RePark UDF replaces the call. Patching the `datafusion-spark` crate is out of scope.
+
+## Fix (2026-11-25)
+
+RePark's own `make_dt_interval` (`crates/repark-functions/src/temporal_ctor/day_time.rs`) replaces the upstream kernel
+by name: Spark's exact adds raise `INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION` in both modes, every in-range value
+answers, seconds follow Spark's implicit `decimal(18, 6)` cast, and the field is nullable as Spark declares it.
+`Duration(µs)` is named and typed `interval day to second` (`crates/repark-spark/src/type_table.rs`,
+`python/repark/src/repark/spark/column_fields.py`). Measured over 1434 cells in both ANSI modes: 1010 fixed, 70 equal
+on both, 0 moved off Spark. Pins: `python/repark/tests/functions/test_make_dt_interval_overflow_1.py` (1064 tests: 1004
+red on main, 60 controls) and 14 Rust tests in `day_time_tests.rs`. Evidence:
+[task/wo/make-dt-interval-overflow-1/evidence/](../../../wo/make-dt-interval-overflow-1/evidence/summary.md).
+
+## Still unlike Spark (measured on head)
+
+The full list with cell counts is in the evidence summary. The shapes that touch this function:
+
+- **Parquet, a narrowing projection under a filter.** `SELECT id, make_dt_interval(d, h, m, s) FROM pq WHERE id = 1`
+  raises the overflow of a filtered-out row (20 cells), where Spark answers the kept row. DataFusion's
+  `FilterExec::try_swapping_with_projection` moves the projection below the filter. Main does the same for every
+  raising expression (`CAST(d + h + m AS SMALLINT)` raises `CAST_OVERFLOW`), so this needs its own card.
+- **`F.expr` decimal literals.** `F.expr("make_dt_interval(0, 0, 0, 0.1)")` types `0.1` as `double`, so `r` is nullable
+  (Spark: not nullable), and `-999999999999.999999` rounds to `-1E12` and answers NULL or raises (44 cells).
+- **SQL `999999999999.9999D`** arrives as `1E12` and answers NULL or raises (2 cells).
+- **`CAST(x AS STRING)`** renders `1 days 2 hours 3 mins 4.500000 secs`, not `INTERVAL '1 02:03:04.5' DAY TO SECOND`.
+- **`extract`** answers totals (`26` hours) rather than fields (`2`).
+- **Refused consumers:** `-x`, `x * 2`, `x / 2`, `DATE + x`, `typeof(x)`, `avg(x)`, `try_add(x, y)`, and strings or
+  decimals as days, hours or minutes.
+- **Writes:** CTAS into Iceberg refuses on both engines with different text; `write.parquet` stores `duration[us]`
+  where Spark stores `int64`.
 
 Up: [map.md](map.md).

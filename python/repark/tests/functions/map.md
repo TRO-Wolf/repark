@@ -75,6 +75,7 @@ pins.
 - [test_functions_e.py](test_functions_e.py) — FN-E — collections facade wrappers (value + Arrow type).
 - [test_functions_f.py](test_functions_f.py) — FN-F — try / session / bitwise facade wrappers (value + Arrow type).
 - [test_functions_gt1.py](test_functions_gt1.py) — ColumnOrName wiring + oracle pins for the GT1 function family.
+- [test_make_dt_interval_overflow_1.py](test_make_dt_interval_overflow_1.py) — MAKE-DT-INTERVAL-OVERFLOW-1 (S1, 2026-11-25): 532 `make_dt_interval` cells × both ANSI modes over the SQL, `selectExpr`, `F.expr`, temp-view and `F.make_dt_interval` doors, literal, in-memory, Parquet and Iceberg (NOT NULL and nullable) sources, `printSchema`, CTAS refusal and three duration consumers; expectations recorded from Spark 4.1.2 in [make_dt_interval_overflow_1_spark_oracle.json](make_dt_interval_overflow_1_spark_oracle.json) by `task/wo/make-dt-interval-overflow-1/evidence/record_pin_cells.py`. 1004 red on main, 60 controls green on both.
 - [test_functions_gt2.py](test_functions_gt2.py) — FN-GT2 — leftover THIN-WIRE datetime / collections / url / bitmap.
 - [test_functions_split_identity.py](test_functions_split_identity.py) — FN-SPLIT identity: ``functions.__all__`` is unchanged and every name resolves.
 - [test_functions_w.py](test_functions_w.py) — FN-W — window functions (value + Arrow type).
