@@ -27,8 +27,9 @@ single table of cast semantics, shared by the shield, the stats barrier and the 
 
 Measured on Spark 4.1.2, main and the branch head, both ANSI modes. The full table is in
 [evidence/domain-table.md](../../../wo/cast-shield-int-decimal-overflow-1/evidence/domain-table.md): 1019 step-0
-cells and 114 conjunction and `OR` shapes. No cell that equals Spark on main moves. The native door is byte-identical
-to main.
+cells and 114 conjunction and `OR` shapes. The evidence also measures the delta-1 verifier's 177 shapes on three
+sources, its 18 writes, and 15 guard shapes in both modes. Across those sets, no cell that equals Spark on main moves
+(delta 1, 2026-11-25). The native door is byte-identical to main.
 
 - **The cause, read here:** DataFusion's `unwrap_cast_in_comparison` moved `CAST(b AS DECIMAL(5,0)) <op> k` onto the
   literal (`b <op> k`), because the cast shield did not count integer to decimal as narrowing. The Spark cast seam
@@ -40,8 +41,11 @@ to main.
     with ANSI on.
   - The shield counts that cast as narrowing, for `TRY_CAST`, on the Spark door only (a session-extension switch).
   - A run-once guard on the optimized plan, in the stack query planner, evaluates the kernel call only on the rows
-    where Spark evaluates it: after the earlier filter conjuncts, or where the left side of an `AND` is not false or of
-    an `OR` is not true.
+    where Spark evaluates it, without copying any operand (delta 1):
+    - a filter, an aggregate `FILTER` and a join condition become one lazy `CASE` over their conjuncts, volatile
+      conjuncts first;
+    - in a projection or an aggregate argument, the left side of `AND`/`OR` is computed once as a column below the
+      node.
 - **Pruning:** EXPLAIN is byte-identical for queries without the cast. A predicate on the overflowing cast reads every
   row group and file, as Spark's scan does. Spark pushes only `IsNotNull`.
 
@@ -65,6 +69,18 @@ to main.
 - **A SQL temp view over a `createDataFrame` temp view** refuses `[TABLE_OR_VIEW_NOT_FOUND] __repark_cdf_<uuid>`,
   whatever its body. A view over a Parquet-backed frame works
   ([viewcheck.py](../../../wo/cast-shield-int-decimal-overflow-1/evidence/viewcheck.py)).
+- **Delta 1: rows where Spark raises and RePark answers, as on main** (verifier, ANSI on):
+  - `DELETE FROM w WHERE a AND CAST(bi AS DECIMAL(5,0)) > 0` deletes ids 1 and 4, and
+    `UPDATE w SET d = 7 WHERE a AND CAST(…) > 0` updates them. The row-level DML predicate is built outside the guard.
+  - Over Iceberg, `WHERE CAST(…) > 0 AND id IN (1, 4, 6)` answers `[1], [4]`, because the scan removes rows first.
+    `WHERE (SELECT max(id) FROM ti) < 0 AND CAST(…) > 0` answers `[]`.
+  - `(nb AND CAST(…) = 1) OR id = 99`, and a filter directly over inline `VALUES` with a NULL left side (consult `d03`,
+    `d06`): an `AND` nested inside a predicate stops on a NULL left side, where Spark's evaluates the right side. The
+    first build matched Spark here by copying the left side, which delta 1 rules out.
+  - `CAST(…) > 0 AND rand() < x`: the optimizer moves volatile conjuncts last, and the guard puts them first. So this
+    order answers as main, while `rand() < x AND CAST(…) > 0` answers as Spark.
+- **Delta 1: a separate gap, present on main:** `count(*) FILTER (WHERE rand(42) < -1.0 AND …)`. Spark refuses
+  `INVALID_AGGREGATE_FILTER.NON_DETERMINISTIC`, and RePark answers `[[0]]` on main and head.
 - **Out of this card, unchanged:**
   - STRING and DOUBLE to an overflowing DECIMAL raise Arrow's error with ANSI off and Arrow's text with ANSI on
     (`neighbour/{str_to_dec,dbl_to_dec}/*`);

@@ -1176,3 +1176,98 @@ the same package.
 | `tp/g10_case_where` | `SELECT id FROM tp WHERE id IN (1, 5, 7, 8) AND CASE WHEN CASE WHEN id IN (1, 5, 7, 8) THEN CAST(bi AS DECIMAL(5,0)) END = 1 THEN true ELSE false END` | 1,8 | 1,8 | same | 1,8 | same |
 | `tp/g11_ne` | `SELECT id FROM tp WHERE id IN (1, 5, 7, 8) AND CASE WHEN id IN (1, 5, 7, 8) THEN CAST(bi AS DECIMAL(5,0)) END <> 1` | 7 | 7 | same | 7 | same |
 | `tp/g12_lit_left` | `SELECT id FROM tp WHERE id IN (1, 5, 7, 8) AND 1 = CASE WHEN id IN (1, 5, 7, 8) THEN CAST(bi AS DECIMAL(5,0)) END` | 1,8 | 1,8 | same | 1,8 | same |
+
+## Delta 1 (2026-11-25): the guard reworked to copy nothing
+
+Re-measured on the delta-1 head package (`BUILT_FROM 9b83dbaf`; the next commit, `b9c21b17`, changes only the plan shape: one flat lazy `CASE` per predicate, and non-materialized gates).
+
+- **Step-0 table:** identical totals to the first build. ANSI on, 484 of 509 equal Spark (main 376); ANSI off, 493 of 510 (main 399). No cell that equals Spark on main moves.
+- **The consult's 114 shapes:** 110 equal Spark (main 82); none moved. Four answer as main where Spark raises: `{t,tp}/d03_nested_null_and` and `{t,tp}/d06_values_null_left`.
+- **The verifier's battery** (`vprobe.py`, 59 shapes on 3 sources):
+  - ANSI on: 163 of 177 equal Spark (main 149), 0 moved;
+  - ANSI off: 170 of 177 (main 155), 0 moved;
+  - with `pushdown_filters` on, 0 moved;
+  - writes read back with Spark: 15 of 17 (ANSI on) and 18 of 18 (ANSI off), 0 moved.
+- **Native door:** byte-identical to main.
+
+### Guard shapes (recorded from Spark 4.1.2; `guard_statements()` in the recorder)
+
+| cell | ANSI | Spark | main | head |
+|---|---|---|---|---|
+| `chain30_agg_filter` | true | [[2]] | [[2]] | [[2]] |
+| `chain30_filter` | true | [[1], [4]] | [[1], [4]] | [[1], [4]] |
+| `chain30_join_on` | true | ERR [NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION] | [[1], [4]] | ERR [NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION] |
+| `chain30_or_filter` | true | [[2], [3], [5]] | [[2], [3], [5]] | [[2], [3], [5]] |
+| `chain30_projection` | true | [[1, true], [2, false], [3, false], [4, true], [5, false]] | [[1, true], [2, false], [3, false], [4, true], [5, false]] | [[1, true], [2, false], [3, false], [4, true], [5, false]] |
+| `nested14_filter` | true | [[1], [4]] | [[1], [4]] | [[1], [4]] |
+| `null_left_agg_filter` | true | [[2]] | [[2]] | [[2]] |
+| `null_left_filter` | true | [[1], [4]] | [[1], [4]] | [[1], [4]] |
+| `null_left_or_filter` | true | ERR [NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION] | [[1], [2], [4], [5]] | ERR [NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION] |
+| `null_left_or_projection` | true | ERR [NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION] | [[1, true], [2, true], [3, null], [4, true], [5, true]] | ERR [NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION] |
+| `null_left_projection` | true | ERR [NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION] | [[1, true], [2, false], [3, null], [4, true], [5, null]] | ERR [NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION] |
+| `volatile_rand_agg_filter` | true | ERR [INVALID_AGGREGATE_FILTER.NON_DETERMINISTIC] | [[0]] | [[0]] |
+| `volatile_rand_filter` | true | [] | [] | [] |
+| `volatile_rand_projection` | true | [[1, false], [2, false], [3, false], [4, false], [5, false]] | [[1, false], [2, false], [3, false], [4, false], [5, false]] | [[1, false], [2, false], [3, false], [4, false], [5, false]] |
+| `volatile_uuid_filter` | true | [] | [] | [] |
+| `chain30_agg_filter` | false | [[2]] | [[2]] | [[2]] |
+| `chain30_filter` | false | [[1], [4]] | [[1], [4]] | [[1], [4]] |
+| `chain30_join_on` | false | [[1], [4]] | [[1], [4]] | [[1], [4]] |
+| `chain30_or_filter` | false | [[2], [3], [5]] | [[2], [3], [5]] | [[2], [3], [5]] |
+| `chain30_projection` | false | [[1, true], [2, false], [3, false], [4, true], [5, false]] | [[1, true], [2, false], [3, false], [4, true], [5, false]] | [[1, true], [2, false], [3, false], [4, true], [5, false]] |
+| `nested14_filter` | false | [[1], [4]] | [[1], [4]] | [[1], [4]] |
+| `null_left_agg_filter` | false | [[2]] | [[2]] | [[2]] |
+| `null_left_filter` | false | [[1], [4]] | [[1], [4]] | [[1], [4]] |
+| `null_left_or_filter` | false | [[1], [2], [4]] | [[1], [2], [4], [5]] | [[1], [2], [4]] |
+| `null_left_or_projection` | false | [[1, true], [2, true], [3, null], [4, true], [5, null]] | [[1, true], [2, true], [3, null], [4, true], [5, true]] | [[1, true], [2, true], [3, null], [4, true], [5, null]] |
+| `null_left_projection` | false | [[1, true], [2, false], [3, null], [4, true], [5, null]] | [[1, true], [2, false], [3, null], [4, true], [5, null]] | [[1, true], [2, false], [3, null], [4, true], [5, null]] |
+| `volatile_rand_agg_filter` | false | ERR [INVALID_AGGREGATE_FILTER.NON_DETERMINISTIC] | [[0]] | [[0]] |
+| `volatile_rand_filter` | false | [] | [] | [] |
+| `volatile_rand_projection` | false | [[1, false], [2, false], [3, false], [4, false], [5, false]] | [[1, false], [2, false], [3, false], [4, false], [5, false]] | [[1, false], [2, false], [3, false], [4, false], [5, false]] |
+| `volatile_uuid_filter` | false | [] | [] | [] |
+
+### Planning and run time (package `b9c21b17`, the verifier's blow-up shapes; script `timing.py` in the session scratch)
+
+| shape | casts | ANSI | main (s) | head (s) | ratio |
+|---|---|---|---|---|---|
+| agg_filter | 100 | true | 0.095 | 0.107 | 1.13 |
+| agg_filter | 18 | true | 0.021 | 0.023 | 1.10 |
+| agg_filter | 500 | true | 0.678 | 0.726 | 1.07 |
+| join_on | 100 | true | 0.080 | 0.093 | 1.16 |
+| join_on | 18 | true | 0.022 | 0.021 | 0.95 |
+| join_on | 500 | true | 0.612 | 0.663 | 1.08 |
+| nest_filter | 100 | true | 0.023 | 0.027 | 1.17 |
+| nest_filter | 18 | true | 0.006 | 0.007 | 1.17 |
+| nest_filter | 500 | true | 0.302 | 0.380 | 1.26 |
+| nest_select | 100 | true | 0.232 | 0.243 | 1.05 |
+| nest_select | 18 | true | 0.015 | 0.017 | 1.13 |
+| nest_select | 500 | true | 5.344 | 5.477 | 1.02 |
+| select | 100 | true | 0.327 | 0.384 | 1.17 |
+| select | 18 | true | 0.034 | 0.039 | 1.15 |
+| select | 500 | true | 5.661 | 6.658 | 1.18 |
+| where | 100 | true | 0.076 | 0.085 | 1.12 |
+| where | 18 | true | 0.016 | 0.017 | 1.06 |
+| where | 500 | true | 0.580 | 0.634 | 1.09 |
+| where_or | 100 | true | 0.083 | 0.093 | 1.12 |
+| where_or | 18 | true | 0.016 | 0.017 | 1.06 |
+| where_or | 500 | true | 0.755 | 0.805 | 1.07 |
+| agg_filter | 100 | false | 0.096 | 0.108 | 1.12 |
+| agg_filter | 18 | false | 0.022 | 0.025 | 1.14 |
+| agg_filter | 500 | false | 0.687 | 0.728 | 1.06 |
+| join_on | 100 | false | 0.085 | 0.094 | 1.11 |
+| join_on | 18 | false | 0.021 | 0.024 | 1.14 |
+| join_on | 500 | false | 0.625 | 0.669 | 1.07 |
+| nest_filter | 100 | false | 0.025 | 0.027 | 1.08 |
+| nest_filter | 18 | false | 0.006 | 0.007 | 1.17 |
+| nest_filter | 500 | false | 0.308 | 0.383 | 1.24 |
+| nest_select | 100 | false | 0.234 | 0.242 | 1.03 |
+| nest_select | 18 | false | 0.015 | 0.017 | 1.13 |
+| nest_select | 500 | false | 5.368 | 5.426 | 1.01 |
+| select | 100 | false | 0.337 | 0.382 | 1.13 |
+| select | 18 | false | 0.037 | 0.042 | 1.14 |
+| select | 500 | false | 5.734 | 6.577 | 1.15 |
+| where | 100 | false | 0.078 | 0.085 | 1.09 |
+| where | 18 | false | 0.016 | 0.018 | 1.12 |
+| where | 500 | false | 0.601 | 0.631 | 1.05 |
+| where_or | 100 | false | 0.085 | 0.094 | 1.11 |
+| where_or | 18 | false | 0.016 | 0.018 | 1.12 |
+| where_or | 500 | false | 0.771 | 0.798 | 1.04 |

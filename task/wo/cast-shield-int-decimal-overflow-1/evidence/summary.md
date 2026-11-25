@@ -12,7 +12,7 @@ The card is [cast-shield-int-decimal-overflow-1](../../../roadmap/mid-term/cards
 | off | 510 | 399 | 493 | 0 |
 | on, conjunction and `OR` shapes | 114 | 82 | 114 | 0 |
 
-- **No cell that equals Spark on main moves,** in either mode.
+- **No cell that equals Spark on main moves,** in either mode, across the step-0 table, the 114 consult shapes, the delta-1 verifier's 177 shapes and 18 writes, and the 15 guard shapes (delta 1, 2026-11-25).
 - **Refusals with ANSI on keep refusing.** 66 of them now carry Spark's `NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION`
   text in place of Arrow's.
 - **The native door is byte-identical to main:** its 25 step-0 cells, their EXPLAIN, and the consult's 7 native cells.
