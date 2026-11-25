@@ -142,6 +142,14 @@ async fn malformed_strings_raise_under_ansi_and_null_under_try_cast() {
     );
     assert!(non_ansi[0].schema().field(0).is_nullable());
     assert!(non_ansi[0].column(0).is_null(0));
+    let valid_lit = non_ansi_ctx
+        .sql("SELECT __repark_cast_timestamp_ntz__('2024-01-02 03:04:05') AS v")
+        .await
+        .expect("plan")
+        .collect()
+        .await
+        .expect("collect");
+    assert!(!valid_lit[0].schema().field(0).is_nullable());
 }
 
 #[tokio::test]
