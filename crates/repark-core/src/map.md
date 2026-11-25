@@ -336,8 +336,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   reference hashes as its resolved relation ordinal plus its name (see
   `plan_canonical.rs`), scan-level pushed-down filters are not hashed
   (the `Filter` node above carries them), file scans fingerprint by listing-table
-  paths (a Parquet path read's `SparkListingTable` hashes and answers the overwrite check as
-  the listing table it wraps, FILE-EXTENSION-FILTER-1), `generate_series` by bounds, memtables by construction identity
+  paths (through a `SparkListingTable` too), `generate_series` by bounds, memtables by construction identity
   (independently built frames never share a hash, same data or not, as on
   Spark), cube / rollup / grouping sets by distinct tags, and cache-view scans
   expand through the caller-supplied lineage map while other temp-view scans expand
@@ -694,18 +693,15 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   maps Arrow `Null` (parquet physical INT32 + Null logical type) to `Int32`, recursive over
   its own struct/list/map walk, depth-bound 32 (`MAX_NESTED_TYPE_DEPTH` now serves only this
   promote walk). Spark's parquet reader does this; DataFusion
-  keeps `Null`. The `LargeList` / `FixedSizeList` / `ListView` / `LargeListView` promote arms
-  mirror the relax walk's list arms and are unreachable from DataFusion's parquet inference
-  today (only `List` is produced); they are kept for shape symmetry, not pinned
+  keeps `Null`. The other list-type promote arms mirror the relax walk and are unreachable
+  from DataFusion's parquet inference (only `List` is produced); kept for symmetry, not pinned
   (DYNFLATTEN-LISTNULL-1 critic F2). CTAS still uses `relax_schema_to_nullable` only, so an actual SQL `VOID`
   column does not become int32 on write. `drop_null_lists=True` still drops `List(Null)`
   that never went through this reader.
   **S3-PATH-WRITE-1 round 2 (2026-09-28):** `read_parquet_nullable` resolves
   the S3 prefix once per call through `object_store_s3`, so the infer read and
-  the relaxed-schema re-read share the directory spelling. **NAN-MINMAX-1 (2026-11-13):** the
-  statistics seat: [spark_nullable/](spark_nullable/map.md). **FILE-EXTENSION-FILTER-1 (2026-11-25):**
-  both listings drop the `.parquet` suffix filter and skip the names Spark skips, through
-  `spark_nullable/hidden_files.rs` ([spark_nullable/](spark_nullable/map.md)).
+  the relaxed-schema re-read share the directory spelling. **NAN-MINMAX-1 (2026-11-13),
+  FILE-EXTENSION-FILTER-1 (2026-11-25):** the statistics and listing seats: [spark_nullable/](spark_nullable/map.md).
 - `column_resolution.rs` — **ICE-MIXED-CASE-1 (2026-09-17, Q-20b-2):** Spark-door
   case-insensitive column fold with normalization ON
   (`plan_statement_with_column_repair` / `sql_with_column_repair` fold the parsed
