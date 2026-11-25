@@ -773,9 +773,8 @@ fn integral_to_decimal_nulls_on_overflow_and_raises_numeric_value_out_of_range_i
     assert_eq!(decimals.value(1), 3_276_700);
 }
 
-#[tokio::test]
-async fn analyzer_rewrites_only_integer_to_decimal_casts_that_can_overflow() {
-    let ctx = narrow_context(false);
+fn integer_decimal_context(ansi: bool) -> SessionContext {
+    let ctx = narrow_context(ansi);
     let schema = Arc::new(Schema::new(vec![
         Field::new("b", DataType::Int64, false),
         Field::new("t", DataType::Int8, true),
@@ -793,6 +792,12 @@ async fn analyzer_rewrites_only_integer_to_decimal_casts_that_can_overflow() {
         Arc::new(MemTable::try_new(schema, vec![vec![batch]]).unwrap()),
     )
     .unwrap();
+    ctx
+}
+
+#[tokio::test]
+async fn analyzer_rewrites_only_integer_to_decimal_casts_that_can_overflow() {
+    let ctx = integer_decimal_context(false);
     let sql = "SELECT CAST(b AS DECIMAL(5,0)) AS a, CAST(b AS DECIMAL(19,0)) AS l, \
                CAST(t AS DECIMAL(3,1)) AS s, CAST(1 AS DECIMAL(5,0)) AS k, \
                CAST(123456 AS DECIMAL(5,0)) AS o, TRY_CAST(b AS DECIMAL(5,0)) AS tc FROM t";
@@ -849,10 +854,11 @@ async fn analyzer_rewrites_only_integer_to_decimal_casts_that_can_overflow() {
     assert_eq!(cell(3, 0), "1");
     assert_eq!(cell(4, 0), "");
     assert_eq!(cell(5, 0), "");
+}
 
-    let ansi = narrow_context(true);
-    ansi.register_table("t", ctx.table_provider("t").await.unwrap())
-        .unwrap();
+#[tokio::test]
+async fn ansi_integer_to_decimal_overflow_raises_and_parts_read_the_target() {
+    let ansi = integer_decimal_context(true);
     let error = ansi
         .sql("SELECT CAST(b AS DECIMAL(5,0)) AS a FROM t")
         .await
