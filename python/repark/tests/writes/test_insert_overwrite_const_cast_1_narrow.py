@@ -15,23 +15,20 @@ ORACLE: dict[str, dict[str, Any]] = json.loads(FIXTURE.read_text(encoding="utf-8
 CELLS = build_cells()
 NAMESPACE = "ice.ioc"
 
-pytestmark = pytest.mark.xdist_group("insert_overwrite_const_cast_1_narrow")
 
-
-@pytest.fixture(scope="module")
-def spark(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Any]:
-    warehouse = tmp_path_factory.mktemp("ioc_narrow")
+@pytest.fixture
+def spark(tmp_path: Path) -> Iterator[Any]:
     session = (
         SparkSession.builder.appName("insert-overwrite-const-cast-1-narrow")
         .config("spark.sql.catalog.ice", "org.apache.iceberg.spark.SparkCatalog")
         .config("spark.sql.catalog.ice.type", "hadoop")
-        .config("spark.sql.catalog.ice.warehouse", str(warehouse))
+        .config("spark.sql.catalog.ice.warehouse", str(tmp_path / "ice"))
         .config("spark.sql.session.timeZone", "UTC")
         .getOrCreate()
     )
     setup(session, NAMESPACE)
     yield session
-    session.conf.set("spark.sql.ansi.enabled", "true")
+    session.stop()
 
 
 def test_fixture_covers_every_cell() -> None:
