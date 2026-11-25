@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-24. **Filed by:** the orchestrator (`claude-opus-5-5`), from an outside nullability sweep, checked
 here against Spark. **Severity:** S2 (owner, 2026-11-24): loud. Every cell crashes; none answers wrongly.
-**Status:** fixed on `fix/try-cast-nonnull-field-1` (2026-11-24); evidence in
+**Status:** **FIXED**; merged as PR #1429 (`14d2404a`, 2026-11-24); evidence in
 [task/wo/try-cast-nonnull-field-1/evidence/](../../../wo/try-cast-nonnull-field-1/evidence/).
 
 ## Measured
@@ -73,6 +73,10 @@ and bare predicate preservation).
 
 ## Still unlike Spark (separate shapes, out of scope for the `TryCast` seat)
 
+The `array_remove` rows are carded as
+[ARRAY-REMOVE-NULLABILITY-1](array-remove-nullability-1-card-2026-11-25.md), and the `make_dt_interval` rows as
+[MAKE-DT-INTERVAL-OVERFLOW-1](make-dt-interval-overflow-1-card-2026-11-25.md).
+
 Every cell below has a wrong **logical** output schema on its own UDF (not `TryCastExpr::return_field`) and is
 identical in both ANSI modes (`false` and `true`):
 
@@ -99,7 +103,7 @@ is private in DataFusion. Over a NOT NULL Parquet `s` holding `'abc'`, `'7'` and
 | the same with `map('m', …)['m']` as `b` | `[1, NULL, NULL], [2, 7, 7], [3, -5, -5]` | crash, the same |
 | `SELECT id, abs(TRY_CAST(coalesce(s, 'x') AS INT)) AS a, TRY_CAST(coalesce(s, 'x') AS INT) + 1 AS b FROM pq_nn` | `[1, NULL, NULL], [2, 7, 8], [3, 5, -4]` | equal to Spark |
 
-It needs its own unit.
+It is carded as [TRY-CAST-PUSHED-PROJECTION-1](try-cast-pushed-projection-1-card-2026-11-25.md).
 
 Note also (pre-existing, unchanged by this unit): `spark.createDataFrame(rows, schema)` with explicit `nullable=False`
 `StructField`s currently emits `nullable=True` columns on RePark (`door/*/mem/*` col 0 `id` is `True` vs Spark
