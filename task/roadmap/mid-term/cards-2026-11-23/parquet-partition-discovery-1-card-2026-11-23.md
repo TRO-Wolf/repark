@@ -146,5 +146,9 @@ Measured gaps remaining on head (all pre-existing on main; no guard relaxed):
     `partitionColumnTypeInference.enabled=false`, `caseSensitive` directory unification,
     `mergeSchema`/`recursiveFileLookup`/`input_file_name`, decimal/scientific/single-fractional-digit timestamp
     nuances); zero control cells moved.
+14. **DataFusion folds some ANSI filters away before the pruning seat (6 cells, ANSI on)** — `p = 1 AND false AND
+    1 / 0 = 1` answers `[]`, and `p = 0 AND (1 / p = 1 OR true)` answers the `p=0` row, where Spark raises
+    `DIVIDE_BY_ZERO`. DataFusion's simplifier removes `x AND false` and `x OR true` before the scan, so the seat never
+    sees the raising side. Main refuses these cells because it discovers no `p` column.
 
 Up: [map.md](map.md).
