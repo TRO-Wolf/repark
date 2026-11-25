@@ -377,6 +377,59 @@ async fn partition_by_writes_hive_dirs() {
 }
 
 #[tokio::test]
+async fn partition_by_names_null_and_special_values_as_spark() {
+    let (session, memory) = write_session("write-bucket");
+    let first = frame_of(
+        &session,
+        "SELECT * FROM (VALUES (1, CAST(NULL AS VARCHAR)), (2, ''), (3, 'a:b'), (4, 'é')) AS t(id, grp)",
+    )
+    .await;
+    let url = "s3://write-bucket/cell/p";
+    let none = HashMap::new();
+    let grp = ["grp".to_string()];
+    session
+        .write_path(&first, url, "parquet", "overwrite", &none, &grp)
+        .await
+        .unwrap();
+    let second = frame_of(&session, "SELECT 5 AS id, CAST(NULL AS VARCHAR) AS grp").await;
+    session
+        .write_path(&second, url, "parquet", "append", &none, &grp)
+        .await
+        .unwrap();
+    let names = listed_names(&memory, "cell/p").await;
+    let dirs: std::collections::BTreeSet<&str> = names
+        .iter()
+        .filter(|name| has_extension(name, "parquet"))
+        .filter_map(|name| name.rsplit_once('/').map(|(dir, _)| dir))
+        .collect();
+    let expected = [
+        "cell/p/grp=__HIVE_DEFAULT_PARTITION__",
+        "cell/p/grp=a%3Ab",
+        "cell/p/grp=é",
+    ];
+    assert_eq!(dirs.into_iter().collect::<Vec<_>>(), expected, "{names:?}");
+    let defaults = names
+        .iter()
+        .filter(|name| name.starts_with("cell/p/grp=__HIVE_DEFAULT_PARTITION__/"))
+        .count();
+    assert_eq!(defaults, 2, "{names:?}");
+    let ints = frame_of(&session, "SELECT 1 AS id, CAST(NULL AS INT) AS n").await;
+    let int_url = "s3://write-bucket/cell/n";
+    let n = ["n".to_string()];
+    session
+        .write_path(&ints, int_url, "csv", "error", &none, &n)
+        .await
+        .unwrap();
+    let int_names = listed_names(&memory, "cell/n").await;
+    assert!(
+        int_names
+            .iter()
+            .any(|name| name.starts_with("cell/n/n=__HIVE_DEFAULT_PARTITION__/")),
+        "{int_names:?}"
+    );
+}
+
+#[tokio::test]
 async fn csv_separator_option_reaches_the_copy() {
     let (session, memory) = write_session("write-bucket");
     let frame = frame_of(&session, "SELECT 1 AS id, 'a' AS grp").await;
