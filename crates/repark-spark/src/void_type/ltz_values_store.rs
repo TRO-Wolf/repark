@@ -472,7 +472,12 @@ pub(super) async fn probe_source_type(
         .ok()
         .and_then(|mut statement| {
             if let datafusion::sql::parser::Statement::Statement(inner) = &mut statement {
-                crate::spark_ast::apply_pregate_judge_rewrites(&probe_sql, inner, case_insensitive);
+                crate::spark_ast::apply_pregate_judge_rewrites(
+                    &probe_sql,
+                    inner,
+                    case_insensitive,
+                    crate::keyword_lower::session_has_ltz_cast_marker(&state),
+                );
                 Some(inner.to_string())
             } else {
                 None

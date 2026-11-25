@@ -504,14 +504,12 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   and 1.050, fix round 4 1.147 and 1.004; main's 10-run rounds spread 24–33 ms, so the cell is
   bimodal), at or over the 1.05x gate on four of them; R-011 and the v1.5.6 notes draft state
   all six.
-  **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-017, ruling 100, 2026-10-15):** R-017's pin moves with
-  R-017's fix: `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores`
-  (was `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds`) asserts that
-  `UPDATE … SET v = CASE WHEN id > 0 THEN c ELSE NULL END` and its three sibling spellings
-  (`NULL_SIBLING_UPDATES`) store what `SET v = c` stores, nine digits, for a `timestamp_ns`
-  and a `timestamptz_ns` source. Oracle: Spark 4.1.2's microsecond twin of the four statements
-  (Iceberg 1.11.0, New York, 2026-10-15) stores `c` unchanged; a NULL takes its sibling's
-  type.
+  **ICE-TSNS-TYPE-PLANNER-1 (R-017, 2026-10-15) & FEXPR-TIMESTAMP-NTZ-1 (2026-11-25):**
+  `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores` pins
+  `NULL_SIBLING_UPDATES` storing `SET v = c` (9 digits) for `timestamp_ns`/`timestamptz_ns`
+  (Spark 4.1.2 + Iceberg 1.11.0, NY), and asserts both `SET v = CAST(c AS TIMESTAMP)` and
+  `SET v = date_trunc('second', c)` shift NY DST gap `2026-03-08 02:30` to `03:30`
+  (`1_772_940_600_000_000_000`, live Spark 4.1.2).
   **EXPLAIN-DML-WRITE-1 (2026-10-21, ruling 141):** the three prepared `INSERT` controls of
   `a_prepared_write_with_a_parameter_that_supplies_the_column_refuses_in_every_zone` now take the
   ruled `PREPARE` text (never the NTZ hint), their `EXECUTE`s fail and nothing is stored.

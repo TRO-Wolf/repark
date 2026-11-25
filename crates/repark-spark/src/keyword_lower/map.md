@@ -20,9 +20,13 @@ lowering it calls first.
   `lower_fragment_timestamp_casts`. **FEXPR-TIMESTAMP-NTZ-1 (2026-11-24, Delta 1):** adds
   `lower_explicit_timestamp_ltz_cast` (used by SQL `lower_expression`, `TimestampNsCastLower`,
   `TimestampNsCastProbe`, and fragments so `CAST`/`TRY_CAST(... AS TIMESTAMP_LTZ)` and zoned
-  `TIMESTAMP '...'` / `TIMESTAMP_LTZ '...'` typed literals stay LTZ on every door) and
-  `lower_fragment_timestamp_ltz_cast` (delegates to `lower_explicit_timestamp_ltz_cast` and
-  nullable-wraps bare-`TIMESTAMP` string-literal casts via `DECIMAL_CAST_NULLABLE_NAME`).
+  `TIMESTAMP '...'` / `TIMESTAMP_LTZ '...'` typed literals stay LTZ on every door),
+  `lower_explicit_timestamp_ltz_cast_as_bare_timestamp` (Delta 1 CI 2026-11-25: fallback used
+  when `session_has_ltz_cast_marker` is false on bare test `SessionContext`s without
+  `repark_functions::register_all`, keeping `CAST(... AS TIMESTAMP_LTZ)` -> `TIMESTAMP` and
+  zoned `TIMESTAMP '...'` untouched), and `lower_fragment_timestamp_ltz_cast` (delegates to
+  `lower_explicit_timestamp_ltz_cast` and nullable-wraps bare-`TIMESTAMP` string-literal casts
+  via `DECIMAL_CAST_NULLABLE_NAME`).
 - `ltz_values_cast.rs` — **WO NTZ-STORE-DOORS-1 second re-verify fold (2026-09-29,
   RD3-1):** `mark_values_timestamp_casts` wraps each `VALUES` cell that is a written
   `CAST` / `::` to `TIMESTAMP` (explicit `TIMESTAMP_LTZ` casts now lower directly to

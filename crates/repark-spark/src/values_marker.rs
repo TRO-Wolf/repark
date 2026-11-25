@@ -155,7 +155,9 @@ pub async fn plan_marked_fragment(
     let dialect = state.config().options().sql_parser.dialect;
     let mut statement = state.sql_to_statement(sql, &dialect)?;
     if session_marks_values(&state) {
-        lower_fragment_statement(&mut statement);
+        if crate::keyword_lower::session_has_ltz_cast_marker(&state) {
+            lower_fragment_statement(&mut statement);
+        }
         if mark_fragment_statement(&mut statement) {
             return Ok(None);
         }

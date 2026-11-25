@@ -491,3 +491,36 @@ async fn a_wrapped_write_to_a_table_with_no_such_leaf_is_not_gated() {
             .contains("not writable yet")
     );
 }
+
+#[tokio::test]
+async fn registered_ltz_marker_decides_branch_writes_and_explain_the_same() {
+    let wh_p = TempDir::new().unwrap();
+    let (ctx_p, catalogs_p) = seeded(&wh_p, PLAIN, "p").await;
+    repark_functions::register_all(&ctx_p);
+    let branch_write = format!("INSERT INTO ice.sales.p.branch_b1 SELECT 5, {VALUE}, 0");
+    assert_eq!(
+        attempt(&ctx_p, &catalogs_p, &branch_write).await,
+        Ok(()),
+        "{branch_write}"
+    );
+    assert_eq!(
+        rows(&ctx_p, &catalogs_p, "SELECT id FROM ice.sales.p.branch_b1").await,
+        3
+    );
+
+    let wh_t = TempDir::new().unwrap();
+    let (ctx_t, catalogs_t) = seeded(&wh_t, NESTED, "t").await;
+    repark_functions::register_all(&ctx_t);
+    let explain = format!("EXPLAIN INSERT INTO ice.sales.t SELECT 5, {VALUE}, 0");
+    assert_eq!(
+        attempt(&ctx_t, &catalogs_t, &explain).await,
+        Ok(()),
+        "{explain}"
+    );
+    let refused = format!("INSERT INTO ice.sales.t.branch_b1 SELECT 5, {VALUE}, 0");
+    let err = attempt(&ctx_t, &catalogs_t, &refused)
+        .await
+        .expect_err("nested timestamp_ns branch write refused");
+    assert!(err.contains(NOT_YET), "{err}");
+    assert_eq!(snapshots(&catalogs_t, "t").await, 1);
+}

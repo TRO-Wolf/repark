@@ -304,7 +304,12 @@ impl<'ctx, 'arms, 'ast> SiblingJudge<'ctx, 'arms, 'ast> {
             return ArmPlan::Failed;
         };
         if let datafusion::sql::parser::Statement::Statement(inner) = &mut statement {
-            crate::spark_ast::apply_pregate_judge_rewrites(sql, inner, self.case_insensitive);
+            crate::spark_ast::apply_pregate_judge_rewrites(
+                sql,
+                inner,
+                self.case_insensitive,
+                crate::keyword_lower::session_has_ltz_cast_marker(&state),
+            );
         }
         match repark_core::column_resolution::plan_statement_with_column_repair(
             &state,

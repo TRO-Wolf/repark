@@ -142,6 +142,7 @@ pub(crate) fn apply_pregate_rewrites_after_identity_dml(
     statement: &mut Statement,
     case_insensitive: bool,
     allow_sort_rewrite: bool,
+    emit_ltz_marker: bool,
     strictness: PregateStrictness,
 ) -> Result<bool> {
     let run = |result: Result<()>| {
@@ -161,7 +162,7 @@ pub(crate) fn apply_pregate_rewrites_after_identity_dml(
     rewrite_binary_casts(statement);
     run(crate::bare_unit::rewrite_bare_datetime_units(statement))?;
     crate::bare_nullary::demote_refusing_nullary_calls(statement);
-    crate::keyword_lower::lower_spark_keywords(statement);
+    crate::keyword_lower::lower_spark_keywords_for(statement, emit_ltz_marker);
     window_range::quote_unquoted_interval_range_bounds(statement);
     Ok(sort_rewrite_fired)
 }
@@ -170,12 +171,14 @@ pub(crate) fn apply_pregate_judge_rewrites(
     sql: &str,
     statement: &mut Statement,
     case_insensitive: bool,
+    emit_ltz_marker: bool,
 ) {
     let _ = apply_pregate_rewrites_before_identity_dml(sql, statement, PregateStrictness::Lenient);
     let _ = apply_pregate_rewrites_after_identity_dml(
         statement,
         case_insensitive,
         true,
+        emit_ltz_marker,
         PregateStrictness::Lenient,
     );
 }
@@ -218,6 +221,7 @@ async fn execute_passthrough_inner(
                 inner,
                 crate::spark_door_case_insensitive(state.config().options()),
                 allow_sort_rewrite,
+                crate::keyword_lower::session_has_ltz_cast_marker(&state),
                 PregateStrictness::Strict,
             )?;
             Box::pin(refuse_insert_void_values(ctx, catalogs, inner)).await?;
@@ -239,7 +243,10 @@ async fn execute_passthrough_inner(
         }
         DfStatement::Explain(explain) => {
             if let DfStatement::Statement(inner) = explain.statement.as_mut() {
-                crate::keyword_lower::lower_timestamp_ns_casts(inner.as_mut());
+                crate::keyword_lower::lower_timestamp_ns_casts_for(
+                    inner.as_mut(),
+                    crate::keyword_lower::session_has_ltz_cast_marker(&state),
+                );
             }
         }
         DfStatement::Reset(ResetStatement::Variable(name)) => {
@@ -565,7 +572,10 @@ async fn restate_range_frames_and_replan(
         rewrite_binary_casts(inner);
         crate::bare_unit::rewrite_bare_datetime_units(inner)?;
         crate::bare_nullary::demote_refusing_nullary_calls(inner);
-        crate::keyword_lower::lower_spark_keywords(inner);
+        crate::keyword_lower::lower_spark_keywords_for(
+            inner,
+            crate::keyword_lower::session_has_ltz_cast_marker(state),
+        );
         window_range::quote_unquoted_interval_range_bounds(inner);
         rewrite(inner);
         if crate::values_marker::session_marks_values(state) {

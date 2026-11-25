@@ -530,18 +530,28 @@ async fn an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stor
     }
     run(&session, "UPDATE ice.ns.u SET v = NULL").await;
     assert_eq!(stored(&session, read).await, vec![None, None]);
-    for kept in ["CAST(c AS TIMESTAMP)", "date_trunc('second', c)"] {
-        run(
-            &session,
-            &format!("UPDATE ice.ns.u SET v = {kept} WHERE id > 0"),
-        )
-        .await;
-    }
+    run(
+        &session,
+        "UPDATE ice.ns.u SET v = CAST(c AS TIMESTAMP) WHERE id > 0",
+    )
+    .await;
+    assert_eq!(
+        stored(&session, read).await,
+        vec![
+            Some(1_767_323_045_123_456_000),
+            Some(1_772_940_600_000_000_000)
+        ]
+    );
+    run(
+        &session,
+        "UPDATE ice.ns.u SET v = date_trunc('second', c) WHERE id > 0",
+    )
+    .await;
     assert_eq!(
         stored(&session, read).await,
         vec![
             Some(1_767_323_045_000_000_000),
-            Some(1_772_937_000_000_000_000)
+            Some(1_772_940_600_000_000_000)
         ]
     );
     run(&session, "UPDATE ice.ns.u SET v = c").await;

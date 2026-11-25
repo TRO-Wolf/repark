@@ -3,6 +3,7 @@ use std::convert::Infallible;
 use std::ops::ControlFlow;
 
 use datafusion::error::DataFusionError;
+use datafusion::execution::SessionState;
 use datafusion::sql::sqlparser::ast::{
     DataType, Expr, Function, FunctionArg, FunctionArgExpr, FunctionArgumentList,
     FunctionArguments, Ident, ObjectName, ObjectNamePart, Query, Statement, UnaryOperator, Value,
@@ -10,6 +11,7 @@ use datafusion::sql::sqlparser::ast::{
 };
 use datafusion::sql::sqlparser::tokenizer::Span;
 use repark_functions::collection::SQL_MAP_NAME;
+use repark_functions::instant_ts::{TIMESTAMP_LTZ_CAST_NAME, TRY_TIMESTAMP_LTZ_CAST_NAME};
 
 mod ltz_values_cast;
 mod ntz_cast_lower;
@@ -105,7 +107,14 @@ fn lower_map_call(node: &mut Expr) -> bool {
     true
 }
 
-fn lower_expression(node: &mut Expr) {
+#[must_use]
+pub(crate) fn session_has_ltz_cast_marker(state: &SessionState) -> bool {
+    let functions = state.scalar_functions();
+    functions.contains_key(TIMESTAMP_LTZ_CAST_NAME)
+        && functions.contains_key(TRY_TIMESTAMP_LTZ_CAST_NAME)
+}
+
+fn lower_expression(node: &mut Expr, emit_ltz_marker: bool) {
     if ntz_cast_lower::lower_timestamp_ntz_cast(node) || lower_map_call(node) {
         return;
     }
@@ -130,16 +139,22 @@ fn lower_expression(node: &mut Expr) {
         };
         return;
     }
-    ntz_cast_lower::lower_explicit_timestamp_ltz_cast(node);
+    if emit_ltz_marker {
+        ntz_cast_lower::lower_explicit_timestamp_ltz_cast(node);
+    } else {
+        ntz_cast_lower::lower_explicit_timestamp_ltz_cast_as_bare_timestamp(node);
+    }
 }
 
-struct KeywordLower;
+struct KeywordLower {
+    emit_ltz_marker: bool,
+}
 
 impl VisitorMut for KeywordLower {
     type Break = Infallible;
 
     fn post_visit_expr(&mut self, expr: &mut Expr) -> ControlFlow<Self::Break> {
-        lower_expression(expr);
+        lower_expression(expr, self.emit_ltz_marker);
         ControlFlow::Continue(())
     }
 
@@ -149,8 +164,13 @@ impl VisitorMut for KeywordLower {
     }
 }
 
+pub(crate) fn lower_spark_keywords_for(statement: &mut Statement, emit_ltz_marker: bool) {
+    let _ = statement.visit(&mut KeywordLower { emit_ltz_marker });
+}
+
+#[cfg(test)]
 pub(crate) fn lower_spark_keywords(statement: &mut Statement) {
-    let _ = statement.visit(&mut KeywordLower);
+    lower_spark_keywords_for(statement, true);
 }
 
 struct FragmentTimestampCastLower;
@@ -177,16 +197,22 @@ pub fn rewrite_fragment_timestamp_ltz_literals(sql: &str) -> Cow<'_, str> {
 
 struct TimestampNsCastLower {
     empty_maps: bool,
+    emit_ltz_marker: bool,
 }
 
 impl VisitorMut for TimestampNsCastLower {
     type Break = Infallible;
 
     fn post_visit_expr(&mut self, expr: &mut Expr) -> ControlFlow<Self::Break> {
-        if !ntz_cast_lower::lower_timestamp_ntz_cast(expr)
-            && !ntz_cast_lower::lower_explicit_timestamp_ltz_cast(expr)
-            && self.empty_maps
-        {
+        if ntz_cast_lower::lower_timestamp_ntz_cast(expr) {
+            return ControlFlow::Continue(());
+        }
+        let lowered_ltz = if self.emit_ltz_marker {
+            ntz_cast_lower::lower_explicit_timestamp_ltz_cast(expr)
+        } else {
+            ntz_cast_lower::lower_explicit_timestamp_ltz_cast_as_bare_timestamp(expr)
+        };
+        if !lowered_ltz && self.empty_maps {
             lower_map_call(expr);
         }
         ControlFlow::Continue(())
@@ -198,13 +224,26 @@ impl VisitorMut for TimestampNsCastLower {
     }
 }
 
-pub(crate) fn lower_timestamp_ns_casts<T: VisitMut>(node: &mut T) {
-    let _ = node.visit(&mut TimestampNsCastLower { empty_maps: false });
+pub(crate) fn lower_timestamp_ns_casts_for<T: VisitMut>(node: &mut T, emit_ltz_marker: bool) {
+    let _ = node.visit(&mut TimestampNsCastLower {
+        empty_maps: false,
+        emit_ltz_marker,
+    });
 }
 
-/// Lower every empty or odd-arity `map(...)` call and every `TIMESTAMP_NTZ` cast.
+pub(crate) fn lower_empty_maps_and_timestamp_ns_casts_for<T: VisitMut>(
+    node: &mut T,
+    emit_ltz_marker: bool,
+) {
+    let _ = node.visit(&mut TimestampNsCastLower {
+        empty_maps: true,
+        emit_ltz_marker,
+    });
+}
+
+#[cfg(test)]
 pub(crate) fn lower_empty_maps_and_timestamp_ns_casts<T: VisitMut>(node: &mut T) {
-    let _ = node.visit(&mut TimestampNsCastLower { empty_maps: true });
+    lower_empty_maps_and_timestamp_ns_casts_for(node, true);
 }
 
 /// Lower every empty or odd-arity `map(...)` call.
@@ -536,5 +575,43 @@ mod tests {
         let error = DataFusionError::Plan("No field named 'revenue'.".to_string());
         let text = error.to_string();
         assert_eq!(map_door_keyword_errors(error).to_string(), text);
+    }
+
+    #[test]
+    fn unregistered_ltz_marker_falls_back_without_emitting_marker() {
+        let mut stmt = Parser::parse_sql(
+            &DatabricksDialect {},
+            "SELECT CAST(x AS TIMESTAMP_LTZ), TRY_CAST(x AS TIMESTAMP_LTZ), \
+             TIMESTAMP '2026-01-02 03:04:05.123456+00:00'",
+        )
+        .unwrap()
+        .remove(0);
+        lower_spark_keywords_for(&mut stmt, false);
+        let text = stmt.to_string();
+        assert!(
+            !text.contains(TIMESTAMP_LTZ_CAST_NAME) && !text.contains(TRY_TIMESTAMP_LTZ_CAST_NAME),
+            "{text}"
+        );
+        assert!(text.contains("CAST(x AS TIMESTAMP)"), "{text}");
+        assert!(text.contains("TRY_CAST(x AS TIMESTAMP)"), "{text}");
+        assert!(
+            text.contains("TIMESTAMP '2026-01-02 03:04:05.123456+00:00'"),
+            "{text}"
+        );
+
+        let mut ns_stmt = Parser::parse_sql(
+            &DatabricksDialect {},
+            "SELECT CAST(x AS TIMESTAMP_LTZ), TIMESTAMP '2026-01-02 03:04:05.123456+00:00'",
+        )
+        .unwrap()
+        .remove(0);
+        lower_empty_maps_and_timestamp_ns_casts_for(&mut ns_stmt, false);
+        let ns_text = ns_stmt.to_string();
+        assert!(!ns_text.contains(TIMESTAMP_LTZ_CAST_NAME), "{ns_text}");
+        assert!(ns_text.contains("CAST(x AS TIMESTAMP)"), "{ns_text}");
+        assert!(
+            ns_text.contains("TIMESTAMP '2026-01-02 03:04:05.123456+00:00'"),
+            "{ns_text}"
+        );
     }
 }

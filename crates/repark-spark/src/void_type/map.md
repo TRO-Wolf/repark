@@ -94,12 +94,11 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   (`refuse_value` still types by `literal_source_type` then the probe, and
   still fail-closes when the probe cannot parse). The skip call site now
   passes only the position and the cell.
-  **Fold 2026-10-01 (re-verify VT6-1):** `probe_source_type` parses the probe
-  SELECT and runs it through the statement's pre-gate rewrite chain
-  (`spark_ast::apply_pregate_judge_rewrites`) before `ctx.sql`, so a bare
-  `localtimestamp` demotes to the column the statement plans instead of
-  probing as the TIMESTAMP function; a probe that cannot parse still falls
-  back to the original text and fail-closes as before.
+  **Fold 2026-10-01 (VT6-1):** `probe_source_type` parses the probe SELECT
+  and runs `spark_ast::apply_pregate_judge_rewrites` (gated on
+  `session_has_ltz_cast_marker`, FEXPR-TIMESTAMP-NTZ-1 Delta 1 CI) before
+  `ctx.sql`, so a bare `localtimestamp` demotes to the planned column;
+  unparsable probes fall back to the original text and fail-close.
 - `insert_source_types.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):**
   `refuse_insert_source_types` is the Spark door's INSERT gate for two source
   types the analyzer gate cannot see: a negated NULL (Spark's DOUBLE, judged by

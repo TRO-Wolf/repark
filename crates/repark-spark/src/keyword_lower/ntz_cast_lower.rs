@@ -75,6 +75,21 @@ pub(super) fn lower_explicit_timestamp_ltz_cast(node: &mut Expr) -> bool {
     false
 }
 
+pub(super) fn lower_explicit_timestamp_ltz_cast_as_bare_timestamp(node: &mut Expr) -> bool {
+    if let Expr::Cast {
+        data_type,
+        array: false,
+        format: None,
+        ..
+    } = node
+        && data_type.to_string().eq_ignore_ascii_case("timestamp_ltz")
+    {
+        *data_type = DataType::Timestamp(None, TimezoneInfo::None);
+        return true;
+    }
+    false
+}
+
 pub(super) fn lower_timestamp_ntz_cast(node: &mut Expr) -> bool {
     if let Expr::Cast {
         kind,

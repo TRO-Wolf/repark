@@ -12,9 +12,10 @@ every pin is file-backed in `tests.rs`.
 - `mod.rs` — `SiblingJudge` and the arm-plan classifier (`Typed`, `Ambiguous`,
   `Unresolved`, `Failed`). **Fold 2026-10-01 (re-verify VT6-1, VT6-2):** the
   arm plan runs the re-parsed arm through the statement's pre-gate rewrite
-  chain (`spark_ast::apply_pregate_judge_rewrites`) before the column-repair
-  planner, so a bare `localtimestamp` demotes to the STRING column the
-  statement plans instead of re-parsing as the TIMESTAMP function and
+  chain (`spark_ast::apply_pregate_judge_rewrites`, gated on
+  `session_has_ltz_cast_marker` under FEXPR-TIMESTAMP-NTZ-1 Delta 1 CI) before
+  the column-repair planner, so a bare `localtimestamp` demotes to the STRING
+  column the statement plans instead of re-parsing as the TIMESTAMP function and
   skipping the position; `Unresolved` narrows to the typed
   `SchemaError::FieldNotFound`, the RePark tags
   (`[UNRESOLVED_COLUMN]` / `[UNRESOLVED_ROUTINE]` /
