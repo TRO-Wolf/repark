@@ -392,9 +392,7 @@ def setup_sources(spark: Any, st: Any, root: Path) -> None:
         ]
     )
     utc_rows = [
-        (*row[:5], row[5].replace(tzinfo=dt.timezone.utc))
-        for row in source_rows(False)
-        if row[0] in MEM_IDS
+        (*row[:5], row[5].replace(tzinfo=dt.UTC)) for row in source_rows(False) if row[0] in MEM_IDS
     ]
     spark.createDataFrame(utc_rows, schema).createOrReplaceTempView("mem")
     pq_path = root / "src.parquet"
@@ -407,9 +405,7 @@ def setup_sources(spark: Any, st: Any, root: Path) -> None:
             f"CREATE TABLE ice.md.{name} (id INT NOT NULL, d INT{nn}, h INT{nn}, "
             f"m INT{nn}, s DOUBLE{nn}, ts TIMESTAMP{nn}) USING iceberg"
         )
-        spark.sql(
-            f"INSERT INTO ice.md.{name} VALUES {ice_values(source_rows(name == 'nl'))}"
-        )
+        spark.sql(f"INSERT INTO ice.md.{name} VALUES {ice_values(source_rows(name == 'nl'))}")
 
 
 def literal_cells(spark: Any, sf: Any, out: dict[str, Any]) -> None:
@@ -417,12 +413,8 @@ def literal_cells(spark: Any, sf: Any, out: dict[str, Any]) -> None:
     for expr in LITERALS + CONSUMERS + NEIGHBOURS + SECONDS_TYPES:
         out[f"sql|lit|{expr}"] = capture(lambda e=expr: spark.sql(f"SELECT {e} AS r"))
     for expr in LITERALS:
-        out[f"selectExpr|lit|{expr}"] = capture(
-            lambda e=expr: base.selectExpr("id", f"{e} AS r")
-        )
-        out[f"expr|lit|{expr}"] = capture(
-            lambda e=expr: base.select("id", sf.expr(e).alias("r"))
-        )
+        out[f"selectExpr|lit|{expr}"] = capture(lambda e=expr: base.selectExpr("id", f"{e} AS r"))
+        out[f"expr|lit|{expr}"] = capture(lambda e=expr: base.select("id", sf.expr(e).alias("r")))
 
 
 def view_cell(spark: Any, body: str) -> Any:
@@ -445,9 +437,7 @@ def column_cells(spark: Any, sf: Any, out: dict[str, Any]) -> None:
     for expr in COLUMN_EXPRS + COLUMN_CONSUMERS:
         for row_id in (1, 2, 3, 7):
             stmt = f"SELECT id, {expr} AS r FROM mem WHERE id = {row_id}"
-            out[f"view|mem#{row_id}|{expr}"] = capture(
-                lambda q=stmt: view_cell(spark, q)
-            )
+            out[f"view|mem#{row_id}|{expr}"] = capture(lambda q=stmt: view_cell(spark, q))
             out[f"selectExpr|mem#{row_id}|{expr}"] = capture(
                 lambda e=expr, i=row_id: (
                     spark.table("mem").where(f"id = {i}").selectExpr("id", f"{e} AS r")
@@ -455,9 +445,7 @@ def column_cells(spark: Any, sf: Any, out: dict[str, Any]) -> None:
             )
             out[f"expr|mem#{row_id}|{expr}"] = capture(
                 lambda e=expr, i=row_id: (
-                    spark.table("mem")
-                    .where(f"id = {i}")
-                    .select("id", sf.expr(e).alias("r"))
+                    spark.table("mem").where(f"id = {i}").select("id", sf.expr(e).alias("r"))
                 )
             )
     for expr in COLUMN_CONSUMERS:
@@ -495,22 +483,16 @@ def blast_cells(spark: Any, sf: Any, out: dict[str, Any]) -> None:
         out[f"blast|sql|{label}"] = capture(lambda q=stmt: spark.sql(q))
     out["blast|describe|view"] = capture(lambda: describe_view(spark))
     out["blast|createDataFrame|timedelta"] = capture(
-        lambda: spark.createDataFrame(
-            [(1, dt.timedelta(days=1, microseconds=5))], ["id", "r"]
-        )
+        lambda: spark.createDataFrame([(1, dt.timedelta(days=1, microseconds=5))], ["id", "r"])
     )
     out["blast|roundtrip|collect+schema"] = capture(
-        lambda: spark.createDataFrame(
-            spark.sql(lit_df).collect(), spark.sql(lit_df).schema
-        )
+        lambda: spark.createDataFrame(spark.sql(lit_df).collect(), spark.sql(lit_df).schema)
     )
     out["blast|schema|json"] = capture_value(lambda: spark.sql(lit_df).schema.json())
     out["blast|schema|simpleString"] = capture_value(
         lambda: spark.sql(lit_df).schema.simpleString()
     )
-    out["blast|toPandas|r"] = capture_value(
-        lambda: str(spark.sql(lit_df).toPandas()["r"].tolist())
-    )
+    out["blast|toPandas|r"] = capture_value(lambda: str(spark.sql(lit_df).toPandas()["r"].tolist()))
     out["blast|col.cast|string"] = capture(
         lambda: spark.sql(lit_df).select(sf.col("r").cast("string").alias("r"))
     )
@@ -541,9 +523,7 @@ def schema_tree(df: Any) -> str:
     return buffer.getvalue().strip()
 
 
-def write_cells(
-    spark: Any, root: Path, engine: str, ansi: str, out: dict[str, Any]
-) -> None:
+def write_cells(spark: Any, root: Path, engine: str, ansi: str, out: dict[str, Any]) -> None:
     stmts = {
         "lit": "SELECT 1 AS id, make_dt_interval(1, 2, 3, 4.5) AS r",
         "col": "SELECT id, make_dt_interval(d, h, m, s) AS r FROM mem WHERE id IN (1, 3, 9)",
@@ -557,9 +537,7 @@ def write_cells(
         try:
             spark.sql(stmt).write.parquet(str(pq_dir))
             files = [pq_dir] if pq_dir.is_file() else sorted(pq_dir.glob("*.parquet"))
-            stored = (
-                [str(f.type) for f in pq.read_schema(str(files[0]))] if files else []
-            )
+            stored = [str(f.type) for f in pq.read_schema(str(files[0]))] if files else []
             out[f"write.parquet|{label}"] = {
                 "kind": "ok",
                 "stored": stored,
@@ -598,9 +576,7 @@ def native_cells(root: Path) -> dict[str, Any]:
     from repark._native import PyReparkSession
 
     session = PyReparkSession.native()
-    session.create_or_replace_temp_view(
-        "pq", session.read_parquet(str(root / "src.parquet"))
-    )
+    session.create_or_replace_temp_view("pq", session.read_parquet(str(root / "src.parquet")))
     queries = {
         "lit(1,2,3,4.5)": "SELECT make_dt_interval(1, 2, 3, 4.5) AS r",
         "lit(2147483647)": "SELECT make_dt_interval(2147483647) AS r",
@@ -617,9 +593,7 @@ def native_cells(root: Path) -> dict[str, Any]:
                 "kind": "ok",
                 "types": [str(f.type) for f in tbl.schema],
                 "nulls": [bool(f.nullable) for f in tbl.schema],
-                "rows": [
-                    [render_value(v) for v in r.values()] for r in tbl.to_pylist()
-                ],
+                "rows": [[render_value(v) for v in r.values()] for r in tbl.to_pylist()],
             }
         except Exception as exc:
             res[f"native|{key}"] = {"kind": "error", "first": first_line(exc)}

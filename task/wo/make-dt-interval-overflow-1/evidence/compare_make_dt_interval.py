@@ -32,9 +32,7 @@ def same(spark: dict[str, Any] | None, other: dict[str, Any] | None) -> bool:
         if spark["kind"] != other["kind"]:
             return False
         wanted = spark.get("cls", "")
-        return bool(wanted) and wanted in (
-            other.get("cls", "") + other.get("first", "")
-        )
+        return bool(wanted) and wanted in (other.get("cls", "") + other.get("first", ""))
     for key in ("dtypes", "nulls"):
         if (spark.get(key) or [None])[-1] != (other.get(key) or [None])[-1]:
             return False
@@ -48,9 +46,7 @@ def same(spark: dict[str, Any] | None, other: dict[str, Any] | None) -> bool:
     return True
 
 
-def verdict(
-    spark: dict[str, Any] | None, main: dict[str, Any] | None, head: Any
-) -> str:
+def verdict(spark: dict[str, Any] | None, main: dict[str, Any] | None, head: Any) -> str:
     main_ok = same(spark, main)
     if head is None:
         return "=" if main_ok else "≠"
@@ -73,7 +69,7 @@ def load(path: Path | None) -> dict[str, Any] | None:
 
 
 def door_and_statement(key: str) -> tuple[str, str]:
-    door, source, expr = (key.split("|", 2) + ["", ""])[:3]
+    door, source, expr = [*key.split("|", 2), "", ""][:3]
     return door, f"{source} · `{expr}`" if expr else source
 
 
@@ -86,17 +82,11 @@ def build(args: argparse.Namespace) -> tuple[list[str], dict[str, int]]:
     for mode in ("false", "true"):
         spark = load(args.dir / f"{args.prefix_spark}_{mode}.json") or {}
         main = load(args.dir / f"{args.prefix_main}_{mode}.json") or {}
-        head = (
-            load(args.dir / f"{args.prefix_head}_{mode}.json")
-            if args.prefix_head
-            else None
-        )
+        head = load(args.dir / f"{args.prefix_head}_{mode}.json") if args.prefix_head else None
         keys = [k for k in main if not k.startswith(("native|", "write.parquet|"))]
         for key in keys:
             head_cell = head.get(key) if head is not None else None
-            mark = verdict(
-                spark.get(key), main.get(key), head_cell if head is not None else None
-            )
+            mark = verdict(spark.get(key), main.get(key), head_cell if head is not None else None)
             counts[mark] = counts.get(mark, 0) + 1
             door, stmt = door_and_statement(key)
             head_text = short(head_cell) if head is not None else "-"
@@ -118,9 +108,7 @@ def main() -> None:
     args = parser.parse_args()
     lines, counts = build(args)
     if args.only_diff:
-        lines = lines[:2] + [
-            ln for ln in lines[2:] if not ln.endswith(("| = |", "| = / = |"))
-        ]
+        lines = lines[:2] + [ln for ln in lines[2:] if not ln.endswith(("| = |", "| = / = |"))]
     args.out.write_text("\n".join(lines) + "\n")
     print(json.dumps(counts, sort_keys=True))
 

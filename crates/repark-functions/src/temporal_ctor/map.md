@@ -52,7 +52,7 @@ parser change (EX-FN-27, run 15c owns the parser).
   nullable when an argument is, or when the seconds cast can answer NULL (floating seconds, `bigint`,
   a decimal past 12 integral digits after rounding). Days, hours and minutes keep the integer-only
   coercion, so strings and decimals still refuse there. Tests: [`day_time_tests.rs`](day_time_tests.rs);
-  facade pin `python/repark/tests/functions/test_make_dt_interval_overflow_1.py`.
+  facade pin `python/repark/tests/sql/test_make_dt_interval_overflow_1.py`.
 
 - **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** the SQL test sessions here are built by
   `spark_type_planner::planned_context`, so `TIMESTAMP` is typed by the planner as on

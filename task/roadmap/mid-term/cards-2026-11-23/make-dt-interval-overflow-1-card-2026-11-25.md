@@ -39,7 +39,7 @@ by name: Spark's exact adds raise `INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTI
 answers, seconds follow Spark's implicit `decimal(18, 6)` cast, and the field is nullable as Spark declares it.
 `Duration(µs)` is named and typed `interval day to second` (`crates/repark-spark/src/type_table.rs`,
 `python/repark/src/repark/spark/column_fields.py`). Measured over 1434 cells in both ANSI modes: 1010 fixed, 70 equal
-on both, 0 moved off Spark. Pins: `python/repark/tests/functions/test_make_dt_interval_overflow_1.py` (1064 tests: 1004
+on both, 0 moved off Spark. Pins: `python/repark/tests/sql/test_make_dt_interval_overflow_1.py` (1064 tests: 1004
 red on main, 60 controls) and 14 Rust tests in `day_time_tests.rs`. Evidence:
 [task/wo/make-dt-interval-overflow-1/evidence/](../../../wo/make-dt-interval-overflow-1/evidence/summary.md).
 
