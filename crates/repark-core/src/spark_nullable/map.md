@@ -92,7 +92,8 @@ leaving text and ORC discovery untouched. Rules pinned to live Spark 4.1.2:
   using the partition name, inferred type, and directory value.
 - `PartitionedParquetProvider` wraps `FileScanConfigBuilder` + `FloatBoundsInexactFormat` + `TableSchema`, sets
   `PartitionedFile.partition_values`, supports `Inexact` filter pushdown, and prunes files in `partition_prune.rs`:
-  it first models Spark's `ConstantPropagation` (a top-level `partcol = literal` or `<=>` conjunct binds the column,
+  it first models Spark's `ConstantPropagation` (a top-level `column = literal` or `<=>` conjunct binds that column,
+  partition or data,
   the last binding wins, bindings reach `AND` children and the `AND`s inside `OR` but not `NOT`; bound columns are
   replaced inside comparisons other than the binding itself, with `!=` read as `NOT (=)`), then its `ConstantFolding`
   (a conjunct left constant is evaluated once: the leading run short-circuits on `false`, later ones always run and
