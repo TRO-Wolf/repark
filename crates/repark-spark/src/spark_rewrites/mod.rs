@@ -778,6 +778,7 @@ pub(crate) use struct_field::plan_struct_field_regions;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::spark_literals as literals;
 
     #[test]
     fn invalid_numeric_literal_range_maps_to_the_full_parse_message() {
@@ -791,7 +792,7 @@ mod tests {
     }
 
     fn canonical(sql: &str) -> String {
-        crate::spark_literals::canonicalize(sql)
+        literals::canonicalize(sql)
             .map(std::borrow::Cow::into_owned)
             .unwrap_or_else(|error| format!("ERR {}", repark_core::engine_err(error)))
     }
