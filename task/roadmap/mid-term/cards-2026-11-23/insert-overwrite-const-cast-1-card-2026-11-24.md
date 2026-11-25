@@ -20,7 +20,7 @@ The source is empty, so both engines agree on what the overwrite writes. They di
 the constant cast and refuses before writing. RePark writes the empty overwrite, so the table's data is gone.
 
 No shape with a non-empty source writes rows Spark refuses: RePark's cast raises on the row (#1431's step 0, and
-re-measured on the narrow branch). So the card stays S2. The outside review's further casts measured on main
+the narrow pins replay it). So the card stays S2. The outside review's further casts measured on main
 `57c92b41`: `TIMESTAMP_NTZ` from `'x'`, through a subquery and as a literal, wipes where Spark raises
 `[CAST_INVALID_INPUT]`; `CAST(1e20 AS DECIMAL(10,2))`, through a subquery and as a literal, wipes where Spark raises
 `[NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION]`.
@@ -46,7 +46,8 @@ The guard acts only where the answer is certain. Everything else stays exactly a
 
 ## Still unlike Spark (left as on main, each measured on main and the narrow head)
 
-Measured on main `57c92b41` and on the narrow head, which answer alike for every item below.
+Measured on main `57c92b41` and Spark 4.1.2; each item is outside the guard's scope, so the narrow head answers as
+main (the head re-measure is recorded with the PR).
 
 - **Reads:** `SELECT CAST(s AS T) FROM (SELECT 'x' AS s) src WHERE 1 = 0` answers empty where Spark raises.
 - **Writes that do not replace data, and RTAS outside `saveAsTable`:** `INSERT INTO`, CTAS, SQL `CREATE OR REPLACE
@@ -72,8 +73,9 @@ Measured on main `57c92b41` and on the narrow head, which answer alike for every
 - **DataFrames built under other settings:** such a frame is a closed scan, so it is outside the guard.
 - **ANSI off:** unchanged; main's W03 check still refuses some empty overwrites Spark makes.
 - **#1431's false-refusal families:** outer joins over unions, `OFFSET` or CTEs, 7-digit years, control-character
-  trimming, `SystemV/*` zones, casts inside `EXISTS` and windows, and the round-1 strings all answer as on main
-  (the attack corpora, 2,392 RePark cells).
+  trimming, `SystemV/*` zones, casts inside `EXISTS` and windows, and the round-1 strings are each outside the guard
+  (a join, union, `OFFSET`, subquery or window, or a value with digits, blanks or control characters). The
+  facade pin replays one cell of each family on three doors (60 cells); all answer as main.
 
 Evidence: [task/wo/insert-overwrite-const-cast-1-narrow/evidence/](../../../wo/insert-overwrite-const-cast-1-narrow/evidence/).
 
