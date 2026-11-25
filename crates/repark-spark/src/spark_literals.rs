@@ -290,9 +290,9 @@ fn canonical_rewrite(sql: &str, keep_verbatim: bool) -> Result<Option<CanonicalR
     regions.extend(crate::spark_rewrites::plan_zero_x_hex_ident_regions(
         &tokens, sql,
     ));
-    regions.extend(crate::spark_rewrites::plan_delete_from_regions(&tokens));
+    crate::spark_rewrites::refuse_fromless_delete(&tokens)?;
     regions.extend(crate::spark_rewrites::plan_keyword_regions(&tokens, sql)?);
-    regions.extend(crate::spark_rewrites::plan_wildcard_except_regions(&tokens));
+    crate::spark_rewrites::refuse_wildcard_exclude(&tokens)?;
     regions.extend(crate::spark_rewrites::extract_field::plan_extract_field_regions(&tokens));
     crate::spark_rewrites::plan_struct_field_regions(&tokens, sql, &mut regions);
     crate::spark_rewrites::plan_insert_partition_column_list_regions(&tokens, sql, &mut regions);

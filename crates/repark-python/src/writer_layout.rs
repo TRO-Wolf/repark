@@ -7,6 +7,7 @@ use repark_core::writer_layout::{
 };
 
 use crate::AnalysisException;
+use crate::dataframe::PyDataFrame;
 use crate::fence::fenced;
 use crate::session::PyReparkSession;
 
@@ -101,8 +102,41 @@ pub fn writer_plan(
     })
 }
 
+#[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
+#[pyfunction]
+pub fn hive_partition_frame(frame: &PyDataFrame, columns: Vec<String>) -> PyResult<PyDataFrame> {
+    fenced!("writer_layout.hive_partition_frame", {
+        let depths = frame.depths();
+        let need = crate::deep_stack::clone_need_bytes(depths.plan, depths.expression);
+        let df = crate::deep_stack::grown_sync(need, || {
+            repark_core::writer_layout::hive_partition_frame(
+                crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths()),
+                &columns,
+            )
+        })
+        .map_err(crate::datafusion_to_py_err)?;
+        Ok(PyDataFrame::new(df, frame.runtime_handle()))
+    })
+}
+
+#[allow(clippy::missing_errors_doc)]
+#[pyfunction]
+pub fn respell_hive_partition_dirs(py: Python<'_>, root: &str, depth: usize) -> PyResult<()> {
+    fenced!("writer_layout.respell_hive_partition_dirs", {
+        py.detach(|| {
+            repark_core::writer_layout::respell_local_partition_dirs(
+                std::path::Path::new(root),
+                depth,
+            )
+        })
+        .map_err(crate::to_py_err)
+    })
+}
+
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(writer_plan, module)?)?;
     module.add_function(wrap_pyfunction!(writer_target_is_table, module)?)?;
+    module.add_function(wrap_pyfunction!(hive_partition_frame, module)?)?;
+    module.add_function(wrap_pyfunction!(respell_hive_partition_dirs, module)?)?;
     Ok(())
 }

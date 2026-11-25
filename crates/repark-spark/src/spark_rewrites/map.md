@@ -13,10 +13,23 @@ path stay in `spark_literals.rs`.
 - `mod.rs` — the shared span and inner-region splicing helpers (`line_starts`,
   `byte_offset`, `skip_whitespace`, `matching_paren`, `splice_inners`,
   `collect_inners`, `retain_outside`) and the rewrite families: numeric suffixes
-  (**FNP-4B**), `0x` hex identifiers, FROM-less `DELETE`, DROP TEMPORARY, wildcard
-  `EXCEPT`, and the INSERT `PARTITION (…) (cols)` order swap (splicing inner
-  regions so rewrites inside `PARTITION (…)` survive without overlapping later
-  regions). **WO-A5 (2026-09-23):** the `INVALID_NUMERIC_LITERAL_RANGE` producer
+  (**FNP-4B**), `0x` hex identifiers, DROP TEMPORARY, and the INSERT
+  `PARTITION (…) (cols)` order swap (splicing inner regions so rewrites inside
+  `PARTITION (…)` survive without overlapping later regions).
+  **SPARK-DOOR-OVER-ACCEPT-SYNTAX-1 (2026-11-24):** these rewrites run before any parse, so
+  each one must not answer a spelling Spark's lexer or parser refuses. An exponent literal
+  that a bare word touches (`1e2foo`, `1e2Dx`) is one identifier, as in Spark's lexer, unless
+  the word is a typed suffix (`D`, `F`, `BD`); a period after it (`1e2.foo`, `1e2.D`) stays a
+  field access, so the parser refuses it. `refuse_fromless_delete` refuses a statement-start
+  `DELETE <table>` with Spark's `PARSE_SYNTAX_ERROR … missing 'FROM'` before any write
+  (it used to insert `FROM`, which deleted rows Spark never touches). The DROP TEMPORARY
+  planner drops the word only in a statement-start `DROP TEMPORARY FUNCTION` (pyspark's
+  `temp_func` emits it), after an optional leading `EXPLAIN [EXTENDED | CODEGEN | COST | FORMATTED]`; `DROP TEMPORARY VIEW` / `TABLE` refuse with Spark's
+  `PARSE_SYNTAX_ERROR`, `DROP TEMPORARY VARIABLE` stays as written, and a column aliased
+  `temporary` keeps its alias. `refuse_wildcard_exclude` refuses `* EXCLUDE (…)` with
+  Spark's `PARSE_SYNTAX_ERROR` at `'('`; Spark's own `* EXCEPT (…)` parses natively, and the
+  facade's internal SQL spells it. Evidence:
+  [task/wo/spark-door-over-accept-syntax-1/](../../../../task/wo/spark-door-over-accept-syntax-1/evidence/). **WO-A5 (2026-09-23):** the `INVALID_NUMERIC_LITERAL_RANGE` producer
   has a direct `engine_err` pin for its complete bracketed parse message.
   **DECIMAL-DIVIDE-LITERAL-1 (2026-11-17):** a `3S` or `3L` that is an operand of
   `* / % + -` or an argument of `mod(` / `pmod(` is spelled

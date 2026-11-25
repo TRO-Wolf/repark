@@ -642,14 +642,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   render plain (`1.50`), booleans lower-case, dates `yyyy-MM-dd`, timestamps in
   the caller-passed session zone with trimmed fractions, doubles and ints plain.
   Rust tests cover the escape set, decimal rendering, the fan-out, the 1290,
-  and the append-on-evict row count. **Round 5 (2026-09-15, X-4):** the first
-  eviction diverts the tail to `text_partition_fallback.rs` (sorted
-  single-writer append); the eviction arm stays pinned by direct unit test.
-  **Round 6 (2026-09-15, Y-1):** the divert hands over the live stream plus
-  the frame's session task context.
-  **Round 7 (2026-09-15, Z-2):** the writer returns the sort spill count
-  (zero when the fallback never runs); the binding is unchanged.
+  and the append-on-evict row count. **Rounds 5-7 (2026-09-15, X-4, Y-1, Z-2):**
+  the first eviction hands the live stream and task context to
+  `text_partition_fallback.rs` (sorted single-writer append; the eviction arm
+  keeps a unit test); the writer returns the sort spill count (0 unspilled).
   pins: io-text-1/U-1, U-2, V-1, X-4, Y-1, Z-2
+  **PARTITIONBY-NULL-WRITE-1:** the NULL name and escape are `pub(crate)` for
+  `session/path_write/hive_dirs.rs`.
 - `text_partition_fallback.rs` — **IO-TEXT-1 round 5 (2026-09-15, X-4):**
   Spark's high-cardinality fallback: the tail past 256 distinct keys sorts by
   the partition columns and appends key by key with one open writer onto each

@@ -139,7 +139,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split format and property cases from query-shape cases.",
     ),
     "crates/repark-spark/src/tests/dml.rs": (
-        1139,
+        1072,
         "Spark DML door scenarios share one integration module.",
         "Split DELETE, UPDATE, and shared refusal families.",
     ),

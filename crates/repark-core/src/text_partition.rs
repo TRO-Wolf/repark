@@ -24,9 +24,9 @@ use repark_common::zone_horizon::wall_at_instant;
 
 const TEXT_PARTITION_WRITERS_CAP: usize = 256;
 
-const HIVE_DEFAULT_PARTITION: &str = "__HIVE_DEFAULT_PARTITION__";
+pub(crate) const HIVE_DEFAULT_PARTITION: &str = "__HIVE_DEFAULT_PARTITION__";
 
-fn escape_partition_value(text: &str) -> Result<String> {
+pub(crate) fn escape_partition_value(text: &str) -> Result<String> {
     const HEX: &[u8; 16] = b"0123456789ABCDEF";
     let mut out: Vec<u8> = Vec::with_capacity(text.len());
     for byte in text.bytes() {

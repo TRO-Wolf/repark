@@ -281,7 +281,7 @@ class CrossValidator(Estimator["CrossValidatorModel"]):
         try:
             train = frame._spawn(
                 frame._session.sql_built(
-                    f"SELECT * EXCLUDE ({quoted_fold}) FROM {train_view} "
+                    f"SELECT * EXCEPT ({quoted_fold}) FROM {train_view} "
                     f"WHERE {quoted_fold} <> {fold_index}"
                 )
             )
@@ -296,7 +296,7 @@ class CrossValidator(Estimator["CrossValidatorModel"]):
         try:
             test = frame._spawn(
                 frame._session.sql_built(
-                    f"SELECT * EXCLUDE ({quoted_fold}) FROM {train_view} "
+                    f"SELECT * EXCEPT ({quoted_fold}) FROM {train_view} "
                     f"WHERE {quoted_fold} = {fold_index}"
                 )
             )
