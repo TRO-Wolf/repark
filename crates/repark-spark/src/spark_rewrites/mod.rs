@@ -484,8 +484,29 @@ pub(crate) fn plan_keyword_regions(
     Ok(regions)
 }
 
-fn plan_drop_temporary_regions(tokens: &[TokenWithSpan]) -> Result<Vec<LiteralRegion>> {
+fn after_leading_explain(tokens: &[TokenWithSpan]) -> usize {
     let index = skip_whitespace(tokens, 0);
+    if !bare_word_matches(tokens, index, &["EXPLAIN"]) {
+        return index;
+    }
+    let next = skip_whitespace(tokens, index + 1);
+    if bare_word_matches(tokens, next, &["EXTENDED", "CODEGEN", "COST", "FORMATTED"]) {
+        return skip_whitespace(tokens, next + 1);
+    }
+    next
+}
+
+fn bare_word_matches(tokens: &[TokenWithSpan], index: usize, keywords: &[&str]) -> bool {
+    matches!(
+        tokens.get(index).map(|with_span| &with_span.token),
+        Some(Token::Word(word))
+            if word.quote_style.is_none()
+                && keywords.iter().any(|keyword| word.value.eq_ignore_ascii_case(keyword))
+    )
+}
+
+fn plan_drop_temporary_regions(tokens: &[TokenWithSpan]) -> Result<Vec<LiteralRegion>> {
+    let index = after_leading_explain(tokens);
     let Some(Token::Word(drop)) = tokens.get(index).map(|with_span| &with_span.token) else {
         return Ok(Vec::new());
     };
@@ -853,6 +874,14 @@ mod tests {
             canonical("DROP TEMPORARY FUNCTION IF EXISTS f"),
             "DROP  FUNCTION IF EXISTS f"
         );
+        assert_eq!(
+            canonical("EXPLAIN DROP TEMPORARY FUNCTION IF EXISTS f"),
+            "EXPLAIN DROP  FUNCTION IF EXISTS f"
+        );
+        assert_eq!(
+            canonical("explain extended drop temporary function f"),
+            "explain extended drop  function f"
+        );
         for sql in [
             "SELECT drop temporary FROM (SELECT 1 AS drop) t",
             "SELECT drop\n  temporary FROM (SELECT 1 AS drop) t",
@@ -891,20 +920,5 @@ mod tests {
         ] {
             assert_eq!(canonical(sql), sql);
         }
-    }
-
-    #[test]
-    fn struct_field_access_passes_every_sibling_to_the_display_wrapper() {
-        let rewritten = canonical("SELECT named_struct('a', 1, 'b', no_such_col, 'c', 2.5D).a");
-        assert!(
-            rewritten.ends_with(", (1), ((no_such_col) IS NULL), ((CAST(2.5 AS DOUBLE)) IS NULL))"),
-            "{rewritten}"
-        );
-        let nested =
-            canonical("SELECT named_struct('s', named_struct('a', 1, 'b', x), 'c', y).s.a");
-        assert!(
-            nested.ends_with(", (1), ((y) IS NULL), ((x) IS NULL))"),
-            "{nested}"
-        );
     }
 }

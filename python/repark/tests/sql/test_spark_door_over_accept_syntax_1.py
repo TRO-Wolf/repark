@@ -60,6 +60,7 @@ def active_session(mode: str, root: Path) -> tuple[Any, Any]:
     )
     session.sql("CREATE NAMESPACE IF NOT EXISTS ice.ns").collect()
     base = session.createDataFrame([(1, 2, "notanint", 1)], "a INT, b INT, s STRING, drop INT")
+    base.createOrReplaceTempView("bt")
     return session, base
 
 

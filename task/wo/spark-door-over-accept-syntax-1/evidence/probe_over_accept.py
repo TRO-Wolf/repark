@@ -120,6 +120,58 @@ EXPRESSION_CELLS: list[dict[str, Any]] = [
     {"id": "S25", "role": "neighbour", "item": "named_struct('a', 1, 'b', array(1, 2)).a AS v"},
     {"id": "S26", "role": "neighbour", "item": "named_struct('a', 1, 'b', true).a AS v"},
     {"id": "S27", "role": "neighbour", "item": "named_struct('a', 1, 'b', a).a AS v"},
+    {"id": "S30", "role": "neighbour", "item": "named_struct('a', 1, 'b', upper(5)).a AS v"},
+    {
+        "id": "S31",
+        "role": "neighbour",
+        "item": "named_struct('a', 1, 'b', date_add('2024-01-01', 1)).a AS v",
+    },
+    {"id": "S32", "role": "neighbour", "item": "named_struct('a', 1, 'b', sqrt('4')).a AS v"},
+    {"id": "S33", "role": "neighbour", "item": "named_struct('a', 1, 'b', reverse(123)).a AS v"},
+    {"id": "S34", "role": "neighbour", "item": "named_struct('a', 1, 'b', upper(a)).a AS v"},
+    {"id": "S35", "role": "neighbour", "item": "named_struct('a', 1, 'b', pmod('7', 3)).a AS v"},
+    {
+        "id": "S38",
+        "role": "neighbour",
+        "item": "named_struct('a', 1, 'b', raise_error('boom')).a AS v",
+    },
+    {
+        "id": "S39",
+        "role": "neighbour",
+        "item": "named_struct('a', 1, 'b', monotonically_increasing_id()).a AS v",
+    },
+    {"id": "S40", "role": "neighbour", "item": "named_struct('a', 1, 'b', current_user()).a AS v"},
+    {
+        "id": "S41",
+        "role": "neighbour",
+        "item": "named_struct('a', 1, 'b', assert_true(false)).a AS v",
+    },
+    {"id": "S42", "role": "neighbour", "item": "named_struct('a', 1, 'b', typeof(1 / 0)).a AS v"},
+    {
+        "id": "S43",
+        "role": "neighbour",
+        "item": "named_struct('a', 1, 'b', coalesce(1, 'x')).a AS v",
+    },
+    {
+        "id": "S44",
+        "role": "neighbour",
+        "item": "named_struct('a', 1, 'b', if(true, 1, 'x')).a AS v",
+    },
+    {
+        "id": "S45",
+        "role": "neighbour",
+        "item": "named_struct('a', 1, 'b', (SELECT max(a) FROM bt)).a AS v",
+    },
+    {
+        "id": "S36",
+        "role": "neighbour",
+        "sql": "SELECT 1 AS x, named_struct('a', 1, 'b', x).a AS v",
+    },
+    {
+        "id": "S37",
+        "role": "neighbour",
+        "sql": "SELECT a AS x, named_struct('a', a, 'b', x + 1).a AS v FROM bt",
+    },
     {
         "id": "W01",
         "role": "card",
@@ -235,6 +287,16 @@ STATEMENT_CELLS: list[dict[str, Any]] = [
         "after": "SELECT * FROM probe_drop_view2",
     },
     {"id": "T25", "role": "neighbour", "sql": "DROP TEMPORARY VARIABLE IF EXISTS probe_var"},
+    {
+        "id": "T27",
+        "role": "neighbour",
+        "sql": "EXPLAIN DROP TEMPORARY FUNCTION IF EXISTS probe_missing_function",
+    },
+    {
+        "id": "T28",
+        "role": "neighbour",
+        "sql": "EXPLAIN DROP TEMPORARY VIEW IF EXISTS probe_missing_view",
+    },
     {"id": "T26", "role": "neighbour", "sql": "DROP TEMPORARY TABLE IF EXISTS probe_table"},
 ]
 
@@ -278,6 +340,11 @@ DML_CELLS: list[dict[str, Any]] = [
         "WHEN MATCHED THEN UPDATE SET b = 1e2foo",
     },
     {"id": "U06", "role": "variant", "sql": "DELETE FROM ice.ns.{t} WHERE a = 1e2foo"},
+    {
+        "id": "U07",
+        "role": "neighbour",
+        "sql": "UPDATE ice.ns.{t} SET b = named_struct('p', 5.0D, 'q', 1 / 0).p WHERE a = 2",
+    },
     {"id": "U10", "role": "neighbour", "sql": "UPDATE ice.ns.{t} SET b = 1e2 WHERE a = 1"},
     {"id": "U11", "role": "neighbour", "sql": "UPDATE ice.ns.{t} SET b = 1e2D WHERE a = 1"},
     {
@@ -468,6 +535,7 @@ def main() -> None:
     session, functions = make_session(arguments.engine, arguments.warehouse, arguments.ansi)
     session.sql("CREATE NAMESPACE IF NOT EXISTS ice.ns").collect()
     base = session.createDataFrame([(1, 2, "notanint", 1)], "a INT, b INT, s STRING, drop INT")
+    base.createOrReplaceTempView("bt")
     prefix = arguments.only
     report: dict[str, Any] = {"engine": arguments.engine, "ansi": arguments.ansi, "cells": {}}
     for cell in EXPRESSION_CELLS:

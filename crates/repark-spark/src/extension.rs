@@ -175,7 +175,6 @@ impl SessionExtension for SparkExtension {
                 rules,
             )?;
         let rules = crate::values_marker::insert_values_typing_first(rules)?;
-        let rules = crate::spark_typed::insert_spark_as_siblings_first(rules);
         Ok(repark_functions::generator::with_alias_mark_first(rules))
     }
 

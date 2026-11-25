@@ -47,8 +47,8 @@ mod spark_type_names;
 mod spark_typed;
 mod view_dispatch;
 pub use spark_typed::{
-    FoldSparkNumericCasts, SUFFIX_LITERAL_NAME, SparkProjectionDisplay,
-    insert_spark_as_siblings_first, spark_as_udf, suffix_literal_udf,
+    FoldSparkNumericCasts, SUFFIX_LITERAL_NAME, SparkProjectionDisplay, spark_as_udf,
+    suffix_literal_udf,
 };
 mod table_props_ddl;
 mod table_props_view;

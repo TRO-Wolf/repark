@@ -41,7 +41,7 @@ pub(crate) fn plan_struct_field_regions(
             continue;
         };
         let inners = collect_inners(regions, &starts, sql, call_start, full_end, true);
-        let replacement = if let Some(((value_from, value_to), siblings)) =
+        let replacement = if let Some((value_from, value_to)) =
             extract_named_struct_span(tokens, sql, &starts, found)
         {
             let extracted = splice_inners(sql, value_from, value_to, &inners);
@@ -49,14 +49,8 @@ pub(crate) fn plan_struct_field_regions(
                 sql.get(call_start..call_end).unwrap_or_default(),
                 &found.fields,
             );
-            let mut sibling_args = String::new();
-            for (from, to) in siblings {
-                sibling_args.push_str(", ((");
-                sibling_args.push_str(&splice_inners(sql, from, to, &inners));
-                sibling_args.push_str(") IS NULL)");
-            }
             format!(
-                "{SPARK_AS_NAME}({}, ({extracted}){sibling_args})",
+                "{SPARK_AS_NAME}({}, ({extracted}))",
                 requote_generic(&display)
             )
         } else {
@@ -79,8 +73,6 @@ pub(crate) fn plan_struct_field_regions(
         });
     }
 }
-
-type ByteSpan = (usize, usize);
 
 struct StructFieldMatch {
     name_index: usize,
@@ -151,28 +143,18 @@ fn extract_named_struct_span(
     sql: &str,
     starts: &[usize],
     found: &StructFieldMatch,
-) -> Option<(ByteSpan, Vec<ByteSpan>)> {
+) -> Option<(usize, usize)> {
     let mut args = named_struct_args(tokens, found.name_index)?;
     let mut remaining = found.fields.as_slice();
-    let mut siblings = Vec::new();
     loop {
         let field = remaining.first()?;
-        let position = args.iter().position(|(name, _, _)| name == field)?;
-        for (other, (_name, value_start, value_end)) in args.iter().enumerate() {
-            if other != position {
-                siblings.push(value_byte_span(
-                    tokens,
-                    sql,
-                    starts,
-                    *value_start,
-                    *value_end,
-                )?);
-            }
-        }
-        let (_name, value_start, value_end) = args.get(position).cloned()?;
+        let (_name, value_start, value_end) =
+            args.iter().find(|(name, _, _)| name == field).cloned()?;
         if remaining.len() == 1 {
-            let value = value_byte_span(tokens, sql, starts, value_start, value_end)?;
-            return Some((value, siblings));
+            let from = byte_offset(starts, sql, tokens.get(value_start)?.span.start)?;
+            let last = value_end.saturating_sub(1).max(value_start);
+            let to = byte_offset(starts, sql, tokens.get(last)?.span.end)?;
+            return Some((from, to));
         }
         let Token::Word(word) = &tokens.get(value_start)?.token else {
             return None;
@@ -183,19 +165,6 @@ fn extract_named_struct_span(
         args = named_struct_args(tokens, value_start)?;
         remaining = &remaining[1..];
     }
-}
-
-fn value_byte_span(
-    tokens: &[TokenWithSpan],
-    sql: &str,
-    starts: &[usize],
-    value_start: usize,
-    value_end: usize,
-) -> Option<ByteSpan> {
-    let from = byte_offset(starts, sql, tokens.get(value_start)?.span.start)?;
-    let last = value_end.saturating_sub(1).max(value_start);
-    let to = byte_offset(starts, sql, tokens.get(last)?.span.end)?;
-    Some((from, to))
 }
 
 fn named_struct_args(

@@ -5,7 +5,6 @@ import subprocess
 from pathlib import Path
 
 REWRITES = Path("crates/repark-spark/src/spark_rewrites/mod.rs")
-STRUCT = Path("crates/repark-spark/src/spark_rewrites/struct_field.rs")
 LITERALS = Path("crates/repark-spark/src/spark_literals.rs")
 
 
@@ -48,14 +47,6 @@ def mutate_exponent(_base: str) -> None:
     )
 
 
-def mutate_struct(_base: str) -> None:
-    replace_once(
-        STRUCT,
-        "for (from, to) in siblings {",
-        "for (from, to) in siblings.into_iter().take(0) {",
-    )
-
-
 def mutate_wildcard(base: str) -> None:
     function = main_function(base, "fn plan_wildcard_except_regions", "mutant_wildcard")
     REWRITES.write_text(REWRITES.read_text() + function)
@@ -88,7 +79,6 @@ def mutate_drop(base: str) -> None:
 
 MUTANTS = {
     "exponent": mutate_exponent,
-    "struct": mutate_struct,
     "wildcard": mutate_wildcard,
     "delete": mutate_delete,
     "drop": mutate_drop,
