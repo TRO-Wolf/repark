@@ -83,8 +83,9 @@ paths, session zone `America/New_York`; RePark main `5caea2a5` / `514281bd4` (th
 - **Pins:** Rust unit tests in `crates/repark-core/src/spark_nullable/partition_tests.rs` (11 async tests) and facade
   pins in `python/repark/tests/io/test_parquet_partition_discovery_1.py` (128 original defect pins red on main
   `514281bd4`; 86 Delta 1 F1–F9 pins red on `9656eec2`; all green on head; 4 control pins green throughout). Delta 2
-  adds `partition_layout_tests.rs` (3 Rust tests) and 508 facade cases recorded from Spark (`test_delta2_*`, 180 red
-  on `f514246d9`, the rest controls green on both).
+  adds `partition_layout_tests.rs` (3 Rust tests) and 508 facade cases recorded from Spark in
+  `python/repark/tests/io/test_parquet_partition_discovery_1_delta2.py` (178 red on `f514246d9`, the rest controls
+  green on both).
 
 ## Still unlike Spark
 

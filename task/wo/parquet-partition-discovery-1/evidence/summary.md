@@ -74,7 +74,46 @@ Over `one_level` (`p=1/part-00000-...parquet`, `p=2/part-00000-...parquet`), `wh
   - **F7:** non-hidden 0-byte `.parquet` files refuse with `[FAILED_READ_FILE.CANNOT_READ_FILE_FOOTER]` (`KD001`) while hidden 0-byte files (`_zero.parquet`) remain skipped.
   - **F8:** zero-mantissa decimal precision, `+NaN`/`-NaN`, and Java hex floats match Spark 4.1.2.
 
+## Delta 2 (re-check findings D1-1 to D1-4)
+
+Measured first on live Spark 4.1.2 by `probe_d2.py` (522 cells, both readers, both ANSI modes, session zone `UTC`);
+the full table is [delta2-matrix.md](delta2-matrix.md).
+
+| Engine | Cells equal to Spark (of 522) |
+|---|---:|
+| main `57c92b41` | 96 |
+| `9656eec2` | 360 |
+| `f514246d9` | 334 |
+| Delta 2 head | 512 |
+
+- **D1-1 (base paths):** Spark's `PartitioningUtils.parsePartitions` rule holds on every layout measured: two
+  non-partition prefixes, root beside `sub/`, a `sub/` file (also 0-byte), `a=1/sub/b=2` beside `a=2/sub/b=3`, three
+  bases and mixed depths of non-`=` folders refuse `CONFLICTING_DIRECTORY_STRUCTURES` (before
+  `CONFLICTING_PARTITION_COLUMN_NAMES`); root files, hidden `sub/_hidden.parquet`, `_temporary/` (flat and nested),
+  `.sub/`, a file in the common base directory, `a=1/sub/b=2` alone or beside `a=1/sub/b=3`, trailing and middle
+  non-`=` folders, and base paths that differ only in case answer.
+- **D1-2 (pruning):** the 13 re-check cells and the matrix's `<=>`, `IN ('1')`, `NOT (p <> '1')`, `AND` inside `OR`,
+  two bindings, two columns, upper-case names, a string literal on an `INT` partition, chained `where`, temp views,
+  `CASE`, `1 / p`, `p + 1` and `CAST(p AS DATE)` siblings answer as Spark; `p != 'x'`, `p IN ('1','2')`,
+  `p LIKE '1%'`, `CAST(a AS INT) = 1 AND b = 1`, a binding under `OR`, an `IN` list before the binding, a constant
+  left raising after the binding, and a data-column binding (`CAST(p AS INT) = id AND id = 1`) raise as Spark. ANSI
+  off moves no cell.
+- **D1-3 (0-byte footer):** Spark reads the footer of the first file in path byte order only (`Z.parquet` sorts before
+  `a.parquet`); a 0-byte first file refuses `FAILED_READ_FILE.CANNOT_READ_FILE_FOOTER`, a later one is skipped and
+  still types its partition (`p=x/empty.parquet` beside `p=1/` gives `p:string`), and the refusal comes after both
+  conflict checks. Delta 1 refused five layouts that main or `9656eec2` answered as Spark
+  (`Z04`, `Z05`, `Z08`, `Z11`, `Z15`); Delta 2 answers them.
+- **Replay:** the 719 Step 0 cells and the re-check's `atk1_pruning.py`, `atk2_layouts_doors_writes.py`,
+  `atk2b_followup.py`, `atk_d1_mechanisms.py`, `atk_d1_deep.py`, `repro_and_extra.py` and `repro_d1_findings.py`
+  (681 cells) move 51 cells toward Spark on the Delta 2 head and none away; Step 0 stays at 356/719 with every
+  control (`orc`, `text`, `csv`, `json`, `ICEBERG`) unchanged.
+- **Still unlike Spark:** recorded on the card (a stray non-`.parquet` file, a single 0-byte file read directly, and
+  `CAST(p AS BOOLEAN) = true AND p = '1'`).
+
 ## Pins
 
 - Rust unit pins: `crates/repark-core/src/spark_nullable/partition_tests.rs` (11 async tests covering layouts, pruning, `EmptyExec`, type inference, `partitionColumnTypeInference.enabled`, overlap, Spark hidden rules, root-only unpart filter, trailing-run specs, URL-escaped keys/values, mixed `DATE`+`TIMESTAMP` in UTC/NY, ANSI pruning error propagation/short-circuiting, 0-byte `.parquet` refusal, Java zero-decimal/signed-NaN/hex-float, conflicts, `caseSensitive`, and in-memory S3).
+- Delta 2 pins: `crates/repark-core/src/spark_nullable/partition_layout_tests.rs` (3 Rust tests) and
+  `python/repark/tests/io/test_parquet_partition_discovery_1_delta2.py` (508 cases recorded from Spark, 178 red on
+  `f514246d9`).
 - Facade pins: `python/repark/tests/io/test_parquet_partition_discovery_1.py` (218 test cases across `read.parquet`, `format("parquet").load`, ANSI `true`/`false`, `UTC`/`America/New_York`: 128 original defect pins red on main `514281bd4`; 86 Delta 1 F1–F9 pins red on `9656eec2`; all 218 green on head).
