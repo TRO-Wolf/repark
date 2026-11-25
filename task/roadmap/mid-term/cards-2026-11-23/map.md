@@ -29,7 +29,8 @@ awaits the owner's rating. Each card row records its own status.
   `array_remove`/`make_dt_interval` cells remain on the card's still-unlike-Spark list; evidence in
   [task/wo/try-cast-nonnull-field-1/evidence/](../../../wo/try-cast-nonnull-field-1/evidence/).
 - [CAST-SHIELD-INT-DECIMAL-OVERFLOW-1](cast-shield-int-decimal-overflow-1-card-2026-11-24.md) (S2) — **card:** an
-  integer-to-decimal overflow in a filter is silently false under ANSI.
+  integer-to-decimal overflow in a filter is silently false under ANSI. **Fixed on the branch (2026-11-25, Ruling 1),
+  awaiting merge review;** evidence in [task/wo/cast-shield-int-decimal-overflow-1/evidence/](../../../wo/cast-shield-int-decimal-overflow-1/evidence/).
 - [INSERT-OVERWRITE-CONST-CAST-1](insert-overwrite-const-cast-1-card-2026-11-24.md) (S2) — **card:** an empty
   `INSERT OVERWRITE` with an invalid constant cast wipes the table where Spark refuses.
 - [SPARK-DOOR-OVER-ACCEPT-SYNTAX-1](spark-door-over-accept-syntax-1-card-2026-11-24.md) (S3) — **card:** `1e2foo`,

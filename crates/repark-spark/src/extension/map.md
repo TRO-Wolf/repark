@@ -19,7 +19,7 @@ function-registry + analyzer-rule installation + the composed
 
 ## Contents
 
-- `tests.rs` — `#[cfg(test)] mod tests;` in `../extension.rs`. U2 pins:
+- `tests.rs` — `#[cfg(test)] mod tests;` in `../extension.rs`. U2 pins: CAST-SHIELD-INT-DECIMAL-OVERFLOW-1: `the_spark_door_shields_integer_to_decimal_casts`.
   `configure_defaults_parse_float_as_decimal` (the option is on) and
   `configure_makes_bare_1_23_decimal128_3_2` (collect path, i128=123). U5 pins:
   `configure_defaults_ansi_enabled_true`, `configure_honors_ansi_enabled_false`,

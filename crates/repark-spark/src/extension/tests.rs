@@ -560,3 +560,8 @@ async fn register_composes_the_ta_extension_window_udfs() {
         );
     }
 }
+
+#[test]
+fn the_spark_door_shields_integer_to_decimal_casts() {
+    assert!(SparkExtension.shields_integer_decimal_casts());
+}

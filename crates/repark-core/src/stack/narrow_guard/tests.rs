@@ -224,4 +224,18 @@ async fn plans_without_an_integer_narrowing_call_are_left_borrowed() {
     assert!(shown.contains("CASE WHEN t.id"), "{shown}");
     assert!(shown.contains(&format!("THEN {N}(t.bi) END")), "{shown}");
     assert_eq!(guarded.schema(), plan.schema());
+    let plan = session
+        .sql(&format!(
+            "SELECT id FROM t WHERE random() >= 0 AND id <> 2 AND {N}(bi) = 1"
+        ))
+        .await
+        .expect("plan")
+        .into_optimized_plan()
+        .expect("optimized");
+    let shown = guard_narrow_decimal_plan(&plan)
+        .expect("guard")
+        .display_indent()
+        .to_string();
+    assert!(shown.contains("CASE WHEN t.id != Int64(2) THEN"), "{shown}");
+    assert!(!shown.contains("CASE WHEN random()"), "{shown}");
 }
