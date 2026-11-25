@@ -11,6 +11,8 @@ use object_store::{ObjectStore, ObjectStoreExt};
 
 use crate::session::ReparkSession;
 
+type AppendCase = (&'static str, Vec<(&'static str, Vec<u8>)>, bool, Vec<i64>);
+
 fn parquet_bytes(batch: &RecordBatch) -> Vec<u8> {
     let mut buffer = Vec::new();
     let mut writer =
@@ -87,7 +89,7 @@ async fn s3_write(seed: Vec<(&str, Vec<u8>)>, mode: &str) -> (bool, Vec<i64>, Ve
 
 #[tokio::test]
 async fn an_s3_append_beside_hidden_keys_validates_only_what_spark_reads() {
-    let cases: Vec<(&str, Vec<(&str, Vec<u8>)>, bool, Vec<i64>)> = vec![
+    let cases: Vec<AppendCase> = vec![
         (
             "plain",
             vec![("cell/t/a.parquet", id_bytes(10))],
