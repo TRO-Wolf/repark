@@ -240,8 +240,10 @@ async fn plans_without_an_integer_narrowing_call_are_left_borrowed() {
     let shown = guarded.display_indent().to_string();
     assert!(matches!(guarded, Cow::Owned(_)), "{shown}");
     assert!(shown.contains("CASE WHEN t.id"), "{shown}");
-    assert!(shown.contains(&format!("THEN {N}(t.bi)")), "{shown}");
-    assert!(shown.contains("ELSE Boolean(false) END"), "{shown}");
+    assert!(
+        shown.contains(&format!("IS NOT TRUE THEN Boolean(false) ELSE {N}(t.bi)")),
+        "{shown}"
+    );
     assert_eq!(guarded.schema(), plan.schema());
 }
 

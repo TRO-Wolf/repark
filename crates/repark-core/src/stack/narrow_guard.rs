@@ -10,7 +10,7 @@ use datafusion::logical_expr::expr::{
     AggregateFunction, AggregateFunctionParams, BinaryExpr, Case, ScalarFunction,
 };
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
-use datafusion::logical_expr::utils::{conjunction, split_conjunction_owned};
+use datafusion::logical_expr::utils::{conjunction, disjunction, split_binary_owned};
 use datafusion::logical_expr::{
     Aggregate, Expr, ExprSchemable, Filter, Join, LogicalPlan, Operator, Projection, lit,
 };
@@ -176,14 +176,6 @@ fn guard_aggregate(
     })
 }
 
-fn when_else(when: Expr, then: Expr, otherwise: Expr) -> Expr {
-    Expr::Case(Case::new(
-        None,
-        vec![(Box::new(when), Box::new(then))],
-        Some(Box::new(otherwise)),
-    ))
-}
-
 fn has_integer_argument(args: &[Expr], schema: &DFSchema) -> bool {
     matches!(args, [argument] if matches!(
         argument.get_type(schema),
@@ -220,6 +212,53 @@ fn is_lazy_connective(op: Operator) -> bool {
     matches!(op, Operator::And | Operator::Or)
 }
 
+fn lazy_case(parts: Vec<Expr>, op: Operator) -> Expr {
+    let mut parts = parts;
+    let Some(last) = parts.pop() else {
+        return lit(op == Operator::And);
+    };
+    if parts.is_empty() {
+        return last;
+    }
+    let branches = parts
+        .into_iter()
+        .map(|part| {
+            if op == Operator::And {
+                (
+                    Box::new(Expr::IsNotTrue(Box::new(part))),
+                    Box::new(lit(false)),
+                )
+            } else {
+                (Box::new(part), Box::new(lit(true)))
+            }
+        })
+        .collect();
+    Expr::Case(Case::new(None, branches, Some(Box::new(last))))
+}
+
+fn guard_parts(
+    parts: Vec<Expr>,
+    op: Operator,
+    condition: Option<&Expr>,
+    schema: &DFSchema,
+) -> Result<Option<Expr>> {
+    let Some(last) = parts.iter().rposition(|part| holds_target(part, schema)) else {
+        return Ok(None);
+    };
+    let mut guarded = Vec::with_capacity(parts.len());
+    for part in parts {
+        guarded.push(truth(part, condition, schema)?.data);
+    }
+    let rest = guarded.split_off(last + 1);
+    let head = lazy_case(guarded, op);
+    let joined = std::iter::once(head).chain(rest);
+    Ok(if op == Operator::And {
+        conjunction(joined)
+    } else {
+        disjunction(joined)
+    })
+}
+
 fn chain(
     predicate: Expr,
     condition: Option<&Expr>,
@@ -228,37 +267,15 @@ fn chain(
     if !holds_target(&predicate, schema) {
         return Ok(Transformed::no(predicate));
     }
-    let (volatile, steady): (Vec<Expr>, Vec<Expr>) = split_conjunction_owned(predicate.clone())
-        .into_iter()
-        .partition(Expr::is_volatile);
-    let conjuncts: Vec<Expr> = volatile.into_iter().chain(steady).collect();
-    let Some(last) = conjuncts
-        .iter()
-        .rposition(|conjunct| holds_target(conjunct, schema))
-    else {
-        return Ok(Transformed::no(predicate));
-    };
-    let mut changed = last > 0;
-    let mut guarded = Vec::with_capacity(conjuncts.len());
-    for conjunct in conjuncts {
-        let result = truth(conjunct, condition, schema)?;
-        changed |= result.transformed;
-        guarded.push(result.data);
+    let (volatile, steady): (Vec<Expr>, Vec<Expr>) =
+        split_binary_owned(predicate.clone(), Operator::And)
+            .into_iter()
+            .partition(Expr::is_volatile);
+    let parts: Vec<Expr> = volatile.into_iter().chain(steady).collect();
+    match guard_parts(parts, Operator::And, condition, schema)? {
+        Some(guarded) => Ok(Transformed::yes(guarded)),
+        None => internal_err!("a guarded predicate lost its conjuncts"),
     }
-    if !changed {
-        return Ok(Transformed::no(predicate));
-    }
-    let rest = guarded.split_off(last + 1);
-    let Some(mut nested) = guarded.pop() else {
-        return internal_err!("a guarded conjunct chain lost its last conjunct");
-    };
-    while let Some(before) = guarded.pop() {
-        nested = when_else(before, nested, lit(false));
-    }
-    let Some(predicate) = conjunction(std::iter::once(nested).chain(rest)) else {
-        return internal_err!("a guarded conjunct chain lost its predicate");
-    };
-    Ok(Transformed::yes(predicate))
 }
 
 fn truth(expr: Expr, condition: Option<&Expr>, schema: &DFSchema) -> Result<Transformed<Expr>> {
@@ -266,21 +283,12 @@ fn truth(expr: Expr, condition: Option<&Expr>, schema: &DFSchema) -> Result<Tran
         return Ok(Transformed::no(expr));
     }
     match expr {
-        Expr::BinaryExpr(BinaryExpr { left, op, right })
-            if is_lazy_connective(op) && holds_target(&right, schema) =>
-        {
-            let left = truth(*left, condition, schema)?.data;
-            let right = truth(*right, condition, schema)?.data;
-            Ok(Transformed::yes(if op == Operator::And {
-                when_else(left, right, lit(false))
-            } else {
-                when_else(left, lit(true), right)
-            }))
-        }
-        Expr::BinaryExpr(BinaryExpr { left, op, right }) if is_lazy_connective(op) => {
-            let left = truth(*left, condition, schema)?;
-            Ok(left
-                .update_data(|left| Expr::BinaryExpr(BinaryExpr::new(Box::new(left), op, right))))
+        Expr::BinaryExpr(BinaryExpr { op, .. }) if is_lazy_connective(op) => {
+            let parts = split_binary_owned(expr, op);
+            match guard_parts(parts, op, condition, schema)? {
+                Some(guarded) => Ok(Transformed::yes(guarded)),
+                None => internal_err!("a guarded connective lost its operands"),
+            }
         }
         other => plain(other, condition, schema),
     }
@@ -378,7 +386,7 @@ fn value(
                 Expr::IsNotTrue(Box::new(column.clone()))
             };
             let gated = match condition {
-                Some(before) => layers.define(before.clone().and(gate)),
+                Some(before) => before.clone().and(gate),
                 None => gate,
             };
             let right = value(*right, Some(&gated), schema, layers)?.data;
