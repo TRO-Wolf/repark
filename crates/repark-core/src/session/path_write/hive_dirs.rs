@@ -377,8 +377,8 @@ mod tests {
         spark_partition_segment, spelled_key,
     };
 
-    fn texts(array: ArrayRef) -> Vec<String> {
-        let rendered = hive_partition_texts(&array).unwrap();
+    fn texts(array: &ArrayRef) -> Vec<String> {
+        let rendered = hive_partition_texts(array).unwrap();
         rendered
             .iter()
             .map(|value| value.unwrap().to_string())
@@ -388,14 +388,14 @@ mod tests {
     #[test]
     fn a_null_partition_value_names_the_hive_default_directory() {
         let ints: ArrayRef = Arc::new(Int32Array::from(vec![None, Some(0), Some(-7)]));
-        assert_eq!(texts(ints), [HIVE_DEFAULT_PARTITION, "0", "-7"]);
+        assert_eq!(texts(&ints), [HIVE_DEFAULT_PARTITION, "0", "-7"]);
         let dates: ArrayRef = Arc::new(Date32Array::from(vec![None, Some(0), Some(19_783)]));
         assert_eq!(
-            texts(dates),
+            texts(&dates),
             [HIVE_DEFAULT_PARTITION, "1970-01-01", "2024-03-01"]
         );
         let flags: ArrayRef = Arc::new(BooleanArray::from(vec![None, Some(true), Some(false)]));
-        assert_eq!(texts(flags), [HIVE_DEFAULT_PARTITION, "true", "false"]);
+        assert_eq!(texts(&flags), [HIVE_DEFAULT_PARTITION, "true", "false"]);
     }
 
     #[test]
@@ -407,19 +407,19 @@ mod tests {
             Some(" "),
         ]));
         assert_eq!(
-            texts(plain),
+            texts(&plain),
             [HIVE_DEFAULT_PARTITION, HIVE_DEFAULT_PARTITION, "a", " "]
         );
         let view: ArrayRef = Arc::new(StringViewArray::from(vec![None, Some(""), Some("b")]));
         assert_eq!(
-            texts(view),
+            texts(&view),
             [HIVE_DEFAULT_PARTITION, HIVE_DEFAULT_PARTITION, "b"]
         );
         let dictionary: DictionaryArray<Int8Type> =
             vec![Some("x"), None, Some("")].into_iter().collect();
         let dictionary: ArrayRef = Arc::new(dictionary);
         assert_eq!(
-            texts(dictionary),
+            texts(&dictionary),
             ["x", HIVE_DEFAULT_PARTITION, HIVE_DEFAULT_PARTITION]
         );
     }
@@ -435,7 +435,7 @@ mod tests {
             Some(1e20),
         ]));
         assert_eq!(
-            texts(floats),
+            texts(&floats),
             ["1", "1.5", "NaN", "-0", "inf", "100000000000000000000"]
         );
     }

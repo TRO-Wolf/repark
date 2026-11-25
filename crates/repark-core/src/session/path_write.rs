@@ -580,6 +580,36 @@ struct S3Commit<'a> {
     copy_sql: &'a str,
 }
 
+async fn append_snapshot(
+    store: &dyn ObjectStore,
+    scope: Option<&ObjectPath>,
+    mode: &SaveMode,
+    partitions: &[String],
+    origin: &str,
+) -> Result<Vec<ObjectPath>> {
+    if matches!(mode, SaveMode::Append) && !partitions.is_empty() {
+        list_all_keys(store, scope, origin).await
+    } else {
+        Ok(Vec::new())
+    }
+}
+
+fn copy_statement(
+    parts: &TextWriteCopyParts,
+    target: &str,
+    partitions: &[String],
+    options_clause: &str,
+) -> String {
+    format!(
+        "COPY ({}) TO '{}' STORED AS {}{}{}",
+        parts.select_sql,
+        sql_escape(target),
+        parts.stored_as,
+        partition_clause(partitions),
+        options_clause
+    )
+}
+
 async fn respell_written_keys(
     commit: &S3Commit<'_>,
     scope: Option<&ObjectPath>,
@@ -664,11 +694,8 @@ impl ReparkSession {
             .map_err(|error| Error::DataFusion(format!("invalid S3 destination {url}: {error}")))?;
         let at_root = prefix_text.is_empty();
         let scope = if at_root { None } else { Some(&prefix) };
-        let existing_keys = if matches!(mode, SaveMode::Append) && !resolved_partitions.is_empty() {
-            list_all_keys(&store, scope, url).await?
-        } else {
-            Vec::new()
-        };
+        let existing_keys =
+            append_snapshot(&store, scope, &mode, &resolved_partitions, url).await?;
         match mode {
             SaveMode::ErrorIfExists => {
                 if destination_has_objects(&store, scope, &prefix, at_root, url).await? {
@@ -724,14 +751,7 @@ impl ReparkSession {
         let parts = self.copy_inner_parts(frame, &format, &view, options, &resolved_partitions)?;
         let spec_options_sql = with_text_write_id(parts.spec_options_sql, &view);
         let options_clause = merge_spec_options(options_clause, &spec_options_sql);
-        let copy_sql = format!(
-            "COPY ({}) TO '{}' STORED AS {}{}{}",
-            parts.select_sql,
-            sql_escape(&copy_target),
-            parts.stored_as,
-            partition_clause(&resolved_partitions),
-            options_clause
-        );
+        let copy_sql = copy_statement(&parts, &copy_target, &resolved_partitions, &options_clause);
         let written = hive_dirs::hive_partition_frame(frame.clone(), &resolved_partitions)
             .map_err(engine_err)?;
         let commit = S3Commit {
