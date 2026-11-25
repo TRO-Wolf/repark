@@ -54,13 +54,24 @@ error-if-exists and rollback are unchanged and equal Spark. Pinned on an in-memo
 (`hidden_files_tests.rs`) and measured locally on Spark, main and head
 ([write-paths.md](../../../wo/file-extension-filter-1/evidence/write-paths.md)).
 
+**Integration with #1430 (2026-11-25).** PARQUET-PARTITION-DISCOVERY-1 merged into main first (`9d566e21`) and
+was merged into this branch. Its discovery listing kept a `.parquet` filter and its own hidden-name copy; it now lists
+every name and skips by `hidden_files::spark_hidden_below`, the one home of the rule, and its unpartitioned, glob and
+single-file fallback reads through the Spark listing. Re-measured on live Spark 4.1.2 against #1430's head package
+(`a2b2902f`): this unit's step 0 fixes 114 cells and moves none off Spark; #1430's `probe_d2` (522 cells),
+`repro_d1_findings` (33) and attack (898) regress none. The #1430 cells that change: `L21_part_sub_txt` (4) and
+`B_two_stray_mid` (4) now refuse as Spark does (a `.txt` or suffix-less file inside the partition tree is listed);
+`B_stray_leaf_txt` and `B_two_stray_leaf` (8) answered rows where Spark fails reading the stray file and now refuse
+too, with RePark's Parquet error instead of `FAILED_READ_FILE.NO_HINT`; `path_file1` (2), a suffix-less single file
+under partition directories, refused and now reads its rows without the partition column Spark adds. The card's
+partition layout now answers Spark's ids with `p int`.
+
 ## Still unlike Spark
 
 Measured on head, both ANSI modes:
 
-- **Partition columns:** `p=1/…` directories add no `p` column (PARQUET-PARTITION-DISCOVERY-1, #1430). With `_p=2/`
-  beside `p=1/`, Spark refuses with `CONFLICTING_PARTITION_COLUMN_NAMES`; head reads ids `1, 2` and skips `.p=3/`
-  (main read `1, 2, 3`).
+- **Partition columns** now come from #1430's discovery and equal Spark on the step-0 cells, including the
+  `CONFLICTING_PARTITION_COLUMN_NAMES` refusal for `_p=2/` beside `p=1/`.
 - **`dir/p=*`:** Spark reads ids `1, 2, 3, 4`; RePark refuses with `No files found` (DataFusion's glob matches the file
   name, not the `key=value` directory).
 - **`inputFiles()` omits `_metadata`, `_common_metadata` and 0-byte files**, which Spark lists but never scans; rows
