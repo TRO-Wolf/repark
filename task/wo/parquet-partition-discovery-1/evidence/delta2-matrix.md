@@ -7,6 +7,9 @@ Spark when the error classes match or either side has no class).
 
 Totals over 522 cells: main `57c92b41` 96, `9656eec2` 360, `f514246d9` 334, Delta 2 head 512
 
+With error classes required to match on both sides, the Delta 2 head equals Spark on 506 of the 522 cells, and so does
+the head after the main merge (the F-1 re-check, 2026-11-25).
+
 | Cell | n | Spark 4.1.2 | main `57c92b41` | `9656eec2` | `f514246d9` | Delta 2 head |
 |---|---:|---|---|---|---|---|
 | `LAYOUT/L01_sub1_sub2/ansi=false` | 2 | ERR `CONFLICTING_DIRECTORY_STRUCTURES` | == ERR `AnalysisException` | != `struct<id:bigint,s:string,a:int>` [(1, 'a', 1), (2, 'b', 2)] | != `struct<id:bigint,s:string,a:int>` [(1, 'a', 1), (2, 'b', 2)] | == ERR `CONFLICTING_DIRECTORY_STRUCTURES` |
