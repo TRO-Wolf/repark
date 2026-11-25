@@ -32,12 +32,13 @@ use crate::object_store_s3;
 use crate::partition_discovery::{HIVE_DEFAULT_PARTITION, conflicting_names_message};
 use crate::session::ReparkSession;
 
+use super::hidden_files::spark_hidden_below;
 use super::partition_infer::{
     infer_column_data_type, scalar_from_partition_text, unescape_spark_path_name,
 };
 use super::partition_prune::prune_partitioned_files;
 use super::{
-    FloatBoundsInexactFormat, promote_parquet_null_types, read_parquet_float_bounds_inexact,
+    FloatBoundsInexactFormat, promote_parquet_null_types, read_parquet_spark_listing,
     relax_schema_to_nullable,
 };
 
@@ -269,14 +270,6 @@ fn parent_display_path(table_url: &ListingTableUrl, meta: &ObjectMeta) -> PathBu
     }
 }
 
-fn is_hidden_directory_segment(segment: &str) -> bool {
-    segment.starts_with('.') || (segment.starts_with('_') && !segment.contains('='))
-}
-
-fn is_hidden_file_name(name: &str) -> bool {
-    name.starts_with('.') || name.starts_with('_')
-}
-
 fn parse_relative_specs(relative: &[&str], location: &str) -> Result<(RawPartitionPairs, String)> {
     let dirs = &relative[..relative.len().saturating_sub(1)];
     let mut specs = Vec::new();
@@ -387,13 +380,9 @@ async fn read_parquet_listing_fallback(
     context: &SessionContext,
     resolved: &str,
 ) -> Result<DataFrame> {
-    let inferred = context
-        .read_parquet(resolved, ParquetReadOptions::default())
+    read_parquet_spark_listing(context, resolved)
         .await
-        .map_err(engine_err)?;
-    let relaxed = relax_schema_to_nullable(inferred.schema().as_arrow());
-    let sparked = promote_parquet_null_types(&relaxed);
-    read_parquet_float_bounds_inexact(context, resolved, &sparked).map_err(engine_err)
+        .map_err(engine_err)
 }
 
 type RawPartitionPairs = Vec<(String, Option<String>)>;
@@ -462,7 +451,7 @@ fn refuse_conflicting_directory_structures(
 }
 
 fn normalize_file_dir_url(path: String) -> String {
-    if path.starts_with("file://")
+    if path.starts_with("file:")
         && !path.ends_with('/')
         && let Ok(parsed) = Url::parse(&path)
         && parsed.to_file_path().is_ok_and(|local| local.is_dir())
@@ -500,28 +489,13 @@ pub(crate) async fn read_parquet_discovered(
             .cmp(&right.location.as_ref().to_lowercase())
             .then_with(|| left.location.as_ref().cmp(right.location.as_ref()))
     });
-    let mut had_hidden_parquet = false;
     let mut visible: Vec<DiscoveredEntry> = Vec::new();
     for meta in listed {
         let Some(rel_iter) = table_url.strip_prefix(&meta.location) else {
             continue;
         };
         let relative: Vec<&str> = rel_iter.collect();
-        let Some((&file_name, dirs)) = relative.split_last() else {
-            continue;
-        };
-        let is_parquet = file_name.ends_with(".parquet");
-        let is_hidden = is_hidden_file_name(file_name)
-            || dirs
-                .iter()
-                .any(|segment| is_hidden_directory_segment(segment));
-        if is_hidden {
-            if is_parquet {
-                had_hidden_parquet = true;
-            }
-            continue;
-        }
-        if !is_parquet {
+        if relative.is_empty() || spark_hidden_below(table_url.prefix(), &meta.location) {
             continue;
         }
         let depth = relative.len();
@@ -531,32 +505,20 @@ pub(crate) async fn read_parquet_discovered(
     if visible.is_empty() {
         return read_parquet_listing_fallback(context, &resolved).await;
     }
-    let any_partitioned = visible.iter().any(|(_, specs, _, _)| !specs.is_empty());
-    let (kept, footer): (Vec<DiscoveredEntry>, Option<ObjectMeta>) = if any_partitioned {
-        refuse_conflicting_directory_structures(&table_url, &visible)?;
-        let footer = footer_file(&visible).cloned();
-        let partitioned: Vec<DiscoveredEntry> = visible
-            .into_iter()
-            .filter(|(_, specs, _, _)| !specs.is_empty())
-            .collect();
-        (partitioned, footer)
-    } else {
+    if !visible.iter().any(|(_, specs, _, _)| !specs.is_empty()) {
         let root_only: Vec<DiscoveredEntry> = visible
             .into_iter()
             .filter(|(_, _, depth, _)| *depth == 1)
             .collect();
-        let footer = footer_file(&root_only).cloned();
-        refuse_zero_byte_footer(footer.as_ref())?;
-        if !had_hidden_parquet {
-            return read_parquet_listing_fallback(context, &resolved).await;
-        }
-        if root_only.is_empty() {
-            return Err(Error::Analysis(format!(
-                "Error during planning: No files found at {resolved}"
-            )));
-        }
-        (root_only, footer)
-    };
+        refuse_zero_byte_footer(footer_file(&root_only))?;
+        return read_parquet_listing_fallback(context, &resolved).await;
+    }
+    refuse_conflicting_directory_structures(&table_url, &visible)?;
+    let footer = footer_file(&visible).cloned();
+    let kept: Vec<DiscoveredEntry> = visible
+        .into_iter()
+        .filter(|(_, specs, _, _)| !specs.is_empty())
+        .collect();
     let mut seen_norm: Vec<Vec<String>> = Vec::new();
     let mut display_by_norm: HashMap<Vec<String>, (Vec<String>, PathBuf)> = HashMap::new();
     for (meta, specs, _, _) in &kept {

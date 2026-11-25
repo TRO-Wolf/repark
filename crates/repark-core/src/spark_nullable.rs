@@ -10,7 +10,9 @@ use datafusion::datasource::file_format::file_compression_type::FileCompressionT
 use datafusion::datasource::file_format::options::ReadOptions;
 use datafusion::datasource::file_format::parquet::ParquetFormatFactory;
 use datafusion::datasource::file_format::{FileFormat, FileFormatFactory, FileMeta};
-use datafusion::datasource::listing::{ListingTable, ListingTableConfig, ListingTableUrl};
+use datafusion::datasource::listing::{
+    ListingOptions, ListingTable, ListingTableConfig, ListingTableUrl,
+};
 use datafusion::datasource::physical_plan::parquet::metadata::DFParquetMetadata;
 use datafusion::datasource::physical_plan::{
     FileScanConfig, FileScanConfigBuilder, FileSinkConfig, FileSource,
@@ -24,6 +26,7 @@ use datafusion::prelude::{DataFrame, ParquetReadOptions, SessionConfig, SessionC
 use object_store::{ObjectMeta, ObjectStore};
 
 mod extreme_bounds;
+pub(crate) mod hidden_files;
 pub mod partition;
 mod partition_infer;
 mod partition_prune;
@@ -50,16 +53,42 @@ pub fn relax_schema_to_nullable(schema: &Schema) -> Schema {
     Schema::new_with_metadata(fields, schema.metadata().clone())
 }
 
-pub(super) fn read_parquet_float_bounds_inexact(
+pub(super) async fn read_parquet_spark_listing(
     context: &SessionContext,
-    path: &str,
+    resolved: &str,
+) -> DataFusionResult<DataFrame> {
+    let url = ListingTableUrl::parse(resolved)?;
+    let state = context.state();
+    let session = hidden_files::SparkListingSession::new(&state, url.prefix());
+    let inferred = spark_listing_options(context, None)
+        .infer_schema(&session, &url)
+        .await?;
+    let relaxed = relax_schema_to_nullable(&inferred);
+    let sparked = promote_parquet_null_types(&relaxed);
+    read_parquet_float_bounds_inexact(context, url, &sparked)
+}
+
+fn spark_listing_options(context: &SessionContext, schema: Option<&Schema>) -> ListingOptions {
+    let read = ParquetReadOptions::default();
+    let read = match schema {
+        Some(schema) => read.schema(schema),
+        None => read,
+    };
+    let mut options =
+        read.to_listing_options(&context.copied_config(), context.copied_table_options());
+    options.file_extension = String::new();
+    options
+}
+
+fn read_parquet_float_bounds_inexact(
+    context: &SessionContext,
+    url: ListingTableUrl,
     schema: &Schema,
 ) -> DataFusionResult<DataFrame> {
-    let mut options = ParquetReadOptions::default()
-        .schema(schema)
-        .to_listing_options(&context.copied_config(), context.copied_table_options());
+    let mut options = spark_listing_options(context, Some(schema));
     options.format = Arc::new(FloatBoundsInexactFormat::new(options.format));
-    let config = ListingTableConfig::new(ListingTableUrl::parse(path)?)
+    let root = url.prefix().clone();
+    let config = ListingTableConfig::new(url)
         .with_listing_options(options)
         .with_schema(Arc::new(schema.clone()));
     let provider = ListingTable::try_new(config)?.with_cache(
@@ -68,7 +97,9 @@ pub(super) fn read_parquet_float_bounds_inexact(
             .cache_manager
             .get_file_statistic_cache(),
     );
-    context.read_table(Arc::new(provider))
+    context.read_table(Arc::new(hidden_files::SparkListingTable::new(
+        provider, root,
+    )))
 }
 
 #[must_use]
@@ -574,6 +605,9 @@ fn rebuild_map_entries(entries: &Field, key: &Field, value: &Field, kids: Vec<Fi
 
 #[cfg(test)]
 mod extreme_bounds_tests;
+
+#[cfg(test)]
+mod hidden_files_tests;
 
 #[cfg(test)]
 mod float_bounds_tests;

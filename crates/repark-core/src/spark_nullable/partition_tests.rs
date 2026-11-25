@@ -953,3 +953,34 @@ async fn java_zero_decimal_signed_nan_hex_floats_and_ansi_pruning() {
         .sum();
     assert_eq!(short_rows, 1);
 }
+
+#[tokio::test]
+async fn a_single_slash_file_uri_of_a_partitioned_directory_discovers_its_columns() {
+    let dir = tempfile::tempdir().unwrap();
+    write_parquet_file(
+        &dir.path().join("t/p=1/part-0.parquet"),
+        &id_s_batch(1, "a"),
+    );
+    write_parquet_file(
+        &dir.path().join("t/p=2/part-0.parquet"),
+        &id_s_batch(2, "b"),
+    );
+    let session = ReparkSession::new().unwrap();
+    let uri = format!("file:{}", dir.path().join("t").to_str().unwrap());
+    let frame = session.read_parquet(&uri).await.unwrap();
+    let names: Vec<String> = frame
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect();
+    assert_eq!(names, vec!["id", "s", "p"]);
+    let rows: usize = frame
+        .collect()
+        .await
+        .unwrap()
+        .iter()
+        .map(RecordBatch::num_rows)
+        .sum();
+    assert_eq!(rows, 2);
+}
