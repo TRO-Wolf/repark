@@ -72,7 +72,7 @@ Measured on head, both ANSI modes:
 
 - `crates/repark-core/src/spark_nullable.rs:48,60` (main): `ParquetReadOptions::default()`, whose file extension is
   `.parquet`, so the listing drops every other name. Fixed through
-  `crates/repark-core/src/spark_nullable/hidden_files.rs`; the full inventory is in the evidence summary.
+  `crates/repark-core/src/spark_nullable/hidden_files.rs`; the full inventory heads the evidence table.
 - #1430's partition seat filters by the same suffix; its verifier names `partition.rs:755-757` on that branch.
 
 Up: [map.md](map.md).
