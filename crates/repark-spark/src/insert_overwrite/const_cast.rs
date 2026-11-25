@@ -16,6 +16,7 @@ const WRITER_VIEW: &str = "_repark_writer_";
 const WRITER_V2_VIEW: &str = "_repark_writer_v2_";
 const PROBE: &str = "__repark_const_cast_probe";
 const MAX_DEPTH: usize = 64;
+const IDENTITY_MARKERS: [&str; 1] = ["__repark_decimal_cast_nullable__"];
 const CAST_FUNCTIONS: [&str; 4] = [
     "__repark_parse_java_double__",
     "__repark_parse_java_float__",
@@ -35,6 +36,22 @@ enum Value {
     Text(String),
     Cast(String, Expr, DataType),
     Other,
+}
+
+pub(crate) async fn refuse_overwrite(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    source: &Query,
+) -> Result<()> {
+    refuse_constant_cast(ctx, catalogs, &source.to_string(), Door::Overwrite).await
+}
+
+pub(crate) async fn refuse_overwrite_where(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    source: &Query,
+) -> Result<()> {
+    refuse_constant_cast(ctx, catalogs, &source.to_string(), Door::OverwriteWhere).await
 }
 
 pub(crate) async fn refuse_constant_cast(
@@ -146,7 +163,7 @@ pub(super) fn reads_only_literals(source_sql: &str, door: Door) -> bool {
     allowed && (door == Door::Overwrite || !seen.names.is_empty())
 }
 
-pub(super) fn constant_casts(plan: &LogicalPlan) -> Vec<(String, Expr, DataType)> {
+pub(crate) fn constant_casts(plan: &LogicalPlan) -> Vec<(String, Expr, DataType)> {
     values(plan, 0)
         .unwrap_or_default()
         .into_iter()
@@ -223,6 +240,12 @@ fn value_of(expr: &Expr, input: &[Value], schema: &DFSchema) -> Option<Value> {
 
 fn text_of(expr: &Expr, input: &[Value], schema: &DFSchema) -> Option<String> {
     match unaliased(expr) {
+        Expr::ScalarFunction(marker) if IDENTITY_MARKERS.contains(&marker.func.name()) => {
+            match marker.args.as_slice() {
+                [operand] => text_of(operand, input, schema),
+                _ => None,
+            }
+        }
         Expr::Literal(
             ScalarValue::Utf8(Some(text))
             | ScalarValue::LargeUtf8(Some(text))

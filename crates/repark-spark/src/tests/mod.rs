@@ -75,6 +75,7 @@ mod identifier_fields;
 mod input_file_name;
 mod insert_arity;
 mod insert_overwrite;
+mod insert_overwrite_const_cast;
 mod join_condition_refusals;
 mod join_null_keys;
 #[cfg(unix)]

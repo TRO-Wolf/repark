@@ -246,13 +246,7 @@ pub(crate) async fn execute_replace_where(
     let source_df =
         spark_ast::execute_insert_source(ctx, catalogs, &planning_sql, options.source_by_name)
             .await?;
-    crate::insert_overwrite::const_cast::refuse_constant_cast(
-        ctx,
-        catalogs,
-        &source.to_string(),
-        crate::insert_overwrite::const_cast::Door::OverwriteWhere,
-    )
-    .await?;
+    crate::insert_overwrite::const_cast::refuse_overwrite_where(ctx, catalogs, source).await?;
     let namespace = namespace_schema_name(table.identifier().namespace());
     let base_table = format!(
         "`{catalog_name}`.`{namespace}`.`{}`",
