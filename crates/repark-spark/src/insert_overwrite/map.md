@@ -26,6 +26,17 @@ conformance it calls before staging.
   `__repark_string_to_*__` (`string_integral_cast_parts`) and `__repark_narrow_to_*__` (`narrow_cast_parts`) as the
   `CAST(x AS T)` they replaced, so a laundered empty overwrite still refuses.
 
+- `const_cast.rs` — **INSERT-OVERWRITE-CONST-CAST-1, narrow fix (2026-11-25):** `refuse_constant_cast`, run once by the
+  overwrite doors before they wipe, replace or commit (the empty whole-table arm after the W03 check, the partition path,
+  `replace_where.rs` for `writeTo().overwrite(...)` and `ctas.rs` for a `saveAsTable` overwrite). Under ANSI, when the
+  source reads no named relation (CTEs and the door's own `_repark_writer_` view aside) and plans to projections, filters
+  and aliases over a `FROM`-less `SELECT`, each output column that is a cast of a string literal is judged by the decision
+  table (`spark_cast_raises`: ASCII-letter strings to the integral and microsecond timestamp types, and to `FLOAT` /
+  `DOUBLE` minus `nan`, `inf`, `infinity` and their `d` / `f` forms, measured on Spark 4.1.2). A listed value runs through
+  RePark's own cast on one row, and the guard refuses only with that cast's `[CAST_INVALID_INPUT]` error. Its unit tests
+  pin the table, the scope test and the relation check. Card:
+  [insert-overwrite-const-cast-1](../../../../task/roadmap/mid-term/cards-2026-11-23/insert-overwrite-const-cast-1-card-2026-11-24.md).
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

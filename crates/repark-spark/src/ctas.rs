@@ -202,6 +202,15 @@ pub(crate) async fn execute_ctas(
 
     // Analyze the SELECT before writing so schema, partitioning, and rows share Spark semantics.
     let query = spark_ast::execute_passthrough(ctx, catalogs, &ctas.query_sql).await?;
+    if matches!(mode, CtasMode::Replace) {
+        crate::insert_overwrite::const_cast::refuse_constant_cast(
+            ctx,
+            catalogs,
+            &ctas.query_sql,
+            crate::insert_overwrite::const_cast::Door::SaveAsTable,
+        )
+        .await?;
+    }
     // Re-analyze to a fixpoint.
     let analyzed_plan =
         repark_functions::analyze_eagerly(&ctx.state(), query.logical_plan().clone())?;
