@@ -792,9 +792,10 @@ mod tests {
     }
 
     fn canonical(sql: &str) -> String {
-        literals::canonicalize(sql)
-            .map(std::borrow::Cow::into_owned)
-            .unwrap_or_else(|error| format!("ERR {}", repark_core::engine_err(error)))
+        literals::canonicalize(sql).map_or_else(
+            |error| format!("ERR {}", repark_core::engine_err(error)),
+            std::borrow::Cow::into_owned,
+        )
     }
 
     #[test]

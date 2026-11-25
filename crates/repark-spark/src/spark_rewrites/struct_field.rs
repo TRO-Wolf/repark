@@ -80,6 +80,8 @@ pub(crate) fn plan_struct_field_regions(
     }
 }
 
+type ByteSpan = (usize, usize);
+
 struct StructFieldMatch {
     name_index: usize,
     start: Location,
@@ -149,7 +151,7 @@ fn extract_named_struct_span(
     sql: &str,
     starts: &[usize],
     found: &StructFieldMatch,
-) -> Option<((usize, usize), Vec<(usize, usize)>)> {
+) -> Option<(ByteSpan, Vec<ByteSpan>)> {
     let mut args = named_struct_args(tokens, found.name_index)?;
     let mut remaining = found.fields.as_slice();
     let mut siblings = Vec::new();
@@ -189,7 +191,7 @@ fn value_byte_span(
     starts: &[usize],
     value_start: usize,
     value_end: usize,
-) -> Option<(usize, usize)> {
+) -> Option<ByteSpan> {
     let from = byte_offset(starts, sql, tokens.get(value_start)?.span.start)?;
     let last = value_end.saturating_sub(1).max(value_start);
     let to = byte_offset(starts, sql, tokens.get(last)?.span.end)?;
