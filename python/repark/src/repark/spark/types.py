@@ -1126,15 +1126,12 @@ def _parse_datatype_json_value(
         ):
             return StringType(collations_map[field_path])
         text = str(json_value)
-        spatial = _parse_spatial_json_token(text)
-        if spatial is not None:
+        if (spatial := _parse_spatial_json_token(text)) is not None:
             return spatial
         _refuse_spatial_json_token(text)
-        lowered = text.strip().lower()
-        if lowered.startswith("interval ") and text != " ".join(lowered.split()):
+        if text.strip().lower().startswith("interval ") and text != " ".join(text.lower().split()):
             raise ValueError(f"cannot parse datatype: {text!r}")
-        atomic = _parse_atomic_token(text)
-        if atomic is not None:
+        if (atomic := _parse_atomic_token(text)) is not None:
             return atomic
         # Fall through to complex simpleString forms.
         return _parse_complex_or_atomic(text)
