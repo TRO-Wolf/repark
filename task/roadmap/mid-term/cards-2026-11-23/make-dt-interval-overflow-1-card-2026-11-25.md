@@ -51,6 +51,8 @@ The full list with cell counts is in the evidence summary. The shapes that touch
   raises the overflow of a filtered-out row (20 cells), where Spark answers the kept row. DataFusion's
   `FilterExec::try_swapping_with_projection` moves the projection below the filter. Main does the same for every
   raising expression (`CAST(d + h + m AS SMALLINT)` raises `CAST_OVERFLOW`), so this needs its own card.
+  In 14 of the 20 cells (7 per ANSI mode, `pq#1`, `#4`, `#7` to `#10` and `#13`) main answered Spark's rows under the
+  `string` type, so these cells keep their values on main and raise on head. No cell equal to Spark on main moves.
 - **`F.expr` decimal literals.** `F.expr("make_dt_interval(0, 0, 0, 0.1)")` types `0.1` as `double`, so `r` is nullable
   (Spark: not nullable), and `-999999999999.999999` rounds to `-1E12` and answers NULL or raises (44 cells).
 - **SQL `999999999999.9999D`** arrives as `1E12` and answers NULL or raises (2 cells).
