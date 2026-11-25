@@ -3,7 +3,7 @@
 **Date:** 2026-11-25. **Filed by:** the orchestrator (`claude-opus-5-5`), from the separate shapes on the
 TRY-CAST-NONNULL-FIELD-1 card, re-measured here. **Severity:** S1 (owner, 2026-11-25): a silent wrong read. Where
 Spark raises, RePark answers NULL, and where Spark answers a large interval, RePark answers NULL too.
-**Status:** fixed on `fix/make-dt-interval-overflow-1` (PR #1435; delta-1 product head `aa2270aaf`), not merged.
+**Status:** fixed on `fix/make-dt-interval-overflow-1` (PR #1435; delta-2 product head `f84548819`), not merged.
 
 ## Measured
 
@@ -80,13 +80,17 @@ The widening made `DataFrame.schema` hand out `DayTimeIntervalType`, which RePar
 - `repark_type_to_arrow(DayTimeIntervalType())` is `duration[us]`, as PySpark's `to_arrow_type`;
 - a double seconds argument converts through a numeric fast path, and the overflow text is built only on the error
   path. Over one million rows (median of 5, two rounds): double 0.032–0.037 s against main 0.028–0.031 s (was 0.32 s),
-  decimal 0.047 s against 0.052–0.061 s (was 0.19 s), int 0.020 s against 0.035 s (was 0.043 s).
+  decimal 0.047 s against 0.052–0.061 s (was 0.19 s), int 0.020 s against 0.035 s (was 0.043 s). The verifier
+  measured doubles at 1.29–1.31× main, and these runs reach 1.33× (0.0371 s against 0.0279 s). Doubles that take the
+  exact path (about 2.8e8 s or more, or on a `.5` boundary at 6 places) cost about 8× main: 0.33 s against 0.039 s.
 
 Consumers measured in [consumers.md](../../../wo/make-dt-interval-overflow-1/evidence/consumers.md): 116 cells, 34
 fixed, 16 equal on both, 0 moved off Spark. The verifier's 191 widening cells and 211 edge cells move off Spark nowhere.
 Still unlike Spark there:
-- **`createDataFrame(rows, schema)`** with a `DayTimeIntervalType` field (a `StructType`, a DDL string or `fromJson`)
-  stores the `timedelta` as text typed `string`, as on main.
+- **`createDataFrame(rows, schema)`** with a `DayTimeIntervalType` field given as a `StructType` (or `fromJson`)
+  stores the `timedelta` as text typed `string`, as on main. Given as a DDL string, main refuses the schema
+  (`PySparkTypeError: createDataFrame schema string must be a DDL field list`); delta 1 made that answer a silent
+  `string`, and delta 2 restores main's refusal.
 - **`describe("t")` / `describe("id", "t")`** refuse with `describe/summary columns must be numeric or string`, where
   Spark drops the interval column (main answered statistics for it); `describe()` with no arguments equals Spark.
 - **Python UDFs** declaring `DayTimeIntervalType` refuse (`does not map to a concrete Arrow scalar type`), as on main.
@@ -94,5 +98,27 @@ Still unlike Spark there:
   seconds or parses the text; `selectExpr("CAST(t AS INTERVAL DAY TO SECOND)")` and the SQL spelling are parser errors,
   as on main.
 - **`spark.read.schema("t interval day to second").json(…)`** refuses, where Spark reads the column.
+- **`from_json(j, "t interval day to second")`** raises `PARSE_SYNTAX_ERROR` on main and head, where Spark answers.
+- **A Python UDF's input** arrives as the text `"1 day, 2:03:04.500000"`, not a `timedelta`, on main and head.
+- **`toPandas()` dtypes** are `timedelta64[us]`, where Spark gives `timedelta64[ns]`.
+- **`write.parquet` then `read.schema(…).parquet`** refuses on main and head (`schema(...) is not applied on parquet
+  reads yet`), where Spark reads the interval back.
+- **`summary()`** refuses on main and head, where Spark answers.
+
+## Delta 2 (2026-11-25): the DDL-string schema and `interval X to X`
+
+- `createDataFrame(rows, "id int, x interval day to second")` (any ANSI interval field, nested too) refuses again with
+  main's `PySparkTypeError` (`python/repark/src/repark/spark/session/create_dataframe_schema.py::_parse_schema_ddl`);
+  `applyInPandas` and `mapInPandas` DDL return schemas take the same path. A `StructType` schema, including one built
+  by `fromDDL` or `fromJson`, still stores the text as `string`, as on main.
+- `interval X to X` and reversed ranges raise as Spark's `PARSE_SYNTAX_ERROR` does
+  (`crates/repark-spark/src/type_table/parse.rs::ansi_interval_type`), on `fromDDL`, `_parse_datatype_string`,
+  `read.schema` and `createDataFrame`.
+- Still unlike Spark, refused on main: PySpark's `fromJson` reads interval type names by prefix, so it takes
+  `interval day to day` (as `interval day`) and `interval year to day`; RePark refuses those 35 spellings.
+  `Column.cast` and SQL `CAST` to any interval other than `interval day to second` refuse; `read.schema` with an
+  interval field refuses on CSV, JSON and Parquet.
+- Pins: `python/repark/tests/types/test_make_dt_interval_ddl_schema.py` (112 tests; 73 red on the delta-1 head, 15 red
+  on main) and five more refusals in `crates/repark-spark/src/type_table/tests.rs`.
 
 Up: [map.md](map.md).
