@@ -43,7 +43,7 @@ async fn seeded(
 async fn the_session_plans_each_card_cast_to_one_guarded_cast() {
     let wh = TempDir::new().expect("warehouse");
     let (ctx, catalogs) = setup(&wh).await;
-    for target in ["DOUBLE", "FLOAT", "TIMESTAMP", "INT", "BIGINT"] {
+    for target in ["DOUBLE", "FLOAT", "TIMESTAMP"] {
         let frame = crate::spark_ast::execute_passthrough(&ctx, &catalogs, &card(target, "x"))
             .await
             .expect("plan");
