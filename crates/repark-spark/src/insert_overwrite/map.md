@@ -34,7 +34,8 @@ conformance it calls before staging.
   table (`spark_cast_raises`: ASCII-letter strings to the integral and microsecond timestamp types, and to `FLOAT` /
   `DOUBLE` minus `nan`, `inf`, `infinity` and their `d` / `f` forms, measured on Spark 4.1.2). A listed value runs through
   RePark's own cast on one row, and the guard refuses only with that cast's `[CAST_INVALID_INPUT]` error. A cast's
-  operand may sit in the session's `__repark_decimal_cast_nullable__` identity marker. Its unit tests pin the table,
+  operand may sit in the session's `__repark_decimal_cast_nullable__` identity marker. It stands down while the session
+  holds a cached frame (`session_holds_cache`, read by the router into `StatementWriteOptions::cached_frames`). Its unit tests pin the table,
   the scope test and the relation check; `tests/insert_overwrite_const_cast.rs` plans through a full session. Card:
   [insert-overwrite-const-cast-1](../../../../task/roadmap/mid-term/cards-2026-11-23/insert-overwrite-const-cast-1-card-2026-11-24.md).
 
