@@ -1130,6 +1130,9 @@ def _parse_datatype_json_value(
         if spatial is not None:
             return spatial
         _refuse_spatial_json_token(text)
+        lowered = text.strip().lower()
+        if lowered.startswith("interval ") and text != " ".join(lowered.split()):
+            raise ValueError(f"cannot parse datatype: {text!r}")
         atomic = _parse_atomic_token(text)
         if atomic is not None:
             return atomic

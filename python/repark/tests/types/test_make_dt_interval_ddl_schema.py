@@ -9,7 +9,7 @@ import pytest
 from repark import ReparkSession
 from repark.errors import PySparkTypeError
 from repark.spark._type_table import _parse_datatype_string
-from repark.spark.types import DataType
+from repark.spark.types import DataType, StructType
 
 DDL_CELLS = {
     "interval year": "interval year",
@@ -102,6 +102,35 @@ def test_interval_ddl_spelling_answers_spark(spelling: str) -> None:
                 parse()
         else:
             assert parse().simpleString() == answer, door
+
+
+JSON_CELLS = {
+    "interval hour to second": "interval hour to second",
+    "interval minute to second": "interval minute to second",
+    "INTERVAL HOUR TO SECOND": None,
+    "interval  minute  to  second": None,
+    "Interval Year To Year": None,
+    " interval day": None,
+}
+
+
+@pytest.mark.parametrize("nested", [False, True])
+@pytest.mark.parametrize("spelling", sorted(JSON_CELLS))
+def test_interval_json_spelling_answers_spark(spelling: str, nested: bool) -> None:
+    expected = JSON_CELLS[spelling]
+    field_type = (
+        {"type": "array", "elementType": spelling, "containsNull": True} if nested else spelling
+    )
+    document = {
+        "type": "struct",
+        "fields": [{"name": "c", "type": field_type, "nullable": True, "metadata": {}}],
+    }
+    if expected is None:
+        with pytest.raises(ValueError, match="cannot parse datatype"):
+            StructType.fromJson(document)
+        return
+    inner = f"array<{expected}>" if nested else expected
+    assert StructType.fromJson(document).simpleString() == f"struct<c:{inner}>"
 
 
 @pytest.mark.parametrize("schema", CDF_SCHEMAS)
