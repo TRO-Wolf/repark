@@ -86,9 +86,7 @@ the S3 overwrite check and the semantic hash. Evidence: `task/wo/file-extension-
 - `hidden_files_tests.rs` — the name table (Spark's writer markers, `_metadata`, `_k=1.parquet`, `._COPYING_`), the
   segment table (partition directories, hidden roots, single files), and `read_parquet` over a flat directory with
   every marker, partition directories, single files with any suffix and hidden names, a hidden root directory, a
-  glob, and the wrapped listing's S3 overwrite check; on an in-memory S3 bucket, an append beside `_b.parquet`,
-  `.c.parquet` (also not Parquet or another schema), `_temporary/…` junk or hidden keys alone succeeds, a visible key
-  of another schema still refuses, and an overwrite still clears hidden keys.
+  glob, and the wrapped listing's S3 overwrite check. The S3 append pins are `../session/tests/hidden_append.rs`.
 
 - `int96_tests.rs` — a low-level `INT96` file (2025, year 2999 and 1960 instants, a NULL) beside an `INT64`
   not-adjusted leaf: `read_parquet` and `CREATE EXTERNAL TABLE … STORED AS PARQUET` read `Timestamp(Microsecond,

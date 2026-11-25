@@ -477,6 +477,19 @@ async fn delete_prefix_objects(
     Ok(locations.len())
 }
 
+fn visible_part_urls(existing: &[ObjectPath], prefix: &ObjectPath, bucket: &str) -> Vec<String> {
+    existing
+        .iter()
+        .filter(|key| !spark_hidden_below(prefix, key))
+        .map(|key| {
+            format!(
+                "s3://{bucket}/{}",
+                object_store_s3::encode_s3_key_for_url(key.as_ref())
+            )
+        })
+        .collect()
+}
+
 async fn list_part_keys(
     store: &dyn ObjectStore,
     scope: Option<&ObjectPath>,
@@ -653,20 +666,8 @@ impl ReparkSession {
                     )));
                 }
                 let existing = list_part_keys(&store, scope, format.extension(), url).await?;
-                let visible: Vec<&ObjectPath> = existing
-                    .iter()
-                    .filter(|key| !spark_hidden_below(&prefix, key))
-                    .collect();
-                if !visible.is_empty() {
-                    let part_urls: Vec<String> = visible
-                        .iter()
-                        .map(|key| {
-                            format!(
-                                "s3://{bucket}/{}",
-                                object_store_s3::encode_s3_key_for_url(key.as_ref())
-                            )
-                        })
-                        .collect();
+                let part_urls = visible_part_urls(&existing, &prefix, &bucket);
+                if !part_urls.is_empty() {
                     self.validate_append(
                         &format,
                         frame.schema().inner(),
