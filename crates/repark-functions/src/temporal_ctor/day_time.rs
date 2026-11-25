@@ -10,8 +10,9 @@ use arrow::datatypes::{
 };
 use datafusion::common::{Result, ScalarValue};
 use datafusion::error::DataFusionError;
+use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{
-    ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
+    ColumnarValue, Expr, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
     Volatility,
 };
 
@@ -25,6 +26,7 @@ const SECONDS_SCALE: i32 = 6;
 const SECONDS_UNSCALED_LIMIT: i128 = 1_000_000_000_000_000_000;
 const SECONDS_INTEGRAL_DIGITS: i32 = 12;
 const MAX_ARGS: usize = 4;
+const FAST_PATH_MARGIN: f64 = 0.25;
 
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
@@ -34,6 +36,82 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
 #[must_use]
 pub fn make_dt_interval_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::new_from_impl(MakeDtInterval::new()))
+}
+
+#[must_use]
+pub fn day_time_cast_expr(expr: Expr, try_cast: bool) -> Expr {
+    Expr::ScalarFunction(ScalarFunction::new_udf(
+        Arc::new(ScalarUDF::new_from_impl(DayTimeCast::new(try_cast))),
+        vec![expr],
+    ))
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+struct DayTimeCast {
+    signature: Signature,
+    try_cast: bool,
+}
+
+impl DayTimeCast {
+    fn new(try_cast: bool) -> Self {
+        Self {
+            signature: Signature::user_defined(Volatility::Immutable),
+            try_cast,
+        }
+    }
+}
+
+impl ScalarUDFImpl for DayTimeCast {
+    fn name(&self) -> &str {
+        if self.try_cast {
+            "__repark_try_cast_day_time__"
+        } else {
+            "__repark_cast_day_time__"
+        }
+    }
+
+    fn signature(&self) -> &Signature {
+        &self.signature
+    }
+
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(DataType::Duration(TimeUnit::Microsecond))
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs) -> Result<FieldRef> {
+        let nullable = self.try_cast || args.arg_fields.iter().any(|field| field.is_nullable());
+        Ok(Arc::new(Field::new(
+            self.name(),
+            DataType::Duration(TimeUnit::Microsecond),
+            nullable,
+        )))
+    }
+
+    fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
+        match arg_types {
+            [DataType::Duration(TimeUnit::Microsecond) | DataType::Null] => {
+                Ok(vec![DataType::Duration(TimeUnit::Microsecond)])
+            }
+            [other] => Err(plan_error(format!(
+                "[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve the cast because of \
+                 a data type mismatch: cannot cast \"{}\" to \"INTERVAL DAY TO SECOND\". SQLSTATE: 42K09",
+                crate::spark_math::spark_type_name(other).to_uppercase()
+            ))),
+            _ => Err(plan_error(format!(
+                "a day-time interval cast takes one argument, got {}",
+                arg_types.len()
+            ))),
+        }
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        match args.args.into_iter().next() {
+            Some(value) => Ok(value),
+            None => Err(exec_error(
+                "a day-time interval cast takes one argument".to_string(),
+            )),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -290,6 +368,23 @@ fn day_time_micros(day: i64, hour: i64, min: i64, micros: i64) -> Result<i64> {
     total.ok_or_else(interval_overflow)
 }
 
+#[derive(Clone, Copy)]
+enum Shown {
+    Int(i64),
+    Float(f64),
+    Decimal(i128, i8),
+}
+
+impl Shown {
+    fn text(self) -> String {
+        match self {
+            Self::Int(value) => value.to_string(),
+            Self::Float(value) => value.to_string(),
+            Self::Decimal(value, scale) => decimal_text(value, scale),
+        }
+    }
+}
+
 fn seconds_micros(seconds: &Seconds<'_>, row: usize, ansi: bool) -> Result<Option<i64>> {
     let (unscaled, shown) = match seconds {
         Seconds::Zero => return Ok(Some(0)),
@@ -297,22 +392,22 @@ fn seconds_micros(seconds: &Seconds<'_>, row: usize, ansi: bool) -> Result<Optio
             if values.is_null(row) {
                 return Ok(None);
             }
-            let value = values.value(row);
-            (rescale(i128::from(value), 0), value.to_string())
+            let value = i64::from(values.value(row));
+            (rescale(i128::from(value), 0), Shown::Int(value))
         }
         Seconds::Int64(values) => {
             if values.is_null(row) {
                 return Ok(None);
             }
             let value = values.value(row);
-            (rescale(i128::from(value), 0), value.to_string())
+            (rescale(i128::from(value), 0), Shown::Int(value))
         }
         Seconds::Float(values) => {
             if values.is_null(row) || !values.value(row).is_finite() {
                 return Ok(None);
             }
             let value = values.value(row);
-            (float_unscaled(value), value.to_string())
+            (float_unscaled(value), Shown::Float(value))
         }
         Seconds::Decimal(values, scale) => {
             if values.is_null(row) {
@@ -321,13 +416,13 @@ fn seconds_micros(seconds: &Seconds<'_>, row: usize, ansi: bool) -> Result<Optio
             let value = values.value(row);
             (
                 rescale(value, i32::from(*scale)),
-                decimal_text(value, *scale),
+                Shown::Decimal(value, *scale),
             )
         }
     };
     match unscaled.and_then(|value| i64::try_from(value).ok()) {
         Some(micros) => Ok(Some(micros)),
-        None if ansi => Err(seconds_out_of_range(&shown)),
+        None if ansi => Err(seconds_out_of_range(&shown.text())),
         None => Ok(None),
     }
 }
@@ -360,6 +455,26 @@ fn round_half_up(magnitude: i128, shift: u32) -> i128 {
 }
 
 fn float_unscaled(value: f64) -> Option<i128> {
+    float_unscaled_fast(value).or_else(|| float_unscaled_exact(value))
+}
+
+#[allow(clippy::cast_possible_truncation)]
+fn float_unscaled_fast(value: f64) -> Option<i128> {
+    let magnitude = (value * 1_000_000.0).abs();
+    let margin = 4.0 * magnitude * f64::EPSILON;
+    let fraction = magnitude - magnitude.floor();
+    if margin >= FAST_PATH_MARGIN || (fraction - 0.5).abs() <= margin {
+        return None;
+    }
+    let rounded = magnitude.round() as i128;
+    Some(if value.is_sign_negative() {
+        -rounded
+    } else {
+        rounded
+    })
+}
+
+fn float_unscaled_exact(value: f64) -> Option<i128> {
     let text = format!("{:e}", value.abs());
     let (mantissa, exponent) = text.split_once('e')?;
     let exponent: i32 = exponent.parse().ok()?;

@@ -1010,9 +1010,9 @@ def _parse_atomic_token(token: str) -> DataType | None:
         return StringType(match.group(1))
     if lower == "decimal":
         return DecimalType()
-    if lower.startswith("time"):
-        return TimeType()
-    return None
+    if lower.startswith("interval "):
+        return _parse_datatype_string(lower)
+    return TimeType() if lower.startswith("time") else None
 
 
 def _split_top_level(text: str, separator: str = ",") -> list[str]:

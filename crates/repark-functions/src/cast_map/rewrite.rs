@@ -32,6 +32,9 @@ pub fn map_cast_token(type_text: &str) -> Option<String> {
     if type_text.trim().eq_ignore_ascii_case("timestamp_ntz") {
         return Some("TIMESTAMP_NTZ".to_string());
     }
+    if type_text.trim().eq_ignore_ascii_case("intervaldaytosecond") {
+        return Some("INTERVAL DAY TO SECOND".to_string());
+    }
     None
 }
 

@@ -237,3 +237,87 @@ fn decimal_text_renders_plain() {
     assert_eq!(decimal_text(5, 2), "0.05");
     assert_eq!(decimal_text(12, 0), "12");
 }
+
+#[test]
+fn float_fast_path_agrees_with_the_exact_conversion() {
+    let mut state: u64 = 0x2545_f491_4f6c_dd1d;
+    let mut fast_hits = 0_usize;
+    let mut checked = 0_usize;
+    let mut values = vec![
+        0.0,
+        -0.0,
+        4.5,
+        0.123_456_5,
+        1.000_000_5,
+        5.0e-7,
+        -5.0e-7,
+        59.999_999_5,
+    ];
+    for step in 0..2000 {
+        values.push(f64::from(step) / 7.0);
+        values.push(f64::from(step) * 1e-6 + 5e-7);
+        values.push(-(f64::from(step) * 0.000_001_5));
+    }
+    for _ in 0..20000 {
+        state ^= state << 13;
+        state ^= state >> 7;
+        state ^= state << 17;
+        let mantissa = f64::from(u32::try_from(state >> 40).unwrap()) / f64::from(1_u32 << 24);
+        let exponent = i32::try_from(state % 30).unwrap() - 12;
+        values.push(mantissa * 10_f64.powi(exponent));
+    }
+    for value in values {
+        checked += 1;
+        if let Some(fast) = float_unscaled_fast(value) {
+            fast_hits += 1;
+            assert_eq!(Some(fast), float_unscaled_exact(value), "{value:e}");
+        }
+    }
+    assert!(fast_hits * 2 > checked, "{fast_hits} of {checked}");
+}
+
+#[tokio::test]
+async fn day_time_cast_keeps_durations_and_refuses_other_types() {
+    let ctx = ctx(true);
+    let frame = ctx
+        .sql("SELECT make_dt_interval(1, 2, 3, CAST(4.5 AS DOUBLE)) AS d, CAST(1 AS INT) AS i")
+        .await
+        .unwrap();
+    let casted = frame
+        .clone()
+        .select(vec![
+            day_time_cast_expr(datafusion::prelude::col("d"), false),
+            day_time_cast_expr(datafusion::prelude::lit(ScalarValue::Null), true),
+        ])
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    let column = casted[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<DurationMicrosecondArray>()
+        .unwrap()
+        .clone();
+    assert_eq!(
+        column.value(0),
+        MICROS_PER_DAY + 2 * MICROS_PER_HOUR + 3 * MICROS_PER_MINUTE + 4_500_000
+    );
+    assert!(casted[0].column(1).is_null(0));
+    let refused = match frame.select(vec![day_time_cast_expr(
+        datafusion::prelude::col("i"),
+        false,
+    )]) {
+        Err(error) => error.to_string(),
+        Ok(selected) => selected
+            .collect()
+            .await
+            .err()
+            .map(|error| error.to_string())
+            .unwrap_or_default(),
+    };
+    assert!(
+        refused.contains("[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION]"),
+        "{refused}"
+    );
+}

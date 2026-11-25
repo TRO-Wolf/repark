@@ -309,6 +309,9 @@ pub fn arrow_type_from_spark(data_type: &SparkDataType) -> Result<ArrowDataType,
             ArrowDataType::Timestamp(TimeUnit::Microsecond, Some(Arc::from("UTC")))
         }
         SparkDataType::TimestampNtz => ArrowDataType::Timestamp(TimeUnit::Microsecond, None),
+        SparkDataType::DayTimeInterval { start, end } if start == "day" && end == "second" => {
+            ArrowDataType::Duration(TimeUnit::Microsecond)
+        }
         SparkDataType::Decimal { precision, scale } => {
             if !(1..=38).contains(precision) {
                 return Err(TypeTableError::DecimalPrecision {

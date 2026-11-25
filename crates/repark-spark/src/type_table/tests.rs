@@ -120,3 +120,42 @@ fn spatial_arrow_mapping_refuses_naming_the_type() {
         assert!(error.to_string().contains(&simple), "{simple}");
     }
 }
+
+#[test]
+fn ansi_interval_ddl_spellings_parse() {
+    for (ddl, expected) in [
+        ("interval day to second", "interval day to second"),
+        ("INTERVAL DAY TO SECOND", "interval day to second"),
+        ("interval hour to minute", "interval hour to minute"),
+        ("interval second", "interval second"),
+        ("interval year to month", "interval year to month"),
+        (
+            "t interval day to second",
+            "struct<t:interval day to second>",
+        ),
+        (
+            "array<interval day to second>",
+            "array<interval day to second>",
+        ),
+    ] {
+        let parsed = parse_ddl(ddl).map(|data_type| simple_string(&data_type));
+        assert_eq!(parsed.ok().as_deref(), Some(expected), "{ddl}");
+    }
+    for ddl in [
+        "interval second to day",
+        "interval year to second",
+        "interval week",
+    ] {
+        assert!(parse_ddl(ddl).is_err(), "{ddl} refuses");
+    }
+    let day_time = SparkDataType::DayTimeInterval {
+        start: "day".to_string(),
+        end: "second".to_string(),
+    };
+    assert_eq!(
+        arrow_type_from_spark(&day_time).ok(),
+        Some(ArrowDataType::Duration(
+            datafusion::arrow::datatypes::TimeUnit::Microsecond
+        ))
+    );
+}
