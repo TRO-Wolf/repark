@@ -11,7 +11,7 @@ use repark_functions::timestamp_ntz_cast::{TIMESTAMP_NTZ_CAST_NAME, TRY_TIMESTAM
 use super::{function_call, null_expr};
 
 pub(super) fn is_explicit_timestamp_ltz_cast(node: &Expr) -> bool {
-    matches!(
+    if matches!(
         node,
         Expr::Cast {
             data_type,
@@ -19,7 +19,29 @@ pub(super) fn is_explicit_timestamp_ltz_cast(node: &Expr) -> bool {
             format: None,
             ..
         } if data_type.to_string().eq_ignore_ascii_case("timestamp_ltz")
-    )
+    ) {
+        return true;
+    }
+    typed_string_ltz_text(node).is_some()
+}
+
+fn typed_string_ltz_text(node: &Expr) -> Option<String> {
+    let Expr::TypedString(typed) = node else {
+        return None;
+    };
+    let explicit_ltz = typed
+        .data_type
+        .to_string()
+        .eq_ignore_ascii_case("timestamp_ltz");
+    let bare_timestamp = matches!(
+        typed.data_type,
+        DataType::Timestamp(None, TimezoneInfo::None)
+    );
+    if !explicit_ltz && !bare_timestamp {
+        return None;
+    }
+    let text = typed_string_text(&typed.value.value)?;
+    (explicit_ltz || string_carries_timezone(&text)).then_some(text)
 }
 
 pub(super) fn lower_explicit_timestamp_ltz_cast(node: &mut Expr) -> bool {
@@ -38,6 +60,16 @@ pub(super) fn lower_explicit_timestamp_ltz_cast(node: &mut Expr) -> bool {
         };
         let value = std::mem::replace(expr, Box::new(null_expr()));
         *node = function_call(name, vec![*value]);
+        return true;
+    }
+    if let Some(text) = typed_string_ltz_text(node) {
+        *node = function_call(
+            TIMESTAMP_LTZ_CAST_NAME,
+            vec![Expr::Value(ValueWithSpan {
+                value: Value::SingleQuotedString(text),
+                span: Span::empty(),
+            })],
+        );
         return true;
     }
     false
@@ -103,29 +135,6 @@ pub(super) fn lower_fragment_timestamp_ltz_cast(node: &mut Expr) -> bool {
         **expr = function_call(DECIMAL_CAST_NULLABLE_NAME, vec![*value]);
         return true;
     }
-    if let Expr::TypedString(typed) = node {
-        let explicit_ltz = typed
-            .data_type
-            .to_string()
-            .eq_ignore_ascii_case("timestamp_ltz");
-        let bare_timestamp = matches!(
-            typed.data_type,
-            DataType::Timestamp(None, TimezoneInfo::None)
-        );
-        if (explicit_ltz || bare_timestamp)
-            && let Some(text) = typed_string_text(&typed.value.value)
-            && (explicit_ltz || string_carries_timezone(&text))
-        {
-            *node = function_call(
-                TIMESTAMP_LTZ_CAST_NAME,
-                vec![Expr::Value(ValueWithSpan {
-                    value: Value::SingleQuotedString(text),
-                    span: Span::empty(),
-                })],
-            );
-            return true;
-        }
-    }
     false
 }
 
@@ -171,6 +180,15 @@ mod tests {
         );
         let nested = "SELECT CAST(a AS ARRAY<TIMESTAMP_NTZ>) AS v";
         assert_eq!(lowered(nested).to_string(), nested);
+        let zoned = lowered(
+            "SELECT TIMESTAMP '2024-01-01 02:00:00Z' AS a, TIMESTAMP '2024-01-01 02:00:00' AS b",
+        )
+        .to_string();
+        assert!(
+            zoned.contains("__repark_cast_timestamp_ltz__('2024-01-01 02:00:00Z') AS a")
+                && zoned.contains("TIMESTAMP '2024-01-01 02:00:00' AS b"),
+            "{zoned}"
+        );
     }
 
     #[test]

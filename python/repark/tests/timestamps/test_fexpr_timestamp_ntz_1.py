@@ -937,3 +937,24 @@ def test_delta1_fa10_marker_free_display_names_and_explain(ttype: str) -> None:
                     assert marker not in text, f"{marker} leaked in explain(extended={ext}): {text}"
     finally:
         spark.stop()
+
+
+@pytest.mark.parametrize("zone", ("America/New_York", "UTC"))
+@pytest.mark.parametrize("ansi", (True, False))
+def test_delta1_fa2_zoned_typed_literal_date_cast_on_sql_and_select_expr(
+    zone: str, ansi: bool
+) -> None:
+    spark = _new_session("fa2-zdate", zone, ansi, timestamp_type="TIMESTAMP_NTZ")
+    try:
+        expected_date = "2023-12-31" if zone == "America/New_York" else "2024-01-01"
+        expr = "CAST(TIMESTAMP '2024-01-01 02:00:00Z' AS DATE)"
+        for df in (
+            spark.sql(f"SELECT {expr} AS v"),
+            spark.range(1).selectExpr(f"{expr} AS v"),
+            spark.range(1).select(sf.expr(expr).alias("v")),
+        ):
+            assert df.schema[0].nullable is False
+            assert df.dtypes == [("v", "date")]
+            assert str(df.collect()[0][0]) == expected_date
+    finally:
+        spark.stop()

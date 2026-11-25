@@ -19,10 +19,10 @@ lowering it calls first.
   `TimestampNsCastLower::post_visit_expr`, `TimestampNsCastProbe`, and
   `lower_fragment_timestamp_casts`. **FEXPR-TIMESTAMP-NTZ-1 (2026-11-24, Delta 1):** adds
   `lower_explicit_timestamp_ltz_cast` (used by SQL `lower_expression`, `TimestampNsCastLower`,
-  `TimestampNsCastProbe`, and fragments so `CAST`/`TRY_CAST(... AS TIMESTAMP_LTZ)` stays LTZ on
-  every door) and `lower_fragment_timestamp_ltz_cast` (explicit `TIMESTAMP_LTZ` casts/literals,
-  zoned `TIMESTAMP '...'` typed strings, and nullable-wrapping bare-`TIMESTAMP` string-literal
-  casts via `DECIMAL_CAST_NULLABLE_NAME`).
+  `TimestampNsCastProbe`, and fragments so `CAST`/`TRY_CAST(... AS TIMESTAMP_LTZ)` and zoned
+  `TIMESTAMP '...'` / `TIMESTAMP_LTZ '...'` typed literals stay LTZ on every door) and
+  `lower_fragment_timestamp_ltz_cast` (delegates to `lower_explicit_timestamp_ltz_cast` and
+  nullable-wraps bare-`TIMESTAMP` string-literal casts via `DECIMAL_CAST_NULLABLE_NAME`).
 - `ltz_values_cast.rs` — **WO NTZ-STORE-DOORS-1 second re-verify fold (2026-09-29,
   RD3-1):** `mark_values_timestamp_casts` wraps each `VALUES` cell that is a written
   `CAST` / `::` to `TIMESTAMP` (explicit `TIMESTAMP_LTZ` casts now lower directly to
