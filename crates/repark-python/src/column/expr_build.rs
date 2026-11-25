@@ -18,6 +18,10 @@ use datafusion::scalar::ScalarValue;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
+mod fragment_canon;
+
+pub(crate) use fragment_canon::canonicalize_fragment;
+
 use super::PyColumn;
 use crate::fence::fenced;
 
@@ -49,9 +53,7 @@ pub(crate) fn parse_canonical_predicate(
 ) -> datafusion::error::Result<Expr> {
     let verbatim = frame_verbatim(frame.inner());
     let state = predicate_state(frame);
-    let spark_door = repark_spark::is_spark_door_session(state.config());
-    let raw_canonical =
-        repark_spark::keyword_lower::canonicalize_predicate(predicate, verbatim, spark_door)?;
+    let raw_canonical = fragment_canon::canonicalize_predicate(&state, predicate, verbatim)?;
     let schema = frame.inner().schema();
     let canonical = repark_core::minus_all_as_except_all(
         state.config().options().sql_parser.dialect,
@@ -143,9 +145,7 @@ pub(crate) fn parse_canonical_predicate_exact(
 ) -> datafusion::error::Result<Expr> {
     let verbatim = frame_verbatim(frame.inner());
     let mut state = predicate_state(frame);
-    let spark_door = repark_spark::is_spark_door_session(state.config());
-    let raw_canonical =
-        repark_spark::keyword_lower::canonicalize_predicate(predicate, verbatim, spark_door)?;
+    let raw_canonical = fragment_canon::canonicalize_predicate(&state, predicate, verbatim)?;
     state
         .config_mut()
         .options_mut()

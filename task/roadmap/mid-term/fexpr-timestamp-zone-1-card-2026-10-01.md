@@ -74,11 +74,11 @@ column or a zone change. That is not yet measured.
   (`crates/repark-functions/src/timestamp_type.rs`) and attached it in `build_expr_context()` so bare `TIMESTAMP`
   literals and casts survive `F.expr` eager analysis and resolve in the consumer session under its
   `spark.sql.timestampType` and `spark.sql.session.timeZone`.
-- **Fragment timestamp cast & `TIMESTAMP_LTZ` literal lowering:** exposed `lower_fragment_timestamp_casts`,
-  `canonicalize_fragment`, and `canonicalize_predicate` across all `F.expr` and Spark-door `filter(str)` seats so
-  `CAST`/`::`/`TRY_CAST`/`SAFE_CAST` to `TIMESTAMP_NTZ`, explicit `TIMESTAMP_LTZ` casts and literals, and zoned
-  `TIMESTAMP '...Z'` literals preserve their exact target semantics across deferral and under
-  `spark.sql.timestampType=TIMESTAMP_NTZ`.
+- **Fragment timestamp cast & `TIMESTAMP_LTZ` literal lowering:** exposed `lower_fragment_timestamp_casts` and
+  `rewrite_fragment_timestamp_ltz_literals` (`repark-spark`) paired with `expr_build/fragment_canon.rs` across all
+  `F.expr` and Spark-door `filter(str)` seats so `CAST`/`::`/`TRY_CAST`/`SAFE_CAST` to `TIMESTAMP_NTZ`, explicit
+  `TIMESTAMP_LTZ` casts and literals, and zoned `TIMESTAMP '...Z'` literals preserve their exact target semantics
+  across deferral and under `spark.sql.timestampType=TIMESTAMP_NTZ`.
 - **Analyzer, nullability, and Iceberg/DML write fixes:** added `Expr::TryCast` + LTZ-to-NTZ wall conversion in
   `rewrite_cast_as_ntz`, stale `LogicalPlan::Union` schema rebuild under NTZ, string-source nullability in
   `SparkTimestampNtzCast::return_field_from_args`, `TIMESTAMP_LTZ_CAST_NAME` emission in `conform_stage.rs::leaf_store`,
