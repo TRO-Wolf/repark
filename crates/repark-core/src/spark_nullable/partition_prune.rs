@@ -136,10 +136,10 @@ fn binding_of(
     if !matches!(op, Operator::Eq | Operator::IsNotDistinctFrom) {
         return None;
     }
-    let (column, value) = match (left.as_ref(), right.as_ref()) {
-        (Expr::Column(column), Expr::Literal(value, _))
-        | (Expr::Literal(value, _), Expr::Column(column)) => (column, value),
-        _ => return None,
+    let ((Expr::Column(column), Expr::Literal(value, _))
+    | (Expr::Literal(value, _), Expr::Column(column))) = (left.as_ref(), right.as_ref())
+    else {
+        return None;
     };
     let data_type = column_types.get(&column.name)?;
     (&value.data_type() == data_type)
