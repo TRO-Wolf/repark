@@ -22,6 +22,7 @@ use crate::session::text_write_format::select::{TextWriteCopyParts, merge_spec_o
 use crate::session::text_write_format::spec::{SPEC_WRITE_ID_KEY, TextWritePathRegistry};
 
 mod append;
+pub(crate) mod hive_dirs;
 mod rollback;
 
 impl ReparkSession {
@@ -453,11 +454,11 @@ async fn prepare_overwrite_destination(
     Ok(())
 }
 
-async fn delete_prefix_objects(
+async fn list_all_keys(
     store: &dyn ObjectStore,
     scope: Option<&ObjectPath>,
     origin: &str,
-) -> Result<usize> {
+) -> Result<Vec<ObjectPath>> {
     let mut listed = store.list(scope);
     let mut locations = Vec::new();
     while let Some(meta) = listed.next().await {
@@ -466,6 +467,15 @@ async fn delete_prefix_objects(
         })?;
         locations.push(meta.location);
     }
+    Ok(locations)
+}
+
+async fn delete_prefix_objects(
+    store: &dyn ObjectStore,
+    scope: Option<&ObjectPath>,
+    origin: &str,
+) -> Result<usize> {
+    let locations = list_all_keys(store, scope, origin).await?;
     for location in &locations {
         store.delete(location).await.map_err(|error| {
             Error::DataFusion(format!(
@@ -564,9 +574,40 @@ struct S3Commit<'a> {
     format: &'a WriteFormat,
     frame: &'a DataFrame,
     columns: &'a [String],
-    partitioned: bool,
+    partition_depth: usize,
+    existing_keys: &'a [ObjectPath],
     options: &'a HashMap<String, String>,
     copy_sql: &'a str,
+}
+
+async fn respell_written_keys(
+    commit: &S3Commit<'_>,
+    scope: Option<&ObjectPath>,
+    moved: &mut Vec<ObjectPath>,
+) -> Result<()> {
+    if commit.partition_depth == 0 {
+        return Ok(());
+    }
+    let existing: HashSet<&ObjectPath> = commit.existing_keys.iter().collect();
+    let written: Vec<ObjectPath> = list_all_keys(commit.store, scope, commit.url)
+        .await?
+        .into_iter()
+        .filter(|key| !existing.contains(key))
+        .collect();
+    let base = if commit.at_root {
+        0
+    } else {
+        commit.prefix.parts().count()
+    };
+    hive_dirs::respell_store_partition_keys(
+        commit.store,
+        &written,
+        base,
+        commit.partition_depth,
+        moved,
+        commit.url,
+    )
+    .await
 }
 
 impl ReparkSession {
@@ -623,6 +664,11 @@ impl ReparkSession {
             .map_err(|error| Error::DataFusion(format!("invalid S3 destination {url}: {error}")))?;
         let at_root = prefix_text.is_empty();
         let scope = if at_root { None } else { Some(&prefix) };
+        let existing_keys = if matches!(mode, SaveMode::Append) && !resolved_partitions.is_empty() {
+            list_all_keys(&store, scope, url).await?
+        } else {
+            Vec::new()
+        };
         match mode {
             SaveMode::ErrorIfExists => {
                 if destination_has_objects(&store, scope, &prefix, at_root, url).await? {
@@ -686,15 +732,18 @@ impl ReparkSession {
             partition_clause(&resolved_partitions),
             options_clause
         );
+        let written = hive_dirs::hive_partition_frame(frame.clone(), &resolved_partitions)
+            .map_err(engine_err)?;
         let commit = S3Commit {
             store: &store,
             prefix: &prefix,
             at_root,
             url,
             format: &format,
-            frame,
+            frame: &written,
             columns: &frame_columns,
-            partitioned: !resolved_partitions.is_empty(),
+            partition_depth: resolved_partitions.len(),
+            existing_keys: &existing_keys,
             options,
             copy_sql: &copy_sql,
         };
@@ -725,9 +774,10 @@ impl ReparkSession {
                 )
                 .await?;
             let _copy_batches = copy_outcome.collect().await.map_err(engine_err)?;
+            respell_written_keys(commit, scope, &mut Vec::new()).await?;
             let mut parts =
                 list_part_keys(commit.store, scope, commit.format.extension(), commit.url).await?;
-            if parts.is_empty() && !commit.partitioned {
+            if parts.is_empty() && commit.partition_depth == 0 {
                 let location = if commit.at_root {
                     ObjectPath::from(format!("part-00000.{}", commit.format.extension()))
                 } else {
@@ -787,6 +837,7 @@ impl ReparkSession {
             Some(commit.prefix)
         };
         let mut materialized: Option<ObjectPath> = None;
+        let mut respelled: Vec<ObjectPath> = Vec::new();
         let outcome = async {
             self.register_text_write(view);
             let copy_outcome = self
@@ -798,9 +849,10 @@ impl ReparkSession {
                 )
                 .await?;
             let _copy_batches = copy_outcome.collect().await.map_err(engine_err)?;
+            respell_written_keys(commit, scope, &mut respelled).await?;
             let mut parts =
                 list_part_keys(commit.store, scope, commit.format.extension(), commit.url).await?;
-            if parts.is_empty() && !commit.partitioned {
+            if parts.is_empty() && commit.partition_depth == 0 {
                 let location = if commit.at_root {
                     ObjectPath::from(format!("part-00000.{}", commit.format.extension()))
                 } else {
@@ -843,6 +895,7 @@ impl ReparkSession {
         .await;
         let mut locations = self.take_text_write_paths(view);
         locations.extend(materialized);
+        locations.extend(respelled);
         match outcome {
             Ok(count) => {
                 self.drop_temp_view(view)?;

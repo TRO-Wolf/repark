@@ -6,6 +6,7 @@ pub use repark_iceberg::write::{
     missing_column_name, save_target_names_table,
 };
 
+pub use super::path_write::hive_dirs::{hive_partition_frame, respell_local_partition_dirs};
 use crate::session::ReparkSession;
 
 #[derive(Debug, Clone, Copy)]
