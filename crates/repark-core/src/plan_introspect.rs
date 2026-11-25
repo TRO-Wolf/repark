@@ -74,14 +74,18 @@ pub(crate) fn plan_reads_s3_prefix(plan: &LogicalPlan, bucket: &str, prefix: &st
                 if let Some(inner) = scan.source.get_logical_plan() {
                     pending.push(inner.into_owned());
                 }
-                if let Ok(provider) = source_as_provider(&scan.source)
-                    && let Some(table) = provider.downcast_ref::<ListingTable>()
-                {
-                    found = found
-                        || table
-                            .table_paths()
-                            .iter()
-                            .any(|url| scan_url_hits_prefix(url, bucket, prefix));
+                if let Ok(provider) = source_as_provider(&scan.source) {
+                    if let Some(table) = provider.downcast_ref::<ListingTable>() {
+                        found = found
+                            || table
+                                .table_paths()
+                                .iter()
+                                .any(|url| scan_url_hits_prefix(url, bucket, prefix));
+                    } else if let Some(table) =
+                        provider.downcast_ref::<crate::spark_nullable::PartitionedParquetProvider>()
+                    {
+                        found = found || scan_url_hits_prefix(table.table_url(), bucket, prefix);
+                    }
                 }
             }
             Ok(TreeNodeRecursion::Continue)
@@ -468,6 +472,14 @@ pub(crate) fn write_table_source<S: BuildHasher>(
         for url in table.table_paths() {
             write_str(hash, url.as_str());
         }
+        return;
+    }
+    if let Some(table) =
+        provider.downcast_ref::<crate::spark_nullable::PartitionedParquetProvider>()
+    {
+        hash.write(b"Listing");
+        hash.write_usize(1);
+        write_str(hash, table.table_url().as_str());
         return;
     }
     if let Some(table) = provider.downcast_ref::<GenerateSeriesTable>() {

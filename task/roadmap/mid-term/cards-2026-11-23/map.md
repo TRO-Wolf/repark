@@ -6,8 +6,11 @@ awaits the owner's rating. Each card row records its own status.
 
 ## Cards
 
-- [PARQUET-PARTITION-DISCOVERY-1](parquet-partition-discovery-1-card-2026-11-23.md) (S1) — **card:**
-  `read.parquet` of a `key=value/` directory drops the partition columns, so a read-then-write copy loses them.
+- [PARQUET-PARTITION-DISCOVERY-1](parquet-partition-discovery-1-card-2026-11-23.md) (S1) — **fixed (2026-11-24):**
+  `read.parquet` and `format("parquet").load` now discover Hive partition columns with Spark 4.1.2 type inference,
+  `partitionColumnTypeInference.enabled`, overlap/conflict/case rules, hidden-file skipping, and partition-only file
+  pruning (residual options/globs/CSV/JSON/S3 list on the card); evidence in
+  [task/wo/parquet-partition-discovery-1/evidence/](../../../wo/parquet-partition-discovery-1/evidence/).
 - [ARROW-ERROR-NUL-ABORT-1](arrow-error-nul-abort-1-card-2026-11-23.md) (S2) — **card:** a cast error over
   text holding a NUL byte aborts the Python process.
 - [SQL-EXPLODE-1](sql-explode-1-card-2026-11-23.md) (S2 proposed) — **card:** `explode` / `explode_outer` in a SQL
@@ -49,5 +52,8 @@ awaits the owner's rating. Each card row records its own status.
   with a nullable element declares a non-null result and crashes.
 - [SQL-PATH-PARQUET-DOORS-1](sql-path-parquet-doors-1-card-2026-11-25.md) (S2 proposed) — **card:** SQL reads of a
   Parquet path refuse where Spark reads them.
+- [PARTITIONBY-NULL-WRITE-1](partitionby-null-write-1-card-2026-11-25.md) (S1, owner 2026-11-25) — **card:** a
+  partitioned Parquet, CSV or JSON path write stored a NULL partition as the type's default (`p=0`); fixed on its
+  branch, PR open; #1430 is parked on it.
 
 Up: [../map.md](../map.md).

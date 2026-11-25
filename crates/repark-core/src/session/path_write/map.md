@@ -32,6 +32,19 @@ and the COPY commit and declares this directory.
   known gap: a parquet-side rollback needs its own sink. The overwrite mode
   still deletes the old prefix before the COPY, so a failed overwrite loses
   the old data; that order predates this fold and is measured, not changed.
+- `hive_dirs.rs` — **PARTITIONBY-NULL-WRITE-1 (2026-11-25):** Spark's partition
+  directory names for COPY-written path writes. `hive_partition_frame` replaces
+  each partition column whose type DataFusion's demux can name with a Utf8
+  column of the demux's own text, except that a NULL or empty value becomes
+  `__HIVE_DEFAULT_PARTITION__`; types the demux refuses (decimal, timestamp,
+  binary) are left alone, so they still refuse. `spark_partition_segment`
+  undoes `object_store`'s percent-encoding of a written `name=value` segment
+  and escapes both halves with `text_partition::escape_partition_value`
+  (Spark's `escapePathName` set); `respell_local_partition_dirs` renames the
+  facade's staging directories to that depth, and
+  `respell_store_partition_keys` renames S3 keys below the prefix. Floats keep
+  the demux's Rust text (`1`, `inf`), which is still unlike Spark (`1.0`,
+  `Infinity`).
 
 ## Pointers
 
