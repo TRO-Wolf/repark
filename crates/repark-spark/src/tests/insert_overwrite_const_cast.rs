@@ -7,7 +7,11 @@ fn card(target: &str, value: &str) -> String {
     CARD.replace("{T}", target).replace("{V}", value)
 }
 
-async fn outcome(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) -> Result<()> {
+async fn outcome(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+) -> datafusion::error::Result<()> {
     execute(ctx, catalogs, sql).await?.collect().await?;
     Ok(())
 }

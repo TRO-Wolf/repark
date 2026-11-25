@@ -43,6 +43,9 @@ The guard acts only where the answer is certain. Everything else stays exactly a
   listed type. The guard then runs RePark's cast on the value and refuses only with that cast's error, so it never
   refuses a value RePark's cast accepts.
 - **Where:** once per statement, before the door wipes, replaces or commits; the table is unchanged.
+- **Size:** `crates/repark-spark/src/insert_overwrite/const_cast.rs` holds 294 product lines (plus its unit tests); the
+  doors add 14 lines of wiring. The Spark door plans `CAST(s AS TIMESTAMP)` as
+  `to_timestamp(__repark_decimal_cast_nullable__(s))`; the guard looks through that identity marker (delta 1).
 
 ## Still unlike Spark (left as on main, each measured on main and the narrow head)
 
