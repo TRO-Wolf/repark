@@ -175,7 +175,9 @@ def run_all(engine: str) -> dict[str, Any]:
                 out,
                 spark,
                 f"{ansi_val}|update_empty_no_where",
-                lambda f=fq: spark.sql(f"UPDATE {f} SET x = CAST('x' AS DOUBLE)").collect(),
+                lambda f=fq: spark.sql(
+                    f"UPDATE {f} SET x = CAST(CAST('x' AS TIMESTAMP) AS DOUBLE)"
+                ).collect(),
                 fq,
             )
             fq = f"local.db.e_upd_ts_{ansi_val}"
