@@ -721,8 +721,9 @@ fn integral_to_decimal(source: &ArrayRef, target: &DataType, mode: Mode) -> Resu
     let wide = cast_with_options(source.as_ref(), &DataType::Int64, &CastOptions::default())?;
     let values = wide.as_primitive::<Int64Type>();
     let out: Decimal128Array = match mode {
-        Mode::Legacy | Mode::Try => values
-            .unary_opt(|value| rescale_decimal(i128::from(value), 0, to_precision, to_scale)),
+        Mode::Legacy | Mode::Try => {
+            values.unary_opt(|value| rescale_decimal(i128::from(value), 0, to_precision, to_scale))
+        }
         Mode::Ansi => try_map_primitive::<Int64Type, Decimal128Type, _>(values, |value| {
             rescale_decimal(i128::from(value), 0, to_precision, to_scale)
                 .ok_or_else(|| decimal_overflow(i128::from(value), 0, to_precision, to_scale))

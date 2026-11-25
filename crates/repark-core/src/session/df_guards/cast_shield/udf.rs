@@ -173,11 +173,8 @@ pub(crate) fn is_narrowing(source: &DataType, target: &DataType) -> bool {
         }
         (DataType::Decimal128(precision, scale), _) => integer_max(target)
             .is_some_and(|max| *scale > 0 || integer_part_overflows(*precision, *scale, max)),
-        (_, DataType::Decimal128(to_precision, to_scale)) => {
-            integer_digits(source).is_some_and(|digits| {
-                i32::from(*to_precision) - i32::from(*to_scale) < digits
-            })
-        }
+        (_, DataType::Decimal128(to_precision, to_scale)) => integer_digits(source)
+            .is_some_and(|digits| i32::from(*to_precision) - i32::from(*to_scale) < digits),
         _ => match (integer_max(source), integer_max(target)) {
             (Some(from), Some(to)) => to < from,
             _ => false,
