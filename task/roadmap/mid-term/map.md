@@ -172,7 +172,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   Spark stores.
 - [fexpr-timestamp-zone-1-card-2026-10-01.md](fexpr-timestamp-zone-1-card-2026-10-01.md) — **card
   FEXPR-TIMESTAMP-ZONE-1 (2026-10-01, #888 re-verify 10):** `F.expr` UTC zone fixed by #1420;
-  NTZ remainder (S1 measured) fixed by FEXPR-TIMESTAMP-NTZ-1 (2026-11-24); display names carded
+  NTZ remainder (S1 measured) fixed by FEXPR-TIMESTAMP-NTZ-1 (2026-11-24/25); display names carded
   as [FEXPR-TIMESTAMP-DISPLAY-NAME-1](cards-2026-11-23/fexpr-timestamp-display-name-1-card-2026-11-24.md).
 - [ml-cv-fold-test-strength-1-card-2026-10-01.md](ml-cv-fold-test-strength-1-card-2026-10-01.md) — **card
   ML-CV-FOLD-TEST-STRENGTH-1 (2026-10-01, from the overnight owner-items backlog, VE4-2):**
