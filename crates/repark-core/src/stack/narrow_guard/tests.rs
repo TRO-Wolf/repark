@@ -129,10 +129,27 @@ async fn outcome(session: &ReparkSession, sql: &str) -> Result<Vec<String>, Stri
 
 const N: &str = "__repark_narrow_to_decimal_5_0__";
 
+async fn optimized(session: &ReparkSession, sql: &str) -> datafusion::logical_expr::LogicalPlan {
+    session
+        .sql(sql)
+        .await
+        .expect("plan")
+        .into_optimized_plan()
+        .expect("optimized")
+}
+
+async fn guarded_text(session: &ReparkSession, sql: &str) -> String {
+    let plan = optimized(session, sql).await;
+    guard_narrow_decimal_plan(&plan)
+        .expect("guard")
+        .display_indent()
+        .to_string()
+}
+
 #[tokio::test]
 async fn a_cast_is_evaluated_only_where_spark_evaluates_it() {
     let session = session();
-    let answers: [(String, &[&str]); 9] = [
+    let answers: [(String, &[&str]); 12] = [
         (
             format!("SELECT id FROM t WHERE id IN (1, 3) AND {N}(bi) = 1"),
             &["1"],
@@ -163,8 +180,23 @@ async fn a_cast_is_evaluated_only_where_spark_evaluates_it() {
             &["1"],
         ),
         (
+            format!("SELECT count(*) FILTER (WHERE nb AND {N}(bi) = 1) FROM t"),
+            &["1"],
+        ),
+        (
+            format!("SELECT id FROM t WHERE random() < -1.0 AND {N}(bi) = 1"),
+            &[],
+        ),
+        (
             format!("SELECT id FROM t WHERE id <> 2 AND {N}(CAST(bi AS DECIMAL(10,0))) = 1"),
             &["1"],
+        ),
+        (
+            format!(
+                "SELECT * FROM (VALUES (CAST(NULL AS BOOLEAN), CAST(123456 AS BIGINT))) v(nb, bi) \
+                 WHERE nb AND {N}(bi) = 1"
+            ),
+            &[],
         ),
     ];
     for (sql, expected) in answers {
@@ -179,12 +211,9 @@ async fn a_cast_is_evaluated_only_where_spark_evaluates_it() {
         format!("SELECT id FROM t WHERE random() >= 0 AND {N}(bi) = 1"),
         format!("SELECT id, nb AND {N}(bi) = 1 FROM t"),
         format!("SELECT id, nb OR {N}(bi) = 1 FROM t"),
+        format!("SELECT id FROM t WHERE nb OR {N}(bi) = 1"),
         format!("SELECT id FROM t WHERE {N}(bi) = 1"),
         format!("SELECT {N}(bi) FROM t"),
-        format!(
-            "SELECT * FROM (VALUES (CAST(NULL AS BOOLEAN), CAST(123456 AS BIGINT))) v(nb, bi) \
-             WHERE nb AND {N}(bi) = 1"
-        ),
     ];
     for sql in raises {
         let error = outcome(&session, &sql).await.expect_err(&sql);
@@ -201,41 +230,69 @@ async fn plans_without_an_integer_narrowing_call_are_left_borrowed() {
         "SELECT id FROM t WHERE id IN (1, 3) AND __repark_narrow_to_decimal_5_0__(CAST(bi AS DECIMAL(10,0))) = 1",
         "SELECT __repark_narrow_to_decimal_5_0__(bi) FROM t",
     ] {
-        let plan = session
-            .sql(sql)
-            .await
-            .expect("plan")
-            .into_optimized_plan()
-            .expect("optimized");
+        let plan = optimized(&session, sql).await;
         let guarded = guard_narrow_decimal_plan(&plan).expect("guard");
         assert!(matches!(guarded, Cow::Borrowed(_)), "{sql}");
     }
-    let plan = session
-        .sql(&format!(
-            "SELECT id FROM t WHERE id IN (1, 3) AND {N}(bi) = 1"
-        ))
-        .await
-        .expect("plan")
-        .into_optimized_plan()
-        .expect("optimized");
+    let sql = format!("SELECT id FROM t WHERE id IN (1, 3) AND {N}(bi) = 1");
+    let plan = optimized(&session, &sql).await;
     let guarded = guard_narrow_decimal_plan(&plan).expect("guard");
     let shown = guarded.display_indent().to_string();
     assert!(matches!(guarded, Cow::Owned(_)), "{shown}");
     assert!(shown.contains("CASE WHEN t.id"), "{shown}");
-    assert!(shown.contains(&format!("THEN {N}(t.bi) END")), "{shown}");
+    assert!(shown.contains(&format!("THEN {N}(t.bi)")), "{shown}");
+    assert!(shown.contains("ELSE Boolean(false) END"), "{shown}");
     assert_eq!(guarded.schema(), plan.schema());
-    let plan = session
-        .sql(&format!(
-            "SELECT id FROM t WHERE random() >= 0 AND id <> 2 AND {N}(bi) = 1"
-        ))
-        .await
-        .expect("plan")
-        .into_optimized_plan()
-        .expect("optimized");
-    let shown = guard_narrow_decimal_plan(&plan)
-        .expect("guard")
-        .display_indent()
-        .to_string();
-    assert!(shown.contains("CASE WHEN t.id != Int64(2) THEN"), "{shown}");
-    assert!(!shown.contains("CASE WHEN random()"), "{shown}");
+}
+
+#[tokio::test]
+async fn every_operand_is_evaluated_once_and_the_plan_grows_linearly() {
+    let session = session();
+    for sql in [
+        format!("SELECT id FROM t WHERE random() >= 0 AND id <> 2 AND {N}(bi) = 1"),
+        format!("SELECT id, random() >= 0 AND {N}(bi) = 1 FROM t"),
+        format!("SELECT id, random() >= 0 OR {N}(bi) = 1 FROM t"),
+        format!("SELECT count(*) FILTER (WHERE random() >= 0 AND {N}(bi) = 1) FROM t"),
+    ] {
+        let shown = guarded_text(&session, &sql).await;
+        assert_eq!(
+            shown.matches("random() >= Float64").count(),
+            1,
+            "{sql}: {shown}"
+        );
+        assert!(shown.contains(&format!("{N}(t.bi)")), "{sql}: {shown}");
+    }
+    let terms = |count: usize, join: &str| {
+        (0..count)
+            .map(|i| format!("{N}(bi + {i}) > {i}"))
+            .collect::<Vec<_>>()
+            .join(join)
+    };
+    let shapes = [
+        |body: String| format!("SELECT id FROM t WHERE id > 0 AND {body}"),
+        |body: String| format!("SELECT id, (id > 0 AND {body}) AS r FROM t"),
+        |body: String| format!("SELECT count(*) FILTER (WHERE id > 0 AND {body}) FROM t"),
+    ];
+    for shape in shapes {
+        let small = guarded_text(&session, &shape(terms(40, " AND ")))
+            .await
+            .len();
+        let large = guarded_text(&session, &shape(terms(80, " AND ")))
+            .await
+            .len();
+        assert!(large < small * 3, "{small} -> {large}");
+    }
+    let small = guarded_text(
+        &session,
+        &format!("SELECT id FROM t WHERE {}", terms(40, " OR ")),
+    )
+    .await
+    .len();
+    let large = guarded_text(
+        &session,
+        &format!("SELECT id FROM t WHERE {}", terms(80, " OR ")),
+    )
+    .await
+    .len();
+    assert!(large < small * 3, "{small} -> {large}");
 }
