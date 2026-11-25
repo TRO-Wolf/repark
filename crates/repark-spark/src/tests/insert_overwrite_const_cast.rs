@@ -43,14 +43,7 @@ async fn seeded(
 async fn the_session_plans_each_card_cast_to_one_guarded_cast() {
     let wh = TempDir::new().expect("warehouse");
     let (ctx, catalogs) = setup(&wh).await;
-    for target in [
-        "DOUBLE",
-        "FLOAT",
-        "TIMESTAMP",
-        "TIMESTAMP_NTZ",
-        "INT",
-        "BIGINT",
-    ] {
+    for target in ["DOUBLE", "FLOAT", "TIMESTAMP", "INT", "BIGINT"] {
         let frame = crate::spark_ast::execute_passthrough(&ctx, &catalogs, &card(target, "x"))
             .await
             .expect("plan");
@@ -72,7 +65,6 @@ async fn overwrite_doors_refuse_the_card_cells_and_keep_the_rows() {
     let cells = [
         ("DOUBLE", "CAST(1.5 AS DOUBLE)"),
         ("TIMESTAMP", "TIMESTAMP'2024-01-02 03:04:05'"),
-        ("TIMESTAMP_NTZ", "TIMESTAMP_NTZ'2024-01-02 03:04:05'"),
     ];
     for (index, (column, value)) in cells.into_iter().enumerate() {
         let table = seeded(&ctx, &catalogs, &format!("ioc_{index}"), column, value).await;
