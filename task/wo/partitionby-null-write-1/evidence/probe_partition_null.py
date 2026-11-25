@@ -429,8 +429,8 @@ def run_sql_door(spark: Any, cell: dict[str, Any], target: Path, seq: int) -> No
         )
     elif cell["door"] == "sql_ctas":
         spark.sql(
-            f"CREATE TABLE partnull_ctas_{seq} USING parquet PARTITIONED BY (p) LOCATION '{target}' "
-            f"AS SELECT * FROM {view}"
+            f"CREATE TABLE partnull_ctas_{seq} USING parquet PARTITIONED BY (p) "
+            f"LOCATION '{target}' AS SELECT * FROM {view}"
         )
     else:
         frame.write.format("parquet").partitionBy("p").saveAsTable(f"partnull_sat_{seq}")
