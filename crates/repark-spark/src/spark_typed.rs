@@ -563,7 +563,7 @@ fn prune_plan_siblings(plan: LogicalPlan, ansi_enabled: bool) -> Result<Transfor
         schema.merge(input.schema());
     }
     let transformed = plan.map_expressions(|expr| {
-        expr.transform_up(|node| prune_siblings(node, &schema, ansi_enabled))
+        expr.transform_up(|node| Ok(prune_siblings(node, &schema, ansi_enabled)))
     })?;
     if transformed.transformed {
         transformed.map_data(LogicalPlan::recompute_schema)
@@ -576,12 +576,12 @@ fn prune_siblings(
     expr: Expr,
     schema: &datafusion::common::DFSchema,
     ansi_enabled: bool,
-) -> Result<Transformed<Expr>> {
+) -> Transformed<Expr> {
     let Expr::ScalarFunction(function) = expr else {
-        return Ok(Transformed::no(expr));
+        return Transformed::no(expr);
     };
     if function.func.name() != SPARK_AS_NAME || function.args.len() <= 2 {
-        return Ok(Transformed::no(Expr::ScalarFunction(function)));
+        return Transformed::no(Expr::ScalarFunction(function));
     }
     let datafusion::logical_expr::expr::ScalarFunction { func, args } = function;
     let mut kept = Vec::with_capacity(args.len());
@@ -606,9 +606,9 @@ fn prune_siblings(
     if !falls_back {
         kept.extend(chosen);
     }
-    Ok(Transformed::yes(Expr::ScalarFunction(
+    Transformed::yes(Expr::ScalarFunction(
         datafusion::logical_expr::expr::ScalarFunction::new_udf(func, kept),
-    )))
+    ))
 }
 
 #[must_use]
