@@ -609,18 +609,33 @@ async fn backtick_ident_survives_the_door() {
 }
 
 #[tokio::test]
-async fn wildcard_exclude_reads_as_except() {
+async fn wildcard_exclude_refuses_and_wildcard_except_reads() {
     let ctx = production_ctx(false);
-    let batches = execute(
+    let refused = execute(
         &ctx,
         &CatalogRegistry::new(),
         "SELECT * EXCLUDE (b) FROM (SELECT 1 AS a, 2 AS b) t",
+    )
+    .await
+    .map(|_| ())
+    .expect_err("Spark's parser refuses `* EXCLUDE (…)`");
+    assert!(
+        refused
+            .to_string()
+            .contains("[PARSE_SYNTAX_ERROR] Syntax error at or near '('."),
+        "{refused}"
+    );
+    let batches = execute(
+        &ctx,
+        &CatalogRegistry::new(),
+        "SELECT * EXCEPT (b) FROM (SELECT 1 AS a, 2 AS b) t",
     )
     .await
     .unwrap()
     .collect()
     .await
     .unwrap();
+    assert_eq!(batches[0].schema().fields().len(), 1);
     assert_eq!(batches[0].schema().field(0).name(), "a");
     assert_eq!(
         batches[0]
@@ -721,17 +736,32 @@ async fn struct_field_access_on_call_result() {
 }
 
 #[test]
-fn fromless_delete_rewrites_to_delete_from() {
-    let rewritten =
-        crate::spark_literals::canonicalize("DELETE ice.sales.tgt WHERE id = 1").expect("rewrites");
-    assert_eq!(rewritten.as_ref(), "DELETE FROM ice.sales.tgt WHERE id = 1");
-    let rewritten =
-        crate::spark_literals::canonicalize("WHEN MATCHED THEN DELETE OUTPUT DELETED.*")
-            .expect("rewrites");
-    assert_eq!(
-        rewritten.as_ref(),
-        "WHEN MATCHED THEN DELETE OUTPUT DELETED.*"
-    );
+fn fromless_delete_refuses_with_the_spark_parse_error() {
+    for (sql, near) in [
+        ("DELETE ice.sales.tgt WHERE id = 1", "'ice'"),
+        ("delete `ice`.sales.tgt", "'`ice`'"),
+        ("  DELETE\n ice.sales.tgt WHERE id IN (SELECT 1)", "'ice'"),
+    ] {
+        let error = crate::spark_literals::canonicalize(sql).expect_err("refuses");
+        let repark_common::Error::Parse(message) = repark_core::engine_err(error) else {
+            panic!("expected a Parse error for {sql:?}");
+        };
+        assert_eq!(
+            message,
+            format!(
+                "[PARSE_SYNTAX_ERROR] Syntax error at or near {near}: missing 'FROM'. \
+                 SQLSTATE: 42601"
+            )
+        );
+    }
+    for sql in [
+        "DELETE FROM ice.sales.tgt WHERE id = 1",
+        "WHEN MATCHED THEN DELETE OUTPUT DELETED.*",
+        "MERGE INTO t USING s ON t.id = s.id WHEN MATCHED THEN DELETE",
+    ] {
+        let rewritten = crate::spark_literals::canonicalize(sql).expect("parses");
+        assert_eq!(rewritten.as_ref(), sql);
+    }
 }
 
 #[test]
