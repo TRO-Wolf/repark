@@ -556,3 +556,384 @@ def test_neighbours_do_not_move(zone: str, ansi: bool) -> None:
         )
     finally:
         spark.stop()
+
+
+def _explain_text(df: Any, extended: bool = False) -> str:
+    import contextlib
+    import io
+
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        df.explain(extended=extended)
+    return buf.getvalue()
+
+
+@pytest.mark.parametrize("pushdown", [True, False], ids=["pd_on", "pd_off"])
+def test_delta1_fa1_mixed_ntz_ltz_filter_parquet_and_iceberg(
+    tmp_path: Path, pushdown: bool
+) -> None:
+    wh = tmp_path / f"wh_fa1_{pushdown}"
+    wh.mkdir()
+    pq_dir = tmp_path / f"pq_fa1_{pushdown}"
+    _reset_active_session_for_tests()
+    spark = (
+        ReparkSession.builder.appName(f"fa1-{pushdown}")
+        .config("spark.sql.session.timeZone", "America/New_York")
+        .config("spark.sql.ansi.enabled", "true")
+        .config("spark.sql.timestampType", "TIMESTAMP_NTZ")
+        .config("datafusion.execution.parquet.pushdown_filters", str(pushdown).lower())
+        .config("spark.sql.catalog.ice", "org.apache.iceberg.spark.SparkCatalog")
+        .config("spark.sql.catalog.ice.type", "hadoop")
+        .config("spark.sql.catalog.ice.warehouse", str(wh))
+        .getOrCreate()
+    )
+    try:
+        p1 = pq_dir / "part-1.parquet"
+        p2 = pq_dir / "part-2.parquet"
+        pq_dir.mkdir(parents=True, exist_ok=True)
+        pq.write_table(
+            pa.table(
+                {
+                    "id": pa.array([1], type=pa.int32()),
+                    "ts": pa.array([dt.datetime(2024, 1, 1, 2, 0, 0)], type=NTZ_ARROW),
+                }
+            ),
+            p1,
+        )
+        pq.write_table(
+            pa.table(
+                {
+                    "id": pa.array([2], type=pa.int32()),
+                    "ts": pa.array([dt.datetime(2024, 1, 1, 7, 0, 0)], type=NTZ_ARROW),
+                }
+            ),
+            p2,
+        )
+        pq_df = spark.read.parquet(str(pq_dir))
+        for pred in (
+            "ts = CAST('2024-01-01 02:00:00' AS TIMESTAMP_LTZ)",
+            "ts = TIMESTAMP_LTZ '2024-01-01 02:00:00'",
+        ):
+            assert [r[0] for r in pq_df.filter(sf.expr(pred)).select("id").collect()] == [1]
+            assert [r[0] for r in pq_df.filter(pred).select("id").collect()] == [1]
+
+        spark.sql("CREATE NAMESPACE IF NOT EXISTS ice.db").collect()
+        for part_name, part_expr in (("days", "days(ts)"), ("hours", "hours(ts)")):
+            tbl = f"ice.db.fa1_{part_name}"
+            spark.sql(
+                f"CREATE TABLE {tbl} (id INT, ts TIMESTAMP_NTZ) USING iceberg "
+                f"PARTITIONED BY ({part_expr})"
+            ).collect()
+            spark.sql(
+                f"INSERT INTO {tbl} VALUES "
+                "(1, TIMESTAMP_NTZ '2024-01-01 23:00:00'), "
+                "(2, TIMESTAMP_NTZ '2024-01-02 04:00:00')"
+            ).collect()
+            tdf = spark.table(tbl)
+            for pred in (
+                "ts = CAST('2024-01-01 23:00:00' AS TIMESTAMP_LTZ)",
+                "ts = TIMESTAMP_LTZ '2024-01-01 23:00:00'",
+            ):
+                assert [r[0] for r in tdf.filter(sf.expr(pred)).select("id").collect()] == [1]
+                assert [r[0] for r in tdf.filter(pred).select("id").collect()] == [1]
+    finally:
+        spark.stop()
+
+
+@pytest.mark.parametrize("ansi", ANSI_MODES, ids=["ansi_on", "ansi_off"])
+def test_delta1_fa2_explicit_ltz_casts_on_sql_and_select_expr(ansi: bool) -> None:
+    spark = _new_session("fa2-ltz", "America/New_York", ansi, timestamp_type="TIMESTAMP_NTZ")
+    try:
+        src = spark.sql("SELECT '2024-01-01 02:00:00Z' AS sz, 'bad' AS sb")
+        src.createOrReplaceTempView("fa2_src")
+        want_ny = dt.datetime(2024, 1, 1, 7, 0, 0, tzinfo=dt.UTC)
+        want_z = dt.datetime(2024, 1, 1, 2, 0, 0, tzinfo=dt.UTC)
+        for expr_sql, want in (
+            ("CAST('2024-01-01 02:00:00' AS TIMESTAMP_LTZ)", want_ny),
+            ("CAST('2024-01-01 02:00:00Z' AS TIMESTAMP_LTZ)", want_z),
+            ("TRY_CAST('2024-01-01 02:00:00Z' AS TIMESTAMP_LTZ)", want_z),
+            ("TRY_CAST(sz AS TIMESTAMP_LTZ)", want_z),
+        ):
+            _assert_ltz_arrow(src.selectExpr(f"{expr_sql} AS v"), want)
+            _assert_ltz_arrow(spark.sql(f"SELECT {expr_sql} AS v FROM fa2_src"), want)
+        for expr_sql in (
+            "TRY_CAST('bad' AS TIMESTAMP_LTZ)",
+            "TRY_CAST(sb AS TIMESTAMP_LTZ)",
+            "TRY_CAST(NULL AS TIMESTAMP_LTZ)",
+        ):
+            for df in (
+                src.selectExpr(f"{expr_sql} AS v"),
+                spark.sql(f"SELECT {expr_sql} AS v FROM fa2_src"),
+            ):
+                table = df.to_arrow()
+                assert table.schema.field("v").type == LTZ_ARROW
+                assert table.column("v")[0].as_py() is None
+    finally:
+        spark.stop()
+
+
+def test_delta1_fa3_merge_update_and_insert_values_into_ltz(tmp_path: Path) -> None:
+    wh = tmp_path / "wh_fa3"
+    wh.mkdir()
+    spark = _new_session(
+        "fa3-dml", "America/New_York", True, timestamp_type="TIMESTAMP_NTZ", warehouse=wh
+    )
+    try:
+        spark.sql("CREATE NAMESPACE IF NOT EXISTS ice.db").collect()
+        spark.sql("CREATE TABLE ice.db.fa3_ltz (id INT, v TIMESTAMP_LTZ) USING iceberg").collect()
+        spark.sql("SELECT 1 AS id").select(
+            sf.col("id"), sf.expr("TIMESTAMP_LTZ '2020-01-01 00:00:00'").alias("v")
+        ).writeTo("ice.db.fa3_ltz").append()
+        msrc = (
+            spark.sql("SELECT 1 AS id")
+            .select(
+                sf.col("id"),
+                sf.expr("CAST(TIMESTAMP '2024-01-01 02:00:00.123456' AS TIMESTAMP_NTZ)").alias("v"),
+            )
+            .union(
+                spark.sql("SELECT 2 AS id").select(
+                    sf.col("id"),
+                    sf.expr("CAST(TIMESTAMP '2024-01-01 02:00:00.123456' AS TIMESTAMP_NTZ)").alias(
+                        "v"
+                    ),
+                )
+            )
+        )
+        msrc.createOrReplaceTempView("fa3_src")
+        spark.sql(
+            "MERGE INTO ice.db.fa3_ltz t USING fa3_src s ON t.id = s.id "
+            "WHEN MATCHED THEN UPDATE SET t.v = s.v "
+            "WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+        ).collect()
+        want = dt.datetime(2024, 1, 1, 7, 0, 0, 123456, tzinfo=dt.UTC)
+        merged = spark.sql("SELECT id, v FROM ice.db.fa3_ltz ORDER BY id").to_arrow()
+        assert merged.schema.field("v").type == LTZ_ARROW
+        assert merged.column("v").to_pylist() == [want, want]
+
+        spark.sql(
+            "UPDATE ice.db.fa3_ltz SET v = TIMESTAMP_NTZ '2024-01-01 02:00:00' WHERE id = 1"
+        ).collect()
+        spark.sql(
+            "INSERT INTO ice.db.fa3_ltz VALUES "
+            "(3, TIMESTAMP_NTZ '2024-01-01 02:00:00'), "
+            "(4, TIMESTAMP '2024-01-01 02:00:00')"
+        ).collect()
+        want_whole = dt.datetime(2024, 1, 1, 7, 0, 0, tzinfo=dt.UTC)
+        after = spark.sql("SELECT id, v FROM ice.db.fa3_ltz ORDER BY id").to_arrow()
+        assert after.column("v").to_pylist() == [want_whole, want, want_whole, want_whole]
+    finally:
+        spark.stop()
+
+
+def test_delta1_fa4_dst_gap_wall_clock_never_shifts_for_ntz(tmp_path: Path) -> None:
+    pq_dir = tmp_path / "pq_fa4"
+    spark = _new_session("fa4", "America/New_York", True, timestamp_type="TIMESTAMP_NTZ")
+    try:
+        gap_wall = dt.datetime(2024, 3, 10, 2, 30, 0, 654321)
+        for expr_sql in (
+            "CAST('2024-03-10 02:30:00.654321' AS TIMESTAMP_NTZ)",
+            "TRY_CAST('2024-03-10 02:30:00.654321' AS TIMESTAMP)",
+            "CAST('2024-03-10 02:30:00.654321' AS TIMESTAMP)",
+        ):
+            _assert_ntz_arrow(spark.range(1).select(sf.expr(expr_sql).alias("v")), gap_wall)
+        spark.range(1).select(
+            sf.expr("CAST('2024-03-10 02:30:00.654321' AS TIMESTAMP_NTZ)").alias("v")
+        ).write.mode("overwrite").parquet(str(pq_dir))
+        _assert_ntz_arrow(spark.read.parquet(str(pq_dir)), gap_wall)
+    finally:
+        spark.stop()
+
+
+def test_delta1_fa5_offset_string_writes_under_ntz(tmp_path: Path) -> None:
+    wh = tmp_path / "wh_fa5"
+    wh.mkdir()
+    spark = _new_session(
+        "fa5", "America/New_York", True, timestamp_type="TIMESTAMP_NTZ", warehouse=wh
+    )
+    try:
+        spark.sql("CREATE NAMESPACE IF NOT EXISTS ice.db").collect()
+        spark.sql("CREATE TABLE ice.db.fa5_ltz (id INT, v TIMESTAMP_LTZ) USING iceberg").collect()
+        spark.sql("CREATE TABLE ice.db.fa5_ntz (v TIMESTAMP_NTZ) USING iceberg").collect()
+        spark.sql(
+            "INSERT INTO ice.db.fa5_ltz SELECT 1, CAST('2024-01-01 02:00:00+05:30' AS TIMESTAMP)"
+        ).collect()
+        _assert_ltz_arrow(
+            spark.sql("SELECT v FROM ice.db.fa5_ltz"),
+            dt.datetime(2024, 1, 1, 7, 0, 0, tzinfo=dt.UTC),
+        )
+        spark.range(1).select(
+            sf.expr("CAST('2024-01-01 02:00:00+05:30' AS TIMESTAMP)").alias("v")
+        ).writeTo("ice.db.fa5_ntz").append()
+        _assert_ntz_arrow(spark.table("ice.db.fa5_ntz"), dt.datetime(2024, 1, 1, 2, 0, 0))
+    finally:
+        spark.stop()
+
+
+def test_delta1_fa6_named_zone_and_seconds_offset_literals() -> None:
+    spark = _new_session("fa6", "America/New_York", True, timestamp_type="TIMESTAMP_NTZ")
+    try:
+        for expr_sql, expected_utc in (
+            (
+                "TIMESTAMP '2024-01-01 02:00:00 America/New_York'",
+                dt.datetime(2024, 1, 1, 7, 0, 0, tzinfo=dt.UTC),
+            ),
+            (
+                "TIMESTAMP '2024-01-01 02:00:00 UTC'",
+                dt.datetime(2024, 1, 1, 2, 0, 0, tzinfo=dt.UTC),
+            ),
+            (
+                "TIMESTAMP '2024-01-01 02:00:00+05:30:00'",
+                dt.datetime(2023, 12, 31, 20, 30, 0, tzinfo=dt.UTC),
+            ),
+            (
+                "TIMESTAMP '2024-01-01 02:00:00+053000'",
+                dt.datetime(2023, 12, 31, 20, 30, 0, tzinfo=dt.UTC),
+            ),
+            (
+                "TIMESTAMP '2024-01-01 02:00:00 GMT+02:00'",
+                dt.datetime(2024, 1, 1, 0, 0, 0, tzinfo=dt.UTC),
+            ),
+        ):
+            _assert_ltz_arrow(spark.range(1).select(sf.expr(expr_sql).alias("v")), expected_utc)
+    finally:
+        spark.stop()
+
+
+def test_delta1_fa7_union_bad_string_raises_cast_invalid_input_under_ntz() -> None:
+    spark = _new_session("fa7", "America/New_York", True, timestamp_type="TIMESTAMP_NTZ")
+    try:
+        base = spark.sql("SELECT 1 AS id")
+        u = base.select(sf.expr("CAST('bad' AS TIMESTAMP)").alias("v")).union(
+            base.select(sf.expr(T).alias("v"))
+        )
+        with pytest.raises(Exception, match="CAST_INVALID_INPUT"):
+            u.collect()
+    finally:
+        spark.stop()
+
+
+@pytest.mark.parametrize("zone", ["America/New_York", "UTC"])
+@pytest.mark.parametrize("ttype", ["TIMESTAMP_LTZ", "TIMESTAMP_NTZ"])
+def test_delta1_fa8_date_trunc_over_ntz_returns_ltz_all_units(zone: str, ttype: str) -> None:
+    spark = _new_session("fa8-dt", zone, True, timestamp_type=ttype)
+    try:
+        expected_ny = {
+            "year": dt.datetime(2024, 1, 1, 5, 0, 0, tzinfo=dt.UTC),
+            "yyyy": dt.datetime(2024, 1, 1, 5, 0, 0, tzinfo=dt.UTC),
+            "yy": dt.datetime(2024, 1, 1, 5, 0, 0, tzinfo=dt.UTC),
+            "quarter": dt.datetime(2024, 1, 1, 5, 0, 0, tzinfo=dt.UTC),
+            "month": dt.datetime(2024, 3, 1, 5, 0, 0, tzinfo=dt.UTC),
+            "mon": dt.datetime(2024, 3, 1, 5, 0, 0, tzinfo=dt.UTC),
+            "mm": dt.datetime(2024, 3, 1, 5, 0, 0, tzinfo=dt.UTC),
+            "week": dt.datetime(2024, 3, 4, 5, 0, 0, tzinfo=dt.UTC),
+            "day": dt.datetime(2024, 3, 10, 5, 0, 0, tzinfo=dt.UTC),
+            "dd": dt.datetime(2024, 3, 10, 5, 0, 0, tzinfo=dt.UTC),
+            "hour": dt.datetime(2024, 3, 10, 7, 0, 0, tzinfo=dt.UTC),
+            "minute": dt.datetime(2024, 3, 10, 7, 30, 0, tzinfo=dt.UTC),
+            "second": dt.datetime(2024, 3, 10, 7, 30, 45, tzinfo=dt.UTC),
+            "millisecond": dt.datetime(2024, 3, 10, 7, 30, 45, 123000, tzinfo=dt.UTC),
+            "microsecond": dt.datetime(2024, 3, 10, 7, 30, 45, 123456, tzinfo=dt.UTC),
+        }
+        expected_utc = {
+            "year": dt.datetime(2024, 1, 1, 0, 0, 0, tzinfo=dt.UTC),
+            "yyyy": dt.datetime(2024, 1, 1, 0, 0, 0, tzinfo=dt.UTC),
+            "yy": dt.datetime(2024, 1, 1, 0, 0, 0, tzinfo=dt.UTC),
+            "quarter": dt.datetime(2024, 1, 1, 0, 0, 0, tzinfo=dt.UTC),
+            "month": dt.datetime(2024, 3, 1, 0, 0, 0, tzinfo=dt.UTC),
+            "mon": dt.datetime(2024, 3, 1, 0, 0, 0, tzinfo=dt.UTC),
+            "mm": dt.datetime(2024, 3, 1, 0, 0, 0, tzinfo=dt.UTC),
+            "week": dt.datetime(2024, 3, 4, 0, 0, 0, tzinfo=dt.UTC),
+            "day": dt.datetime(2024, 3, 10, 0, 0, 0, tzinfo=dt.UTC),
+            "dd": dt.datetime(2024, 3, 10, 0, 0, 0, tzinfo=dt.UTC),
+            "hour": dt.datetime(2024, 3, 10, 2, 0, 0, tzinfo=dt.UTC),
+            "minute": dt.datetime(2024, 3, 10, 2, 30, 0, tzinfo=dt.UTC),
+            "second": dt.datetime(2024, 3, 10, 2, 30, 45, tzinfo=dt.UTC),
+            "millisecond": dt.datetime(2024, 3, 10, 2, 30, 45, 123000, tzinfo=dt.UTC),
+            "microsecond": dt.datetime(2024, 3, 10, 2, 30, 45, 123456, tzinfo=dt.UTC),
+        }
+        want_map = expected_ny if zone == "America/New_York" else expected_utc
+        for unit, want in want_map.items():
+            expr_sql = f"date_trunc('{unit}', TIMESTAMP_NTZ '2024-03-10 02:30:45.123456')"
+            _assert_ltz_arrow(spark.range(1).select(sf.expr(expr_sql).alias("v")), want)
+            _assert_ltz_arrow(spark.sql(f"SELECT {expr_sql} AS v"), want)
+    finally:
+        spark.stop()
+
+
+@pytest.mark.parametrize("ttype", ["TIMESTAMP_LTZ", "TIMESTAMP_NTZ"])
+@pytest.mark.parametrize("ansi", ANSI_MODES, ids=["ansi_on", "ansi_off"])
+def test_delta1_fa9_schema_nullability_and_ctas(tmp_path: Path, ttype: str, ansi: bool) -> None:
+    wh = tmp_path / f"wh_fa9_{ttype}_{ansi}"
+    wh.mkdir()
+    spark = _new_session("fa9", "America/New_York", ansi, timestamp_type=ttype, warehouse=wh)
+    try:
+        base = spark.sql("SELECT 1 AS id")
+        assert (
+            base.select(sf.expr("CAST('2024-01-01 02:00:00' AS TIMESTAMP)").alias("v"))
+            .schema[0]
+            .nullable
+            is True
+        )
+        assert (
+            base.select(sf.expr("TRY_CAST('2024-03-10 02:30:00' AS TIMESTAMP)").alias("v"))
+            .schema[0]
+            .nullable
+            is True
+        )
+        assert (
+            base.select(sf.expr("CAST(DATE '2024-01-01' AS TIMESTAMP_LTZ)").alias("v"))
+            .schema[0]
+            .nullable
+            is False
+        )
+        assert base.select(sf.expr(f"CAST({T} AS DATE)").alias("v")).schema[0].nullable is (
+            ttype == "TIMESTAMP_NTZ"
+        )
+        assert base.select(sf.expr(f"unix_timestamp({T})").alias("v")).schema[0].nullable is (
+            not ansi
+        )
+
+        spark.sql("CREATE NAMESPACE IF NOT EXISTS ice.db").collect()
+        df_ctas = spark.range(1).select(
+            sf.expr("CAST('2024-01-01 02:00:00' AS TIMESTAMP)").alias("v")
+        )
+        assert df_ctas.schema[0].nullable is True
+        df_ctas.writeTo("ice.db.fa9_ctas").create()
+        assert spark.table("ice.db.fa9_ctas").schema[0].nullable is True
+    finally:
+        spark.stop()
+
+
+@pytest.mark.parametrize("ttype", ["TIMESTAMP_LTZ", "TIMESTAMP_NTZ"])
+def test_delta1_fa10_marker_free_display_names_and_explain(ttype: str) -> None:
+    spark = _new_session("fa10", "America/New_York", True, timestamp_type=ttype)
+    try:
+        base = spark.sql(
+            "SELECT 1 AS id, '2024-01-01 02:00:00' AS s, TIMESTAMP '2024-01-01 02:00:00' AS ts"
+        )
+        src_s = spark.sql("SELECT '2024-01-01 02:00:00' AS s")
+        assert src_s.selectExpr("TRY_CAST(s AS TIMESTAMP_LTZ)").columns == ["s"]
+        assert src_s.selectExpr("TRY_CAST(s AS TIMESTAMP)").columns == ["s"]
+        assert spark.sql(
+            "SELECT TRY_CAST(s AS TIMESTAMP_LTZ) FROM (SELECT '2024-01-01 02:00:00' AS s)"
+        ).columns == ["s"]
+
+        markers = (
+            "__repark_cast_timestamp_ltz__",
+            "__repark_try_cast_timestamp_ltz__",
+            "__repark_cast_timestamp_ntz__",
+            "__repark_try_cast_timestamp_ntz__",
+        )
+        for df in (
+            base.select(sf.expr("CAST(s AS TIMESTAMP_NTZ)")),
+            base.select(sf.expr("CAST(ts AS TIMESTAMP_NTZ)")),
+            base.select(sf.expr("TRY_CAST(ts AS TIMESTAMP_NTZ)")),
+            base.select(sf.expr("CAST('2024-01-01 02:00:00' AS TIMESTAMP_NTZ)")),
+            base.filter("ts = CAST('2024-01-01 02:00:00' AS TIMESTAMP_NTZ)"),
+        ):
+            for ext in (False, True):
+                text = _explain_text(df, extended=ext)
+                for marker in markers:
+                    assert marker not in text, f"{marker} leaked in explain(extended={ext}): {text}"
+    finally:
+        spark.stop()

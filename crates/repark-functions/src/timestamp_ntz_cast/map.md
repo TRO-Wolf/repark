@@ -24,7 +24,8 @@ parameter here would be a second nanosecond conversion beside that one.
   (an already-wrapped expression keeps a single wrap; `wrap_bare=false`
   leaves the expression alone). **FEXPR-TIMESTAMP-NTZ-1 (2026-11-24):** pins nullable `NULL`
   output for malformed string inputs under `ansi=false` while preserving non-nullability for
-  valid string literals (ntz-1 R-5).
+  valid string literals (ntz-1 R-5); Delta 1 adds DST gap wall, `+HH:MM:SS` / named-zone walls,
+  and `SparkTimestampNtzCast::simplify` constant-folding pins.
 
 ## Pointers
 

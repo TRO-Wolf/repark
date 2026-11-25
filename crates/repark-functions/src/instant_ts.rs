@@ -16,11 +16,12 @@ use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::simplify::{ExprSimplifyResult, SimplifyContext};
 use datafusion::logical_expr::{
     Cast, ColumnarValue, Expr, ExprSchemable, LogicalPlan, ReturnFieldArgs, ScalarFunctionArgs,
-    ScalarUDF, ScalarUDFImpl, Signature, TryCast, Union, Volatility,
+    ScalarUDF, ScalarUDFImpl, Signature, TryCast, Volatility,
 };
 use datafusion::optimizer::AnalyzerRule;
 
 use crate::datetime::localize_wall_micros_in_zone;
+use crate::decimal_cast::DECIMAL_CAST_NULLABLE_NAME;
 use crate::session_time_zone::{
     current_timezone_udf, is_session_time_zone_deferred, session_time_zone_from_options,
 };
@@ -29,13 +30,13 @@ use crate::spark_string_timestamp::{
     spark_string_literal,
 };
 use crate::spark_type_planner::planned_instant_cast;
-use crate::timestamp_type::{
-    SparkTimestampType, is_spark_timestamp_type_deferred, spark_timestamp_type_from_options,
-};
+use crate::timestamp_type::{is_spark_timestamp_type_deferred, spark_timestamp_type_from_options};
 
 pub(crate) mod ltz_cast;
+mod ntz_cast;
 
 pub use ltz_cast::{TIMESTAMP_LTZ_CAST_NAME, TRY_TIMESTAMP_LTZ_CAST_NAME, timestamp_ltz_cast_udf};
+pub use ntz_cast::{NTZ_TIMESTAMP_CAST_RULE_NAME, insert_ntz_timestamp_cast_before_coercion};
 
 /// Spark's default `TIMESTAMP` / LTZ Arrow type — µs with a UTC annotation.
 pub(crate) fn ltz_timestamp_type() -> DataType {
@@ -361,54 +362,20 @@ fn parse_extraction_zone(zone_id: &str) -> Result<Tz> {
     })
 }
 
-/// `true` when Spark would treat the string as already carrying a zone (instant, not wall).
 #[must_use]
 pub fn string_carries_timezone(text: &str) -> bool {
+    if let Some(parsed) = crate::spark_string_timestamp::grammar::parse_timestamp_string(text)
+        && let Some(zone) = parsed.zone
+        && crate::spark_string_timestamp::zone::spark_zone_id(zone).is_some()
+    {
+        return true;
+    }
     let trimmed = text.trim();
     if trimmed.is_empty() {
         return false;
     }
     let last = trimmed.as_bytes()[trimmed.len() - 1];
-    if last == b'Z' || last == b'z' {
-        return true;
-    }
-    if last == b']' && trimmed.contains('[') {
-        return true;
-    }
-    ends_with_numeric_offset(trimmed)
-}
-
-fn ends_with_numeric_offset(text: &str) -> bool {
-    let bytes = text.as_bytes();
-    let length = bytes.len();
-    for suffix_len in [6_usize, 5, 3] {
-        if length < suffix_len {
-            continue;
-        }
-        let suffix = &bytes[length - suffix_len..];
-        if suffix[0] != b'+' && suffix[0] != b'-' {
-            continue;
-        }
-        if !suffix[1].is_ascii_digit() || !suffix[2].is_ascii_digit() {
-            continue;
-        }
-        let wall = &text[..length - suffix_len];
-        let has_time = wall
-            .bytes()
-            .any(|byte| byte == b':' || byte == b'T' || byte == b't' || byte == b' ');
-        if !has_time {
-            continue;
-        }
-        match suffix_len {
-            3 => return true,
-            5 if suffix[3].is_ascii_digit() && suffix[4].is_ascii_digit() => return true,
-            6 if suffix[3] == b':' && suffix[4].is_ascii_digit() && suffix[5].is_ascii_digit() => {
-                return true;
-            }
-            _ => {}
-        }
-    }
-    false
+    last == b']' && trimmed.contains('[')
 }
 
 fn columnar_utf8_strings(value: &ColumnarValue) -> Option<Vec<Option<String>>> {
@@ -540,7 +507,8 @@ impl AnalyzerRule for SparkLtzTimestampCast {
             .then(|| session_time_zone_from_options(config).to_string());
         let zone_ref = zone.as_deref();
         let defer_timestamp_type = is_spark_timestamp_type_deferred(config);
-        let timestamp_type = spark_timestamp_type_from_options(config);
+        let session_ntz =
+            !defer_timestamp_type && spark_timestamp_type_from_options(config).is_ntz();
         let empty = DFSchema::empty();
         let plan = crate::timestamp_ns_cast::widen_mixed_values_timestamps(
             plan,
@@ -550,23 +518,21 @@ impl AnalyzerRule for SparkLtzTimestampCast {
                         node,
                         &empty,
                         zone_ref,
-                        timestamp_type,
                         defer_timestamp_type,
+                        session_ntz,
                     ))
                 })
                 .data()
             },
-            !defer_timestamp_type && timestamp_type.is_ntz(),
+            session_ntz,
         )?;
         let plan = if defer_timestamp_type {
             plan
-        } else if timestamp_type.is_ntz() {
-            ltz_cast::retarget_dml_ltz_store_casts(plan)?
         } else {
             crate::timestamp_ntz_cast::retarget_dml_store_casts(plan)?
         };
         plan.transform_up_with_subqueries(|node| {
-            rewrite_plan(node, zone_ref, timestamp_type, defer_timestamp_type)
+            rewrite_plan(node, zone_ref, defer_timestamp_type, session_ntz)
         })
         .data()
     }
@@ -580,15 +546,9 @@ impl AnalyzerRule for SparkLtzTimestampCast {
 fn rewrite_plan(
     plan: LogicalPlan,
     zone: Option<&str>,
-    timestamp_type: SparkTimestampType,
     defer_timestamp_type: bool,
+    session_ntz: bool,
 ) -> Result<Transformed<LogicalPlan>> {
-    if !defer_timestamp_type
-        && timestamp_type.is_ntz()
-        && let LogicalPlan::Union(union) = plan
-    {
-        return rebuild_stale_union(union);
-    }
     let mut schema = DFSchema::empty();
     for input in plan.inputs() {
         schema.merge(input.schema());
@@ -597,7 +557,7 @@ fn rewrite_plan(
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
         let rewritten = expr.transform_up(|node| {
-            rewrite_cast(node, &schema, zone, timestamp_type, defer_timestamp_type).transform_data(
+            rewrite_cast(node, &schema, zone, defer_timestamp_type, session_ntz).transform_data(
                 |typed| crate::timestamp_ns_cast::wall_kernel_by_target(typed, &schema),
             )
         })?;
@@ -608,32 +568,15 @@ fn rewrite_plan(
         .map_data(crate::timestamp_ns_cast::conform_values_timestamp_columns)
 }
 
-fn rebuild_stale_union(union: Union) -> Result<Transformed<LogicalPlan>> {
-    let stale = union.inputs.iter().any(|input| {
-        let merged = union.schema.fields();
-        let mine = input.schema().fields();
-        mine.len() != merged.len()
-            || mine
-                .iter()
-                .zip(merged.iter())
-                .any(|(mine, merged)| mine.data_type() != merged.data_type())
-    });
-    if !stale {
-        return Ok(Transformed::no(LogicalPlan::Union(union)));
-    }
-    let rebuilt = Union::try_new_with_loose_types(union.inputs)?;
-    Ok(Transformed::yes(LogicalPlan::Union(rebuilt)))
-}
-
 fn rewrite_cast(
     expr: Expr,
     schema: &DFSchema,
     zone: Option<&str>,
-    timestamp_type: SparkTimestampType,
     defer_timestamp_type: bool,
+    session_ntz: bool,
 ) -> Transformed<Expr> {
     if defer_timestamp_type {
-        if let Some((arg, _)) = ltz_cast::unwrap_ltz_cast_marker(&expr)
+        if let Some((arg, false)) = ltz_cast::unwrap_ltz_cast_marker(&expr)
             && let Some(literal) = spark_string_literal(&arg, None)
         {
             return Transformed::yes(literal);
@@ -643,10 +586,7 @@ fn rewrite_cast(
     if let Some((arg, try_cast)) = ltz_cast::unwrap_ltz_cast_marker(&expr) {
         return rewrite_explicit_ltz_marker(arg, try_cast, schema, zone);
     }
-    if timestamp_type.is_ntz() {
-        return rewrite_cast_as_ntz(expr, schema);
-    }
-    rewrite_cast_as_ltz(expr, schema, zone)
+    rewrite_cast_as_ltz(expr, schema, zone, session_ntz)
 }
 
 fn rewrite_explicit_ltz_marker(
@@ -655,12 +595,33 @@ fn rewrite_explicit_ltz_marker(
     schema: &DFSchema,
     zone: Option<&str>,
 ) -> Transformed<Expr> {
-    if !try_cast
-        && arg
-            .get_type(schema)
-            .is_ok_and(|data_type| is_ltz_timestamp(&data_type))
-    {
-        return Transformed::yes(arg);
+    if let Ok(source) = arg.get_type(schema) {
+        if is_ltz_timestamp(&source) {
+            if !try_cast {
+                return Transformed::yes(arg);
+            }
+            return Transformed::yes(Expr::ScalarFunction(ScalarFunction::new_udf(
+                crate::timestamp_ltz_ntz::try_to_timestamp_udf(),
+                vec![arg],
+            )));
+        }
+        if matches!(source, DataType::Null) {
+            if matches!(&arg, Expr::Literal(scalar, _) if scalar.is_null()) {
+                return Transformed::yes(Expr::Literal(
+                    ScalarValue::TimestampMicrosecond(None, Some(Arc::<str>::from("UTC"))),
+                    None,
+                ));
+            }
+            let udf = if try_cast {
+                crate::timestamp_ltz_ntz::try_to_timestamp_udf()
+            } else {
+                to_timestamp_udf()
+            };
+            return Transformed::yes(Expr::ScalarFunction(ScalarFunction::new_udf(
+                udf,
+                vec![arg],
+            )));
+        }
     }
     let nullable = try_cast || arg.nullable(schema).unwrap_or(true);
     let field = Arc::new(Field::new("ts", ltz_timestamp_type(), nullable));
@@ -669,11 +630,27 @@ fn rewrite_explicit_ltz_marker(
     } else {
         Expr::Cast(Cast::new_from_field(Box::new(arg), field))
     };
-    let rewritten = rewrite_cast_as_ltz(unwrapped, schema, zone);
+    let rewritten = rewrite_cast_as_ltz(unwrapped, schema, zone, false);
     Transformed::yes(rewritten.data)
 }
 
-fn rewrite_cast_as_ltz(expr: Expr, schema: &DFSchema, zone: Option<&str>) -> Transformed<Expr> {
+fn unwrap_nullable_marker(expr: &Expr) -> Option<&Expr> {
+    let Expr::ScalarFunction(function) = expr else {
+        return None;
+    };
+    if function.func.name() == DECIMAL_CAST_NULLABLE_NAME && function.args.len() == 1 {
+        Some(&function.args[0])
+    } else {
+        None
+    }
+}
+
+fn rewrite_cast_as_ltz(
+    expr: Expr,
+    schema: &DFSchema,
+    zone: Option<&str>,
+    session_ntz: bool,
+) -> Transformed<Expr> {
     if let Some(seamed) = crate::zone_seam::rewrite_zone_seam(&expr, schema) {
         return Transformed::yes(seamed);
     }
@@ -681,6 +658,9 @@ fn rewrite_cast_as_ltz(expr: Expr, schema: &DFSchema, zone: Option<&str>) -> Tra
         return Transformed::yes(rewritten);
     }
     if let Expr::Cast(cast) = &expr {
+        if session_ntz && !is_ltz_timestamp(cast.field.data_type()) {
+            return Transformed::no(expr);
+        }
         let targeting_naive_us = matches!(
             cast.field.data_type(),
             DataType::Timestamp(TimeUnit::Microsecond, None)
@@ -713,6 +693,12 @@ fn rewrite_cast_as_ltz(expr: Expr, schema: &DFSchema, zone: Option<&str>) -> Tra
                 ));
             }
             if targeting_timestamp && !targeting_ns && is_wall_clock_cast_source(&source) {
+                if let Some(inner) = unwrap_nullable_marker(&cast.expr) {
+                    return Transformed::yes(Expr::ScalarFunction(ScalarFunction::new_udf(
+                        to_timestamp_udf(),
+                        vec![inner.clone()],
+                    )));
+                }
                 if let Some(literal) = spark_string_literal(&cast.expr, zone) {
                     return Transformed::yes(literal);
                 }
@@ -727,10 +713,13 @@ fn rewrite_cast_as_ltz(expr: Expr, schema: &DFSchema, zone: Option<&str>) -> Tra
             }
         }
     }
-    peel_naive_cast_of_ltz_producer(expr, schema)
+    if session_ntz {
+        Transformed::no(expr)
+    } else {
+        peel_naive_cast_of_ltz_producer(expr, schema)
+    }
 }
 
-/// `TypeCoercion` may wrap a `TIMESTAMP` literal in a naive µs `CAST` before this rule rewrites it.
 fn peel_naive_cast_of_ltz_producer(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     let Expr::Cast(cast) = &expr else {
         return Transformed::no(expr);
@@ -755,7 +744,7 @@ fn peel_naive_cast_of_ltz_producer(expr: Expr, schema: &DFSchema) -> Transformed
     Transformed::no(expr)
 }
 
-fn is_wall_clock_cast_source(data_type: &DataType) -> bool {
+pub(crate) fn is_wall_clock_cast_source(data_type: &DataType) -> bool {
     is_string_type(data_type)
         || matches!(
             data_type,
@@ -774,87 +763,6 @@ pub(crate) fn is_ltz_timestamp(data_type: &DataType) -> bool {
 fn wrap_as_ltz(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     let nullable = expr.nullable(schema).unwrap_or(true);
     let field = Arc::new(Field::new("ts", ltz_timestamp_type(), nullable));
-    Transformed::yes(Expr::Cast(Cast::new_from_field(Box::new(expr), field)))
-}
-
-/// `spark.sql.timestampType=TIMESTAMP_NTZ`: bare `TIMESTAMP` literals / casts become naive µs.
-fn rewrite_cast_as_ntz(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
-    if let Expr::TryCast(try_cast) = &expr {
-        let targeting_timestamp = matches!(try_cast.field.data_type(), DataType::Timestamp(_, _));
-        let targeting_ns = matches!(
-            try_cast.field.data_type(),
-            DataType::Timestamp(TimeUnit::Nanosecond, _)
-        );
-        if targeting_timestamp
-            && !targeting_ns
-            && let Ok(source) = try_cast.expr.get_type(schema)
-            && (is_ltz_timestamp(&source)
-                || is_wall_clock_cast_source(&source)
-                || matches!(source, DataType::Null))
-        {
-            return Transformed::yes(crate::timestamp_ntz_cast::timestamp_ntz_cast_expr(
-                *try_cast.expr.clone(),
-                true,
-            ));
-        }
-        return Transformed::no(expr);
-    }
-    if let Expr::Cast(cast) = &expr {
-        let targeting_naive_us = matches!(
-            cast.field.data_type(),
-            DataType::Timestamp(TimeUnit::Microsecond, None)
-        );
-        let targeting_timestamp = matches!(cast.field.data_type(), DataType::Timestamp(_, _));
-        let targeting_ns = matches!(
-            cast.field.data_type(),
-            DataType::Timestamp(TimeUnit::Nanosecond, _)
-        );
-        let targeting_seconds = matches!(
-            cast.field.data_type(),
-            DataType::Timestamp(TimeUnit::Second, _)
-        );
-        if targeting_naive_us {
-            let child_is_to_timestamp = matches!(
-                cast.expr.as_ref(),
-                Expr::ScalarFunction(function) if function.func.name() == "to_timestamp"
-            );
-            let child_is_ltz = cast
-                .expr
-                .get_type(schema)
-                .is_ok_and(|data_type| is_ltz_timestamp(&data_type));
-            if child_is_to_timestamp || child_is_ltz {
-                return Transformed::yes(crate::timestamp_ntz_cast::timestamp_ntz_cast_expr(
-                    *cast.expr.clone(),
-                    false,
-                ));
-            }
-            return Transformed::no(expr);
-        }
-        if let Ok(source) = cast.expr.get_type(schema) {
-            if let Some(planned) = planned_instant_cast(cast, &source, schema, true) {
-                return Transformed::yes(planned);
-            }
-            if targeting_timestamp && !targeting_ns && is_ltz_timestamp(&source) {
-                return Transformed::yes(crate::timestamp_ntz_cast::timestamp_ntz_cast_expr(
-                    *cast.expr.clone(),
-                    false,
-                ));
-            }
-            if targeting_timestamp && !targeting_ns && is_wall_clock_cast_source(&source) {
-                return wrap_as_ntz(*cast.expr.clone(), schema);
-            }
-            let source_is_int_or_null = source.is_integer() || matches!(source, DataType::Null);
-            if targeting_seconds && source_is_int_or_null {
-                return wrap_as_ntz(expr, schema);
-            }
-        }
-    }
-    Transformed::no(expr)
-}
-
-fn wrap_as_ntz(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
-    let nullable = expr.nullable(schema).unwrap_or(true);
-    let field = Arc::new(Field::new("ts", ntz_timestamp_type(), nullable));
     Transformed::yes(Expr::Cast(Cast::new_from_field(Box::new(expr), field)))
 }
 

@@ -821,9 +821,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   types, so the wrap was tautological; `nonnull_spark_cast` remains Date32 →
   Timestamp only. The facade column-CAST pin still holds Spark-equal non-null
   struct CAST.
-  *ZONE-SEAM-1 fix round 3 (2026-10-23):* `decimal_cast::SPARK_NONNULL_NAME` is `pub`, so the
-  router's ZS-9 gate (`repark-spark/src/router/nested_ns.rs`) can look through the non-null
-  marker around a `named_struct` when it reads an UPDATE's assigned struct leaf by leaf.
+  *ZONE-SEAM-1 fix round 3 (2026-10-23):* `decimal_cast::SPARK_NONNULL_NAME` is `pub` for
+  `nested_ns.rs`. *FEXPR-TIMESTAMP-NTZ-1 Delta 1 (2026-11-24):* `DECIMAL_CAST_NULLABLE_NAME` is
+  `pub` and registered in `registration.rs`; `SparkNullability` marks
+  `TIMESTAMP_LTZ_CAST_NAME(Date32)` non-null and legacy `!ansi` `unix_timestamp` nullable.
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer rule, on BOTH doors via `install_shared_analyzer_rules` (here since FNP-11B step 3; TIME guard left to `analyzer_rules()`, remediation round 1). `CAST(bool AS DECIMAL(p,s))` becomes a precision-carrying UDF (true 1, false 0; per-row nulls) reading ANSI at plan time for the overflow (`(2,2)`: raise vs NULL), overflow-exposed targets nullable; registry `CAST-BOOL-DEC-1`. **DOUBLE-DECIMAL-STORE-ROUND-1 (2026-11-13):** main's BOOLEAN-to-DECIMAL cast again; a FLOAT/DOUBLE `CAST`, `TRY_CAST` or `arrow_cast` to DECIMAL is left alone (pin `bool_decimal::tests::a_float_cast_to_decimal_is_left_to_its_cast`). **DECIMAL-DOUBLE-UNION-COERCION-1 part 1 (2026-11-15):** a door flag: on the Spark door FLOAT/DOUBLE to `Decimal128` casts run K1 (`__repark_float_to_decimal__`) and `Decimal128` to `Float64` casts run K2 (`__repark_decimal_to_double__`); the native door keeps the bool branch only. The delta (2026-11-15) adds `DecimalToDouble::preimage`: a `Float64` literal against a non-volatile `Decimal128(p, s)` argument returns `PreimageResult::Range` over `[lower, upper)` from `decimal_preimage_of_double`, so DataFusion's simplifier turns `=`, `<>`, `<`, `<=`, `>`, `>=`, `IS DISTINCT FROM`, `<=>` (either side) and `IN` / `NOT IN` of up to three constants into decimal comparisons; otherwise `None`. (`bool_decimal/tests.rs`, 15 tests: 12 before, 3 new.)
 - `int_to_binary.rs` — **BL-11 (2026-09-16):** the `IntToBinaryCast` analyzer rule,
   slotted after `SparkExprSemantics` so `SparkIntegerLiteral` has already narrowed bare
@@ -1085,12 +1086,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **WO NTZ-STORE-DOORS-1 third re-verify fold (2026-09-29, RD4-1):** the call also passes
   `timestamp_type.is_ntz()`, so the pass reads a `TIMESTAMP` literal by the session's
   default timestamp type.
-  **FEXPR-TIMESTAMP-NTZ-1 (2026-11-24):** [instant_ts/](instant_ts/map.md) holds `ltz_cast.rs`
-  (`__repark_cast_timestamp_ltz__` / `__repark_try_cast_timestamp_ltz__`) and moved `tests.rs`.
-  `SparkLtzTimestampCast` skips bare `TIMESTAMP` rewrites under `DeferredSparkTimestampTypeConfig`
-  (folding only zoned LTZ markers), unwraps explicit LTZ markers via the LTZ path even in NTZ
-  sessions, handles `TryCast` and LTZ->NTZ wall conversion in `rewrite_cast_as_ntz`, and rebuilds
-  stale `Union` schemas in NTZ sessions.
+  **FEXPR-TIMESTAMP-NTZ-1 (2026-11-24):** [instant_ts/](instant_ts/map.md) holds `ltz_cast.rs`,
+  pre-coercion `ntz_cast.rs` (`spark_ntz_timestamp_cast`), and `tests.rs`. Under deferral bare
+  `TIMESTAMP` waits for the session; post-coercion `SparkLtzTimestampCast` localizes every
+  `Timestamp(µs, None) -> Timestamp(µs, UTC)` cast in both `LTZ` and `NTZ` sessions, unwraps
+  `DECIMAL_CAST_NULLABLE_NAME` to nullable `to_timestamp`, and `string_carries_timezone` reuses
+  `spark_string_timestamp` (`grammar` + `zone`).
 - `timestamp_cast.rs` — **C-4 fold 3 item 2 (2026-10-11):** the tick, wall-clock and
   formatting kernels of `__repark_timestamp_to_string__` moved to
   `repark-common`'s `spark_timestamp_text.rs` so the Postgres write chokepoint calls
@@ -1116,7 +1117,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Embedded, never registered. Pins: `epoch_seconds_floor_is_floor_not_truncation` and siblings,
   plus `spark_timestamp_string_trims_trailing_fraction_zeros` / year-shape / LTZ-vs-NTZ here;
   facade corpus `test_timestamp_cast_parity.py`. **TZ-8:** `__repark_timestamp_to_date__`
-  (embedded CAST) + registered `to_date` overwrite share `datetime::invoke_local_dates`.
+  (embedded CAST; nullable for `Timestamp(_, None)`, FEXPR-TIMESTAMP-NTZ-1 Delta 1) + registered
+  `to_date` overwrite share `datetime::invoke_local_dates`.
   Pin `ltz_date_is_session_zone_and_ntz_is_stored_wall`. Ledgers:
   `task/tz5-cast-seconds-ledger.md` §4, `task/v3-btz4-ledger.md`, `task/r4-tz8-ledger.md`.
   **DATE-FN-1 (2026-09-04):** registered `date` (Spark `CAST AS DATE`) and `unix_timestamp` (the `date` / `unix_timestamp` registrations in `expr_fn.rs` / `timestamp_cast.rs` carry no doc comments; this row is their contract)
@@ -1268,8 +1270,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   pass-through subquery nests, so `from_utc_timestamp` / `to_utc_timestamp` /
   `date_trunc` cells store the session wall again; the wrap skips an
   already-wrapped expression. **FEXPR-TIMESTAMP-NTZ-1 (2026-11-24):** `SparkTimestampNtzCast`
-  marks string-source outputs nullable so `CAST('bad' AS TIMESTAMP_NTZ)` returns `NULL` under
-  `ansi=false` without an Arrow schema error.
+  marks string-source outputs nullable unless the argument is a string literal that parses
+  (`parse_timestamp_ntz_wall`, keeping valid literals non-null per ntz-1 R-5), and `simplify`
+  folds constant valid literals/dates/already-NTZ/non-deferred LTZ/NULLs.
 - `timestamp_ltz_ntz.rs` — **ICE-TSNS-FLOOR-DOORS-1 (2026-10-14, R-009):** the `Timestamp` arm of
   `ntz_single` hands every timestamp source to `timestamp_ns_cast::store_micros` with the
   `TIMESTAMP_NTZ` type; its two Arrow casts are gone, and `unlocalize_to_walls` is `pub(crate)`
@@ -1284,10 +1287,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `plan_format_column` / `parse_wall_or_null` primitives through a module-local
   walls helper (the `stamps_with_format_column` loop stays untouched behind its
   pins, and `java_datetime.rs` sits 3 lines under its ceiling), while the 1-arg
-  arm strips a zone/offset suffix and round-trips the wall through the
-  `to_timestamp` kernel before un-localizing, so offset strings keep their
-  written wall and malformed strings retarget `[CAST_INVALID_INPUT]` at the
-  `TIMESTAMP_NTZ` name.
+  arm parses walls directly via `spark_string_timestamp::cast_strings_to_ntz` without
+  session-zone DST shifting (FEXPR-TIMESTAMP-NTZ-1 Delta 1, 2026-11-24).
   `timestamp_ltz_ntz::tests::*`.
   **CAST-TS-STRING-1 (2026-09-19):** one-argument string `try_to_timestamp` calls the Spark
   kernel with NULL on failure; the `to_timestamp_ntz` arms keep DataFusion's parse through
@@ -1368,11 +1369,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Inputs are coerced by `coerce_date_arg` / `coerce_to_date32` / `coerce_to_timestamp_micros`
   (`user_defined` signature): date / timestamp (any unit+zone) / string — matching Spark. Tests run
   the UDFs through a real `SessionContext` against ISO-8601 / Spark goldens.
-  Session-zone semantics resolve LTZ instants in `spark.sql.session.timeZone`; `Timestamp(_, None)`
-  is NTZ wall time and remains wall time. LTZ conversion preserves the preferred source offset on
-  DST overlaps and uses the current gap resolver. Rewrites match source types and output shapes,
-  which makes each rewrite idempotent; repeated analysis remains a separate set-operation schema
-  fixpoint requirement. `date_trunc` outputs `Timestamp(µs, UTC)`.
+  Session-zone semantics resolve LTZ instants in `spark.sql.session.timeZone`; `date_trunc`
+  localizes `Timestamp(_, None)` wall inputs and always outputs `Timestamp(µs, UTC)`
+  (FEXPR-TIMESTAMP-NTZ-1 Delta 1, 2026-11-24); `date_format` keeps NTZ wall ticks. LTZ conversion
+  preserves preferred source offsets on DST overlaps and uses the current gap resolver. Rewrites
+  match source types and output shapes, making each rewrite idempotent.
   **r20 A1:** SAF-001 out-of-chrono Date32 → NULL in `add_months`/`trunc` (pins
   `extreme_date32_add_months_and_trunc_null_without_panic`,
   `chrono_boundary_date32_add_months_computes`, `extreme_date32_year_extractor_no_panic`);

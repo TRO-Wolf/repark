@@ -10,7 +10,7 @@ use datafusion::logical_expr::{
     ScalarUDFImpl, Signature, Volatility,
 };
 
-pub(crate) const DECIMAL_CAST_NULLABLE_NAME: &str = "__repark_decimal_cast_nullable__";
+pub const DECIMAL_CAST_NULLABLE_NAME: &str = "__repark_decimal_cast_nullable__";
 pub const SPARK_NONNULL_NAME: &str = "__repark_spark_nonnull__";
 
 pub(crate) fn nullable_spark_cast(cast: &Cast, schema: &DFSchema) -> Option<Expr> {

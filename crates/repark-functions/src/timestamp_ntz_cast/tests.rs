@@ -213,3 +213,35 @@ fn retargeting_an_already_wrapped_store_expr_keeps_a_single_wrap() {
     assert_eq!(twice, once);
     assert_eq!(retarget_top(bare, &schema, false).to_string(), "c");
 }
+
+#[tokio::test]
+async fn gap_wall_and_named_zones_preserve_wall_and_constant_simplify() {
+    let ctx = ctx_at("America/New_York");
+    for (sql, expected) in [
+        (
+            "SELECT __repark_cast_timestamp_ntz__('2024-03-10 02:30:00.654321') AS v",
+            1_710_037_800_654_321_i64,
+        ),
+        (
+            "SELECT __repark_cast_timestamp_ntz__('2024-01-01 02:00:00+05:30:00') AS v",
+            1_704_074_400_000_000_i64,
+        ),
+        (
+            "SELECT __repark_cast_timestamp_ntz__('2024-01-01 02:00:00 America/New_York') AS v",
+            1_704_074_400_000_000_i64,
+        ),
+    ] {
+        let frame = ctx.sql(sql).await.expect(sql);
+        let optimized = format!("{}", frame.clone().into_optimized_plan().expect(sql));
+        assert!(
+            !optimized.contains(TIMESTAMP_NTZ_CAST_NAME),
+            "{sql}: {optimized}"
+        );
+        let batches = frame.collect().await.expect(sql);
+        assert_eq!(
+            array_ticks(batches[0].column(0)),
+            vec![Some(expected)],
+            "{sql}"
+        );
+    }
+}

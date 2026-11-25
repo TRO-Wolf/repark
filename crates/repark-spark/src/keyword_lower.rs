@@ -5,8 +5,8 @@ use std::ops::ControlFlow;
 use datafusion::error::DataFusionError;
 use datafusion::sql::sqlparser::ast::{
     DataType, Expr, Function, FunctionArg, FunctionArgExpr, FunctionArgumentList,
-    FunctionArguments, Ident, ObjectName, ObjectNamePart, Query, Statement, TimezoneInfo,
-    UnaryOperator, Value, ValueWithSpan, Visit, VisitMut, Visitor, VisitorMut,
+    FunctionArguments, Ident, ObjectName, ObjectNamePart, Query, Statement, UnaryOperator, Value,
+    ValueWithSpan, Visit, VisitMut, Visitor, VisitorMut,
 };
 use datafusion::sql::sqlparser::tokenizer::Span;
 use repark_functions::collection::SQL_MAP_NAME;
@@ -130,11 +130,7 @@ fn lower_expression(node: &mut Expr) {
         };
         return;
     }
-    if let Expr::Cast { data_type, .. } = node
-        && data_type.to_string().eq_ignore_ascii_case("timestamp_ltz")
-    {
-        *data_type = DataType::Timestamp(None, TimezoneInfo::None);
-    }
+    ntz_cast_lower::lower_explicit_timestamp_ltz_cast(node);
 }
 
 struct KeywordLower;
@@ -187,7 +183,10 @@ impl VisitorMut for TimestampNsCastLower {
     type Break = Infallible;
 
     fn post_visit_expr(&mut self, expr: &mut Expr) -> ControlFlow<Self::Break> {
-        if !ntz_cast_lower::lower_timestamp_ntz_cast(expr) && self.empty_maps {
+        if !ntz_cast_lower::lower_timestamp_ntz_cast(expr)
+            && !ntz_cast_lower::lower_explicit_timestamp_ltz_cast(expr)
+            && self.empty_maps
+        {
             lower_map_call(expr);
         }
         ControlFlow::Continue(())
@@ -247,6 +246,7 @@ impl Visitor for TimestampNsCastProbe {
             Expr::TypedString(typed) if matches!(typed.data_type, DataType::TimestampNtz(_)) => {
                 ControlFlow::Break(())
             }
+            _ if ntz_cast_lower::is_explicit_timestamp_ltz_cast(expr) => ControlFlow::Break(()),
             _ if is_empty_map_call(expr) || is_odd_map_call(expr) => ControlFlow::Break(()),
             _ => ControlFlow::Continue(()),
         }
@@ -438,10 +438,21 @@ mod tests {
     }
 
     #[test]
-    fn ltz_cast_lowers_to_bare_timestamp() {
-        let text = lowered("SELECT CAST('2024-01-02 03:04:05' AS TIMESTAMP_LTZ) AS v").to_string();
+    fn ltz_cast_lowers_to_explicit_ltz_marker() {
+        let text = lowered(
+            "SELECT CAST('2024-01-02 03:04:05' AS TIMESTAMP_LTZ) AS v, \
+             TRY_CAST('x' AS TIMESTAMP_LTZ) AS w",
+        )
+        .to_string();
         assert!(!text.contains("TIMESTAMP_LTZ"), "{text}");
-        assert!(text.contains("TIMESTAMP"), "{text}");
+        assert!(
+            text.contains("__repark_cast_timestamp_ltz__('2024-01-02 03:04:05')"),
+            "{text}"
+        );
+        assert!(
+            text.contains("__repark_try_cast_timestamp_ltz__('x')"),
+            "{text}"
+        );
     }
 
     #[test]

@@ -3,9 +3,7 @@ use std::sync::Arc;
 
 use arrow::array::timezone::Tz;
 use chrono::NaiveDateTime;
-use datafusion::arrow::array::{
-    Array, ArrayRef, AsArray, StringArray, StringBuilder, TimestampMicrosecondArray,
-};
+use datafusion::arrow::array::{Array, ArrayRef, AsArray, StringArray, TimestampMicrosecondArray};
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{
     DataType, Date32Type, Field, FieldRef, TimestampMicrosecondType,
@@ -257,110 +255,6 @@ fn retarget_to_ntz(error: &DataFusionError) -> DataFusionError {
     )
 }
 
-fn ltz_of_strings(
-    texts: &StringArray,
-    args: &ScalarFunctionArgs,
-    tolerate: bool,
-) -> Result<ArrayRef> {
-    let values: ArrayRef = Arc::new(texts.clone());
-    let rows = values.len();
-    let field: FieldRef = Arc::new(Field::new("to_timestamp_ntz", DataType::Utf8, true));
-    let return_field: FieldRef =
-        Arc::new(Field::new("to_timestamp_ntz", ltz_timestamp_type(), true));
-    let forward = ScalarFunctionArgs {
-        args: vec![ColumnarValue::Array(values)],
-        arg_fields: vec![field],
-        number_rows: rows,
-        return_field,
-        config_options: Arc::clone(&args.config_options),
-    };
-    match arrow_grammar_to_timestamp_udf().invoke_with_args(forward) {
-        Ok(produced) => {
-            let arrays = ColumnarValue::values_to_arrays(std::slice::from_ref(&produced))?;
-            if !tolerate {
-                return Ok(Arc::clone(&arrays[0]));
-            }
-            let out = arrays[0].as_primitive::<TimestampMicrosecondType>();
-            if out.null_count() == texts.null_count() {
-                return Ok(Arc::clone(&arrays[0]));
-            }
-            salvage_strings(texts, args)
-        }
-        Err(error) => {
-            if !tolerate {
-                return Err(error);
-            }
-            salvage_strings(texts, args)
-        }
-    }
-}
-
-fn salvage_strings(texts: &StringArray, args: &ScalarFunctionArgs) -> Result<ArrayRef> {
-    let mut builder = TimestampMicrosecondArray::builder(texts.len());
-    for row in 0..texts.len() {
-        if texts.is_null(row) {
-            builder.append_null();
-            continue;
-        }
-        let one: ArrayRef = Arc::new(StringArray::from(vec![Some(texts.value(row))]));
-        match forward_to_timestamp(one, args) {
-            Ok(produced) => {
-                let arrays = ColumnarValue::values_to_arrays(std::slice::from_ref(&produced))?;
-                let micros = arrays[0].as_primitive::<TimestampMicrosecondType>();
-                if micros.is_null(0) {
-                    builder.append_null();
-                } else {
-                    builder.append_value(micros.value(0));
-                }
-            }
-            Err(_) => builder.append_null(),
-        }
-    }
-    Ok(Arc::new(builder.finish().with_timezone("UTC")))
-}
-
-pub(crate) fn wall_without_zone(text: &str) -> &str {
-    let trimmed = text.trim();
-    if trimmed.is_empty() {
-        return text;
-    }
-    let bytes = trimmed.as_bytes();
-    if bytes[bytes.len() - 1] == b']'
-        && let Some(start) = trimmed.find('[')
-    {
-        return trimmed[..start].trim_end();
-    }
-    if bytes[bytes.len() - 1] == b'Z' || bytes[bytes.len() - 1] == b'z' {
-        return trimmed[..trimmed.len() - 1].trim_end();
-    }
-    for width in [6_usize, 5, 3] {
-        if trimmed.len() < width {
-            continue;
-        }
-        let tail = &trimmed[trimmed.len() - width..];
-        let head = tail.as_bytes();
-        if head[0] != b'+' && head[0] != b'-' {
-            continue;
-        }
-        if !head[1].is_ascii_digit() || !head[2].is_ascii_digit() {
-            continue;
-        }
-        let zoned = match width {
-            3 => true,
-            5 => head[3].is_ascii_digit() && head[4].is_ascii_digit(),
-            _ => head[3] == b':' && head[4].is_ascii_digit() && head[5].is_ascii_digit(),
-        };
-        let wall = &trimmed[..trimmed.len() - width];
-        let has_time = wall
-            .bytes()
-            .any(|byte| byte == b':' || byte == b'T' || byte == b't' || byte == b' ');
-        if zoned && has_time {
-            return wall.trim_end();
-        }
-    }
-    text
-}
-
 pub(crate) fn unlocalize_to_walls(ltz: &ArrayRef, zone: Tz) -> Result<ArrayRef> {
     let instants = cast(ltz.as_ref(), &ltz_timestamp_type())?;
     let instants = instants.as_primitive::<TimestampMicrosecondType>();
@@ -394,21 +288,14 @@ pub(crate) fn ntz_single(
     match input.data_type() {
         DataType::Null => Ok(ColumnarValue::Array(all_null_ntz(input.len()))),
         DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => {
-            let texts = cast(input.as_ref(), &DataType::Utf8)?;
-            let texts = texts.as_string::<i32>();
-            let mut stripped =
-                StringBuilder::with_capacity(texts.len(), texts.get_array_memory_size());
-            for row in 0..texts.len() {
-                if texts.is_null(row) {
-                    stripped.append_null();
-                } else {
-                    stripped.append_value(wall_without_zone(texts.value(row)));
-                }
-            }
-            let stripped = stripped.finish();
-            let instants = ltz_of_strings(&stripped, args, tolerate)
-                .map_err(|error| retarget_to_ntz(&error))?;
-            Ok(ColumnarValue::Array(unlocalize_to_walls(&instants, zone)?))
+            let failure = if tolerate {
+                StringCastFailure::Null
+            } else {
+                StringCastFailure::Raise
+            };
+            Ok(ColumnarValue::Array(
+                crate::spark_string_timestamp::cast_strings_to_ntz(input, failure)?,
+            ))
         }
         DataType::Date32 | DataType::Date64 => {
             let days = cast(input.as_ref(), &DataType::Date32)?;

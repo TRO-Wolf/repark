@@ -40,6 +40,60 @@ fn spark_sql_string_value(text: &str) -> String {
 }
 
 #[must_use]
+pub(crate) fn string_to_ntz_wall_micros(text: &str, now: DateTime<Utc>) -> Option<i64> {
+    let trimmed = text.trim();
+    let candidate = if trimmed.ends_with(']')
+        && let Some(bracket) = trimmed.find('[')
+    {
+        trimmed[..bracket].trim_end()
+    } else {
+        text
+    };
+    let parsed = grammar::parse_timestamp_string(candidate)?;
+    if let Some(zone_id) = parsed.zone {
+        zone::spark_zone_id(zone_id)?;
+    }
+    instant::wall_only_micros(&parsed, now)
+}
+
+#[must_use]
+pub(crate) fn cast_invalid_input_timestamp_ntz(text: &str) -> DataFusionError {
+    DataFusionError::Execution(format!(
+        "[CAST_INVALID_INPUT] The value {} of the type \"STRING\" cannot be cast to \
+         \"TIMESTAMP_NTZ\" because it is malformed. Correct the value as per the syntax, or \
+         change its target type. Use `try_cast` to tolerate malformed input and return NULL \
+         instead. SQLSTATE: 22018",
+        spark_sql_string_value(text)
+    ))
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) fn cast_strings_to_ntz(
+    strings: &ArrayRef,
+    failure: StringCastFailure,
+) -> Result<ArrayRef> {
+    let texts = cast(strings.as_ref(), &DataType::Utf8)?;
+    let texts = texts.as_string::<i32>();
+    let now = Utc::now();
+    let mut builder = TimestampMicrosecondArray::builder(texts.len());
+    for row in 0..texts.len() {
+        if texts.is_null(row) {
+            builder.append_null();
+            continue;
+        }
+        let text = texts.value(row);
+        match string_to_ntz_wall_micros(text, now) {
+            Some(micros) => builder.append_value(micros),
+            None if failure == StringCastFailure::Raise => {
+                return Err(cast_invalid_input_timestamp_ntz(text));
+            }
+            None => builder.append_null(),
+        }
+    }
+    Ok(Arc::new(builder.finish()))
+}
+
+#[must_use]
 pub(crate) fn cast_invalid_input_timestamp(text: &str) -> DataFusionError {
     DataFusionError::Execution(format!(
         "[CAST_INVALID_INPUT] The value {} of the type \"STRING\" cannot be cast to \
@@ -155,12 +209,15 @@ pub(crate) fn rewrite_string_try_cast(
     if !is_string_type(&source) {
         return None;
     }
-    Some(
-        spark_string_literal(&try_cast.expr, zone).unwrap_or_else(|| {
-            Expr::ScalarFunction(ScalarFunction::new_udf(
-                crate::timestamp_ltz_ntz::try_to_timestamp_udf(),
-                vec![*try_cast.expr.clone()],
-            ))
-        }),
-    )
+    let folded = if zone.is_none() {
+        spark_string_literal(&try_cast.expr, None)
+    } else {
+        None
+    };
+    Some(folded.unwrap_or_else(|| {
+        Expr::ScalarFunction(ScalarFunction::new_udf(
+            crate::timestamp_ltz_ntz::try_to_timestamp_udf(),
+            vec![*try_cast.expr.clone()],
+        ))
+    }))
 }

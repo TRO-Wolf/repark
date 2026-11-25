@@ -37,6 +37,13 @@ Tests: [`../tests/spark_string_timestamp.rs`](../tests/map.md).
   `zone_horizon::offset_at_instant`, so a time-only string after 2099 lands on the right day
   (`../tests/zone_horizon_render.rs::a_time_only_string_takes_today_from_the_final_rule`).
   `offset_micros_at` is unchanged: it already read `proxy_year`.
+- **FEXPR-TIMESTAMP-NTZ-1 Delta 1 (2026-11-24):** `instant.rs::wall_only_micros` and parent
+  `string_to_ntz_wall_micros` / `cast_strings_to_ntz` parse wall-clock strings directly without
+  session-zone DST shifting (validating any trailing zone via `zone::spark_zone_id` and discarding
+  its offset, preserving NY spring-forward gap `02:30` and raising `CAST_INVALID_INPUT` targeting
+  `"TIMESTAMP_NTZ"`). `instant_ts::string_carries_timezone` reuses `grammar::parse_timestamp_string`
+  + `zone::spark_zone_id`. `rewrite_string_try_cast` folds only when session zone is deferred
+  (`zone.is_none()`), keeping non-deferred `TRY_CAST` nullable via `try_to_timestamp`.
 
 ## Pointers
 

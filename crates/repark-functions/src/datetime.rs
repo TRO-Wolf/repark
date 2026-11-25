@@ -801,18 +801,11 @@ impl Hash for DateTrunc {
 impl ScalarUDFImpl for DateTrunc {
     crate::shim_udf_boilerplate!("date_trunc");
 
-    fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
-        let ntz = arg_types
-            .get(1)
-            .is_some_and(|data_type| matches!(data_type, DataType::Timestamp(_, None)));
-        if ntz {
-            Ok(DataType::Timestamp(TIMESTAMP_UNIT, None))
-        } else {
-            Ok(DataType::Timestamp(
-                TIMESTAMP_UNIT,
-                Some(INSTANT_ZONE.into()),
-            ))
-        }
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(DataType::Timestamp(
+            TIMESTAMP_UNIT,
+            Some(INSTANT_ZONE.into()),
+        ))
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
@@ -854,21 +847,26 @@ impl ScalarUDFImpl for DateTrunc {
                 LocalSource::ZoneFree => datetime_from_micros(micros)
                     .and_then(|datetime| trunc_datetime_to(datetime, formats.value(row)))
                     .and_then(|local| micros_from_local_datetime(local, zone, None)),
-                LocalSource::NaiveTimestamp => datetime_from_micros(micros)
-                    .and_then(|datetime| trunc_datetime_to(datetime, formats.value(row)))
-                    .map(|local| local.and_utc().timestamp_micros()),
+                LocalSource::NaiveTimestamp => {
+                    localize_wall_micros_in_zone(micros, zone).and_then(|instant| {
+                        local_datetime_from_micros(instant, zone)
+                            .and_then(|local| trunc_datetime_to(local, formats.value(row)))
+                            .and_then(|local| {
+                                micros_from_local_datetime(
+                                    local,
+                                    zone,
+                                    offset_at_instant(instant, zone),
+                                )
+                            })
+                    })
+                }
             };
             match truncated {
                 Some(result) => builder.append_value(result),
                 None => builder.append_null(),
             }
         }
-        let finished = builder.finish();
-        let finished = if source == LocalSource::NaiveTimestamp {
-            finished
-        } else {
-            finished.with_timezone(INSTANT_ZONE)
-        };
+        let finished = builder.finish().with_timezone(INSTANT_ZONE);
         Ok(ColumnarValue::Array(Arc::new(finished)))
     }
 }

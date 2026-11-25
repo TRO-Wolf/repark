@@ -531,7 +531,6 @@ fn expr_context_defers_zoneless_timestamp_literals_and_folds_zoned_text() {
     for sql in [
         "TIMESTAMP '2024-01-01 02:00:00Z'",
         "TIMESTAMP '2024-01-01 02:00:00+00:00'",
-        "TRY_CAST('2024-01-01 02:00:00Z' AS TIMESTAMP_LTZ)",
     ] {
         let column = PyColumn::sql(sql, false).expect(sql);
         match column.expr() {
@@ -558,6 +557,10 @@ fn expr_context_defers_zoneless_timestamp_literals_and_folds_zoned_text() {
         (
             "CAST('2024-01-01 02:00:00' AS TIMESTAMP_LTZ)",
             repark_functions::instant_ts::TIMESTAMP_LTZ_CAST_NAME,
+        ),
+        (
+            "TRY_CAST('2024-01-01 02:00:00Z' AS TIMESTAMP_LTZ)",
+            repark_functions::instant_ts::TRY_TIMESTAMP_LTZ_CAST_NAME,
         ),
         (
             "TIMESTAMP_LTZ '2024-01-01 02:00:00'",

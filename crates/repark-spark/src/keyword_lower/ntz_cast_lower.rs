@@ -2,12 +2,46 @@ use datafusion::sql::sqlparser::ast::{
     CastKind, DataType, Expr, TimezoneInfo, Value, ValueWithSpan,
 };
 use datafusion::sql::sqlparser::tokenizer::Span;
+use repark_functions::decimal_cast::DECIMAL_CAST_NULLABLE_NAME;
 use repark_functions::instant_ts::{
     TIMESTAMP_LTZ_CAST_NAME, TRY_TIMESTAMP_LTZ_CAST_NAME, string_carries_timezone,
 };
 use repark_functions::timestamp_ntz_cast::{TIMESTAMP_NTZ_CAST_NAME, TRY_TIMESTAMP_NTZ_CAST_NAME};
 
 use super::{function_call, null_expr};
+
+pub(super) fn is_explicit_timestamp_ltz_cast(node: &Expr) -> bool {
+    matches!(
+        node,
+        Expr::Cast {
+            data_type,
+            array: false,
+            format: None,
+            ..
+        } if data_type.to_string().eq_ignore_ascii_case("timestamp_ltz")
+    )
+}
+
+pub(super) fn lower_explicit_timestamp_ltz_cast(node: &mut Expr) -> bool {
+    if let Expr::Cast {
+        kind,
+        expr,
+        data_type,
+        array: false,
+        format: None,
+    } = node
+        && data_type.to_string().eq_ignore_ascii_case("timestamp_ltz")
+    {
+        let name = match kind {
+            CastKind::Cast | CastKind::DoubleColon => TIMESTAMP_LTZ_CAST_NAME,
+            CastKind::TryCast | CastKind::SafeCast => TRY_TIMESTAMP_LTZ_CAST_NAME,
+        };
+        let value = std::mem::replace(expr, Box::new(null_expr()));
+        *node = function_call(name, vec![*value]);
+        return true;
+    }
+    false
+}
 
 pub(super) fn lower_timestamp_ntz_cast(node: &mut Expr) -> bool {
     if let Expr::Cast {
@@ -46,21 +80,27 @@ pub(super) fn lower_timestamp_ntz_cast(node: &mut Expr) -> bool {
 }
 
 pub(super) fn lower_fragment_timestamp_ltz_cast(node: &mut Expr) -> bool {
+    if lower_explicit_timestamp_ltz_cast(node) {
+        return true;
+    }
     if let Expr::Cast {
-        kind,
+        kind: CastKind::Cast | CastKind::DoubleColon,
         expr,
         data_type,
         array: false,
         format: None,
     } = node
-        && data_type.to_string().eq_ignore_ascii_case("timestamp_ltz")
+        && matches!(data_type, DataType::Timestamp(None, TimezoneInfo::None))
+        && matches!(
+            expr.as_ref(),
+            Expr::Value(ValueWithSpan {
+                value: Value::SingleQuotedString(_) | Value::DoubleQuotedString(_),
+                ..
+            })
+        )
     {
-        let name = match kind {
-            CastKind::Cast | CastKind::DoubleColon => TIMESTAMP_LTZ_CAST_NAME,
-            CastKind::TryCast | CastKind::SafeCast => TRY_TIMESTAMP_LTZ_CAST_NAME,
-        };
         let value = std::mem::replace(expr, Box::new(null_expr()));
-        *node = function_call(name, vec![*value]);
+        **expr = function_call(DECIMAL_CAST_NULLABLE_NAME, vec![*value]);
         return true;
     }
     if let Expr::TypedString(typed) = node {
@@ -171,7 +211,9 @@ mod tests {
             "{text}"
         );
         assert!(
-            text.contains("CAST('2024-01-01 02:00:00Z' AS TIMESTAMP) AS g"),
+            text.contains(
+                "CAST(__repark_decimal_cast_nullable__('2024-01-01 02:00:00Z') AS TIMESTAMP) AS g"
+            ),
             "{text}"
         );
     }

@@ -60,6 +60,19 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Transforme
         return Transformed::new(nonnull, true, TreeNodeRecursion::Stop);
     }
     if let Expr::ScalarFunction(function) = &expr
+        && function.func.name() == crate::instant_ts::TIMESTAMP_LTZ_CAST_NAME
+        && let [arg] = function.args.as_slice()
+        && let Ok((_, child)) = arg.to_field(schema)
+        && !child.is_nullable()
+        && matches!(child.data_type(), DataType::Date32)
+    {
+        return Transformed::new(
+            Expr::ScalarFunction(ScalarFunction::new_udf(spark_nonnull_udf(), vec![expr])),
+            true,
+            TreeNodeRecursion::Stop,
+        );
+    }
+    if let Expr::ScalarFunction(function) = &expr
         && matches!(
             function.func.name(),
             "named_struct" | "struct" | "map" | "make_array"
@@ -82,10 +95,29 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Transforme
             TreeNodeRecursion::Stop,
         );
     }
-    if !ansi_enabled && let Some(nullable) = nullable_decimal_arith(&expr, schema) {
+    if !ansi_enabled
+        && let Some(nullable) = nullable_decimal_arith(&expr, schema)
+            .or_else(|| nullable_legacy_unix_timestamp(&expr, schema))
+    {
         return Transformed::new(nullable, true, TreeNodeRecursion::Stop);
     }
     Transformed::no(expr)
+}
+
+fn nullable_legacy_unix_timestamp(expr: &Expr, schema: &DFSchema) -> Option<Expr> {
+    let Expr::ScalarFunction(function) = expr else {
+        return None;
+    };
+    if !matches!(function.func.name(), "unix_timestamp" | "to_unix_timestamp") {
+        return None;
+    }
+    if datafusion_nullable(expr, schema) != Some(false) {
+        return None;
+    }
+    Some(Expr::ScalarFunction(ScalarFunction::new_udf(
+        spark_decimal_cast_nullable_udf(),
+        vec![expr.clone()],
+    )))
 }
 
 fn nullable_decimal_arith(expr: &Expr, schema: &DFSchema) -> Option<Expr> {

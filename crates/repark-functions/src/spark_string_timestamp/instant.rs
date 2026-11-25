@@ -80,6 +80,27 @@ fn is_valid_date(date: (i64, i64, i64)) -> bool {
 }
 
 #[must_use]
+pub(crate) fn wall_only_micros(parsed: &ParsedTimestamp<'_>, now: DateTime<Utc>) -> Option<i64> {
+    if !is_valid_time(parsed) {
+        return None;
+    }
+    let date = if parsed.just_time {
+        let today = now.date_naive();
+        (
+            i64::from(today.year()),
+            i64::from(today.month()),
+            i64::from(today.day()),
+        )
+    } else {
+        (parsed.year, parsed.month, parsed.day)
+    };
+    if !is_valid_date(date) {
+        return None;
+    }
+    i64::try_from(wall_micros(date, parsed)).ok()
+}
+
+#[must_use]
 pub(crate) fn instant_micros(
     parsed: &ParsedTimestamp<'_>,
     zone: SparkZone,

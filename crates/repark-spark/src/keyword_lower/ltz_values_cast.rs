@@ -119,14 +119,23 @@ mod tests {
                 && text.contains("DATE '2024-03-10'"),
             "{text}"
         );
-        let mut twice = parse("INSERT INTO t VALUES (1, CAST(d AS TIMESTAMP_LTZ))");
-        lower_spark_keywords(&mut twice);
-        lower_spark_keywords(&mut twice);
+        let mut twice_bare = parse("INSERT INTO t VALUES (1, CAST(d AS TIMESTAMP))");
+        lower_spark_keywords(&mut twice_bare);
+        lower_spark_keywords(&mut twice_bare);
         assert!(
-            twice
+            twice_bare
                 .to_string()
                 .contains("VALUES (1, CAST(CAST(d AS TIMESTAMP) AS TIMESTAMP))"),
-            "{twice}"
+            "{twice_bare}"
+        );
+        let mut twice_ltz = parse("INSERT INTO t VALUES (1, CAST(d AS TIMESTAMP_LTZ))");
+        lower_spark_keywords(&mut twice_ltz);
+        lower_spark_keywords(&mut twice_ltz);
+        assert!(
+            twice_ltz
+                .to_string()
+                .contains("VALUES (1, __repark_cast_timestamp_ltz__(d))"),
+            "{twice_ltz}"
         );
     }
 

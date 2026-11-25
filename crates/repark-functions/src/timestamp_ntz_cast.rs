@@ -1,21 +1,23 @@
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, LazyLock};
 
-use arrow::compute::kernels::cast_utils::string_to_datetime;
+use arrow::array::timezone::Tz;
 use chrono::{DateTime, Utc};
 use datafusion::arrow::array::{Array, AsArray, TimestampMicrosecondArray};
-use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Int64Type, TimeUnit};
+use datafusion::arrow::datatypes::{DataType, Date32Type, Field, FieldRef, Int64Type, TimeUnit};
 use datafusion::common::tree_node::{Transformed, TreeNode};
 use datafusion::common::{DFSchema, DataFusionError, Result, ScalarValue};
 use datafusion::logical_expr::expr::{Alias, ScalarFunction};
+use datafusion::logical_expr::simplify::{ExprSimplifyResult, SimplifyContext};
 use datafusion::logical_expr::{
     ColumnarValue, DmlStatement, Expr, ExprSchemable, LogicalPlan, Projection, ReturnFieldArgs,
     ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Values, Volatility,
 };
 
 use crate::ansi::spark_ansi_enabled_from_options;
+use crate::datetime::local_datetime_from_micros;
+use crate::session_time_zone::{is_session_time_zone_deferred, session_time_zone_from_options};
 use crate::timestamp_cast::format_spark_timestamp_string;
-use crate::timestamp_ltz_ntz::wall_without_zone;
 
 pub use repark_common::udf_names::TIMESTAMP_NTZ_CAST_NAME;
 pub const TRY_TIMESTAMP_NTZ_CAST_NAME: &str = "__repark_try_cast_timestamp_ntz__";
@@ -201,11 +203,7 @@ fn is_ntz_cast_call(expr: &Expr) -> bool {
 
 #[must_use]
 pub fn parse_timestamp_ntz_wall(text: &str) -> Option<i64> {
-    let wall = wall_without_zone(text);
-    let parsed = string_to_datetime(&Utc, wall.trim()).ok()?;
-    parsed
-        .timestamp_nanos_opt()
-        .map(|nanos| nanos.div_euclid(1_000))
+    crate::spark_string_timestamp::string_to_ntz_wall_micros(text, Utc::now())
 }
 
 fn ntz_timestamp_type() -> DataType {
@@ -333,6 +331,47 @@ impl ScalarUDFImpl for SparkTimestampNtzCast {
             ntz_timestamp_type(),
             nullable,
         )))
+    }
+
+    fn simplify(&self, args: Vec<Expr>, info: &SimplifyContext) -> Result<ExprSimplifyResult> {
+        let [Expr::Literal(scalar, _)] = args.as_slice() else {
+            return Ok(ExprSimplifyResult::Original(args));
+        };
+        if scalar.is_null() && is_cast_source(&scalar.data_type()) {
+            return Ok(ExprSimplifyResult::Simplified(Expr::Literal(
+                ScalarValue::TimestampMicrosecond(None, None),
+                None,
+            )));
+        }
+        let folded = match scalar {
+            ScalarValue::Utf8(Some(text))
+            | ScalarValue::LargeUtf8(Some(text))
+            | ScalarValue::Utf8View(Some(text)) => parse_timestamp_ntz_wall(text),
+            ScalarValue::TimestampMicrosecond(Some(micros), None) => Some(*micros),
+            ScalarValue::TimestampMicrosecond(Some(micros), Some(_)) => {
+                let options = info.config_options();
+                if is_session_time_zone_deferred(options) {
+                    None
+                } else {
+                    session_time_zone_from_options(options)
+                        .parse::<Tz>()
+                        .ok()
+                        .and_then(|zone| local_datetime_from_micros(*micros, zone))
+                        .map(|wall| wall.and_utc().timestamp_micros())
+                }
+            }
+            ScalarValue::Date32(Some(days)) => Date32Type::to_naive_date_opt(*days)
+                .and_then(|date| date.and_hms_opt(0, 0, 0))
+                .map(|midnight| midnight.and_utc().timestamp_micros()),
+            _ => None,
+        };
+        match folded {
+            Some(micros) => Ok(ExprSimplifyResult::Simplified(Expr::Literal(
+                ScalarValue::TimestampMicrosecond(Some(micros), None),
+                None,
+            ))),
+            None => Ok(ExprSimplifyResult::Original(args)),
+        }
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {

@@ -23,6 +23,11 @@ pub fn register_udf_families(ctx: &SessionContext) {
             .as_ref()
             .clone(),
     );
+    ctx.register_udf(
+        crate::decimal_cast::spark_decimal_cast_nullable_udf()
+            .as_ref()
+            .clone(),
+    );
 }
 
 #[must_use]

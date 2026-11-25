@@ -13,8 +13,9 @@ use datafusion::logical_expr::{
 };
 use datafusion::logical_expr::{ReturnFieldArgs, ScalarFunctionArgs};
 use datafusion::optimizer::AnalyzerRule;
-use repark_functions::decimal_cast::SPARK_NONNULL_NAME;
+use repark_functions::decimal_cast::{DECIMAL_CAST_NULLABLE_NAME, SPARK_NONNULL_NAME};
 use repark_functions::java_double::{java_double_text, java_float_text};
+use repark_functions::timestamp_ntz_cast::{TIMESTAMP_NTZ_CAST_NAME, TRY_TIMESTAMP_NTZ_CAST_NAME};
 
 pub const SPARK_AS_NAME: &str = "__repark_spark_as__";
 
@@ -116,9 +117,18 @@ fn rewrite_projection_display(plan: LogicalPlan) -> Result<LogicalPlan> {
             Expr::Alias(alias) => alias.expr.as_ref(),
             other => other,
         };
-        let display = spark_display(&without_nonnull(crate::struct_position::without_relabels(
-            inner,
-        ))?);
+        let cleaned_inner = without_nonnull(crate::struct_position::without_relabels(inner))?;
+        let preserved_cast = matches!(
+            &cleaned_inner,
+            Expr::ScalarFunction(function)
+                if matches!(function.func.name(), "to_timestamp" | "try_to_timestamp")
+                    && !name.contains(function.func.name())
+        );
+        let display = if preserved_cast {
+            clean_spark_display(&name)
+        } else {
+            spark_display(&cleaned_inner)
+        };
         if display == name {
             continue;
         }
@@ -332,14 +342,21 @@ fn spark_display_inner(expr: &Expr) -> String {
         Expr::ScalarFunction(function) if function.func.name() == "named_struct" => {
             named_struct_spark(&function.args)
         }
-        Expr::ScalarFunction(function) if function.func.name() == SPARK_AS_NAME => function
-            .args
-            .first()
-            .map_or_else(|| expr.schema_name().to_string(), spark_display),
-        Expr::ScalarFunction(function) if function.func.name() == SUFFIX_LITERAL_NAME => function
-            .args
-            .first()
-            .map_or_else(|| expr.schema_name().to_string(), spark_display),
+        Expr::ScalarFunction(function)
+            if matches!(
+                function.func.name(),
+                SPARK_AS_NAME
+                    | SUFFIX_LITERAL_NAME
+                    | DECIMAL_CAST_NULLABLE_NAME
+                    | TIMESTAMP_NTZ_CAST_NAME
+                    | TRY_TIMESTAMP_NTZ_CAST_NAME
+            ) =>
+        {
+            function
+                .args
+                .first()
+                .map_or_else(|| expr.schema_name().to_string(), spark_display)
+        }
         other => other.schema_name().to_string(),
     }
 }

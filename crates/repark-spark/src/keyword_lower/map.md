@@ -17,14 +17,17 @@ lowering it calls first.
   token layer into the cast of its text. Nested targets (`ARRAY`, `STRUCT`, `MAP`) stay
   untouched for the R4 refusal. Reached from `lower_expression`,
   `TimestampNsCastLower::post_visit_expr`, `TimestampNsCastProbe`, and
-  `lower_fragment_timestamp_casts`. **FEXPR-TIMESTAMP-NTZ-1 (2026-11-24):** adds
-  `lower_fragment_timestamp_ltz_cast` (explicit `TIMESTAMP_LTZ` casts/literals and zoned
-  `TIMESTAMP '...'` typed strings -> `__repark_cast_timestamp_ltz__` /
-  `__repark_try_cast_timestamp_ltz__`) for `F.expr` and Spark-door `filter(str)` fragments.
+  `lower_fragment_timestamp_casts`. **FEXPR-TIMESTAMP-NTZ-1 (2026-11-24, Delta 1):** adds
+  `lower_explicit_timestamp_ltz_cast` (used by SQL `lower_expression`, `TimestampNsCastLower`,
+  `TimestampNsCastProbe`, and fragments so `CAST`/`TRY_CAST(... AS TIMESTAMP_LTZ)` stays LTZ on
+  every door) and `lower_fragment_timestamp_ltz_cast` (explicit `TIMESTAMP_LTZ` casts/literals,
+  zoned `TIMESTAMP '...'` typed strings, and nullable-wrapping bare-`TIMESTAMP` string-literal
+  casts via `DECIMAL_CAST_NULLABLE_NAME`).
 - `ltz_values_cast.rs` — **WO NTZ-STORE-DOORS-1 second re-verify fold (2026-09-29,
   RD3-1):** `mark_values_timestamp_casts` wraps each `VALUES` cell that is a written
-  `CAST` / `::` to `TIMESTAMP` (or `TIMESTAMP_LTZ`), through parentheses, in one more
-  `CAST(… AS TIMESTAMP)`. The planner's `VALUES` coercion emits the same naive
+  `CAST` / `::` to `TIMESTAMP` (explicit `TIMESTAMP_LTZ` casts now lower directly to
+  `TIMESTAMP_LTZ_CAST_NAME` under FEXPR-TIMESTAMP-NTZ-1 Delta 1), through parentheses, in one
+  more `CAST(… AS TIMESTAMP)`. The planner's `VALUES` coercion emits the same naive
   `Timestamp(ns)` cast for a `DATE` or `TIMESTAMP_NTZ` cell, so without the mark
   `repark-functions` `timestamp_ns_cast` could not tell a written `CAST(ntz AS TIMESTAMP)`
   from a coerced `TIMESTAMP_NTZ` literal. The extra cast is same-typed, so every later

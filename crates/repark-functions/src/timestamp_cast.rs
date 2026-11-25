@@ -339,10 +339,14 @@ impl ScalarUDFImpl for SparkTimestampToDate {
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        let from_ntz = args
+            .arg_fields
+            .first()
+            .is_some_and(|field| matches!(field.data_type(), DataType::Timestamp(_, None)));
         Ok(Arc::new(Field::new(
             self.name(),
             DataType::Date32,
-            nullable_like_argument(&args),
+            from_ntz || nullable_like_argument(&args),
         )))
     }
 
@@ -524,7 +528,7 @@ fn is_utf8_type(data_type: &DataType) -> bool {
 fn date_result_nullable(args: &ReturnFieldArgs<'_>) -> bool {
     match args.arg_fields.first().map(|field| field.data_type()) {
         Some(data_type) if is_utf8_type(data_type) => true,
-        Some(DataType::Null) => true,
+        Some(DataType::Null | DataType::Timestamp(_, None)) => true,
         _ => nullable_like_argument(args),
     }
 }
