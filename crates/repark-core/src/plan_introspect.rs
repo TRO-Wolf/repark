@@ -92,7 +92,7 @@ pub(crate) fn plan_reads_s3_prefix(plan: &LogicalPlan, bucket: &str, prefix: &st
     found
 }
 
-fn listing_table(provider: &(dyn TableProvider + 'static)) -> Option<&ListingTable> {
+fn listing_table<'a>(provider: &'a (dyn TableProvider + 'static)) -> Option<&'a ListingTable> {
     provider.downcast_ref::<ListingTable>().or_else(|| {
         provider
             .downcast_ref::<SparkListingTable>()

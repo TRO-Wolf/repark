@@ -106,10 +106,10 @@ impl TableProvider for SparkListingTable {
         self.inner.scan(&session, projection, filters, limit).await
     }
 
-    async fn scan_with_args(
+    async fn scan_with_args<'a>(
         &self,
         state: &dyn Session,
-        args: ScanArgs<'_>,
+        args: ScanArgs<'a>,
     ) -> DataFusionResult<ScanResult> {
         let session = SparkListingSession::new(state, &self.root);
         self.inner.scan_with_args(&session, args).await
