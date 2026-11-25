@@ -41,6 +41,18 @@ parser change (EX-FN-27, run 15c owns the parser).
 - [`intervals.rs`](intervals.rs) — `make_ym_interval`, `try_make_interval`, the
   `CAST(interval AS STRING)` analyzer rule with Spark's spelled-out text (each
   unit carries its own sign from truncating division).
+- [`day_time.rs`](day_time.rs) — `make_dt_interval` (MAKE-DT-INTERVAL-OVERFLOW-1, 2026-11-25),
+  registered over `datafusion-spark`'s kernel of the same name, whose `i32` hour and minute totals
+  answered NULL on overflow. It follows Spark's `IntervalUtils.makeDayTimeInterval`: exact `i64`
+  microsecond adds in Spark's order (seconds, days, hours, minutes) raise
+  `INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION` in both modes. Seconds pass Spark's implicit
+  `decimal(18, 6)` cast: a double rounds HALF_UP from its shortest decimal text, NaN and infinities
+  answer NULL in both modes, and a value with more than 12 integral digits answers NULL, or raises
+  `NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION` under ANSI. The result is `Duration(µs)`; it is
+  nullable when an argument is, or when the seconds cast can answer NULL (floating seconds, `bigint`,
+  a decimal past 12 integral digits after rounding). Days, hours and minutes keep the integer-only
+  coercion, so strings and decimals still refuse there. Tests: [`day_time_tests.rs`](day_time_tests.rs);
+  facade pin `python/repark/tests/functions/test_make_dt_interval_overflow_1.py`.
 
 - **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** the SQL test sessions here are built by
   `spark_type_planner::planned_context`, so `TIMESTAMP` is typed by the planner as on

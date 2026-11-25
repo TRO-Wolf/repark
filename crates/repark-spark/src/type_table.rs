@@ -264,6 +264,10 @@ pub fn spark_type_from_arrow(data_type: &ArrowDataType) -> SparkDataType {
                 })
                 .collect(),
         ),
+        ArrowDataType::Duration(TimeUnit::Microsecond) => SparkDataType::DayTimeInterval {
+            start: "day".to_string(),
+            end: "second".to_string(),
+        },
         ArrowDataType::Null => SparkDataType::Null,
         _ => SparkDataType::SparkString {
             collation: Cow::Borrowed(DEFAULT_COLLATION),

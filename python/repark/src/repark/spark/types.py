@@ -1283,6 +1283,8 @@ def _arrow_type_to_repark_python(arrow_type: object) -> DataType:
         return TimestampType()
     if pa.types.is_decimal(arrow_type):
         return DecimalType(arrow_type.precision, arrow_type.scale)  # type: ignore[attr-defined]
+    if pa.types.is_duration(arrow_type) and getattr(arrow_type, "unit", None) == "us":
+        return DayTimeIntervalType()
     if (
         pa.types.is_list(arrow_type)
         or pa.types.is_large_list(arrow_type)
