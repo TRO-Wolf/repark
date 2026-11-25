@@ -897,11 +897,14 @@ mod tests {
     fn struct_field_access_passes_every_sibling_to_the_display_wrapper() {
         let rewritten = canonical("SELECT named_struct('a', 1, 'b', no_such_col, 'c', 2.5D).a");
         assert!(
-            rewritten.ends_with(", (1), (no_such_col), (CAST(2.5 AS DOUBLE)))"),
+            rewritten.ends_with(", (1), ((no_such_col) IS NULL), ((CAST(2.5 AS DOUBLE)) IS NULL))"),
             "{rewritten}"
         );
         let nested =
             canonical("SELECT named_struct('s', named_struct('a', 1, 'b', x), 'c', y).s.a");
-        assert!(nested.ends_with(", (1), (y), (x))"), "{nested}");
+        assert!(
+            nested.ends_with(", (1), ((y) IS NULL), ((x) IS NULL))"),
+            "{nested}"
+        );
     }
 }

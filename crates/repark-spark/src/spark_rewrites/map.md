@@ -41,11 +41,16 @@ path stay in `spark_literals.rs`.
   nested `named_struct`) or falls back to subscript access while splicing inner
   `LiteralRegion` rewrites (including `extract_field`) into the extracted value.
   **SPARK-DOOR-OVER-ACCEPT-SYNTAX-1:** the extraction passes every sibling value (each
-  level's other fields) to `__repark_spark_as__` after the value. Spark analyses every
-  sibling, folds the constant ones and then prunes the rest, so the wrapper's `simplify`
-  ([spark_typed.rs](../spark_typed.rs)) keeps the constant siblings, which raise when they
-  fail (`CAST('x' AS INT)` under ANSI, `1 / 0`), and drops the ones that read a column, a
-  subquery or a volatile call, which Spark never evaluates.
+  level's other fields) to `__repark_spark_as__` after the value, each as `((sibling) IS NULL)`,
+  so the SQL planner resolves its names (an unknown column refuses, as in Spark) without typing
+  it. The `spark_as_siblings` analyzer rule ([spark_typed.rs](../spark_typed.rs), first after
+  the generator alias mark) then decides each sibling (orchestrator ruling 1, option C): a
+  sibling that fails a function signature (`abs(1, 2)`) stays and refuses; a sibling that fails
+  to type for any other reason (`'x' + 1`, a RePark coercion gap) drops every sibling, so the
+  access answers as the plain splice did; with ANSI on a constant sibling stays and evaluates,
+  so `CAST('x' AS INT)` and `1 / 0` raise as Spark's folding does; every other sibling drops,
+  as Spark prunes it. The wrapper's `simplify` still drops any sibling that reads a column, a
+  subquery or a volatile call.
 - `timestamp_ltz_literal.rs` — **WO U9-TYPES-1 (2026-09-25):**
   `plan_timestamp_ltz_literal_regions` rewrites an unquoted `TIMESTAMP_LTZ` word that a
   single- or double-quoted string follows (whitespace allowed; the Spark door lexes `"…"` as a

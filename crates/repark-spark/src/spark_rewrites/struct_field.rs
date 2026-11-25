@@ -51,9 +51,9 @@ pub(crate) fn plan_struct_field_regions(
             );
             let mut sibling_args = String::new();
             for (from, to) in siblings {
-                sibling_args.push_str(", (");
+                sibling_args.push_str(", ((");
                 sibling_args.push_str(&splice_inners(sql, from, to, &inners));
-                sibling_args.push(')');
+                sibling_args.push_str(") IS NULL)");
             }
             format!(
                 "{SPARK_AS_NAME}({}, ({extracted}){sibling_args})",

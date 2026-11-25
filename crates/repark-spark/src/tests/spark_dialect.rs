@@ -648,9 +648,25 @@ async fn wildcard_exclude_refuses_and_wildcard_except_reads() {
     );
 }
 
+fn ansi_ctx(enabled: bool) -> SessionContext {
+    let state = production_ctx(false).state();
+    let config = repark_functions::ansi::with_spark_ansi_config(state.config().clone(), enabled);
+    SessionContext::new_with_state(
+        datafusion::execution::SessionStateBuilder::new_from_existing(state)
+            .with_config(config)
+            .build(),
+    )
+}
+
 async fn struct_field_outcome(sql: &str) -> std::result::Result<Vec<RecordBatch>, String> {
-    let ctx = production_ctx(false);
-    let frame = execute(&ctx, &CatalogRegistry::new(), sql)
+    struct_field_outcome_in(&ansi_ctx(true), sql).await
+}
+
+async fn struct_field_outcome_in(
+    ctx: &SessionContext,
+    sql: &str,
+) -> std::result::Result<Vec<RecordBatch>, String> {
+    let frame = execute(ctx, &CatalogRegistry::new(), sql)
         .await
         .map_err(|error| error.to_string())?;
     frame.collect().await.map_err(|error| error.to_string())
@@ -684,6 +700,44 @@ async fn struct_field_access_resolves_every_sibling_and_evaluates_constant_ones(
     assert!(
         folded.as_ref().is_err_and(|text| text.contains("notanint")),
         "{folded:?}"
+    );
+}
+
+fn first_int(batches: &[RecordBatch]) -> i32 {
+    batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<Int32Array>()
+        .expect("Int32")
+        .value(0)
+}
+
+#[tokio::test]
+async fn struct_field_access_answers_past_siblings_spark_does_not_refuse() {
+    for (sql, ansi) in [
+        ("SELECT named_struct('a', 1, 'b', 'x' + 1).a AS v", true),
+        ("SELECT named_struct('a', 1, 'b', 'x' + 1).a AS v", false),
+        ("SELECT named_struct('a', 1, 'b', 1 / 0).a AS v", false),
+        (
+            "SELECT named_struct('a', 1, 'b', CAST('notanint' AS INT)).a AS v",
+            false,
+        ),
+    ] {
+        let batches = struct_field_outcome_in(&ansi_ctx(ansi), sql)
+            .await
+            .unwrap_or_else(|error| panic!("{sql} ansi={ansi} must answer: {error}"));
+        assert_eq!(first_int(&batches), 1, "{sql} ansi={ansi}");
+    }
+    let unresolved = struct_field_outcome_in(
+        &ansi_ctx(false),
+        "SELECT named_struct('a', 1, 'b', no_such_col_xyz).a AS v",
+    )
+    .await;
+    assert!(
+        unresolved
+            .as_ref()
+            .is_err_and(|text| text.contains("no_such_col_xyz")),
+        "{unresolved:?}"
     );
 }
 

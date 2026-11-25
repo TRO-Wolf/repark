@@ -533,6 +533,84 @@ impl ScalarUDFImpl for SparkAs {
     }
 }
 
+#[derive(Debug, Default)]
+pub struct SparkAsSiblings;
+
+impl AnalyzerRule for SparkAsSiblings {
+    fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
+        let ansi_enabled = repark_functions::ansi::spark_ansi_enabled_from_options(config);
+        plan.transform_up_with_subqueries(|node| prune_plan_siblings(node, ansi_enabled))
+            .data()
+    }
+
+    #[allow(clippy::unnecessary_literal_bound)]
+    fn name(&self) -> &str {
+        "spark_as_siblings"
+    }
+}
+
+#[must_use]
+pub fn insert_spark_as_siblings_first(
+    mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
+) -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
+    rules.insert(0, Arc::new(SparkAsSiblings));
+    rules
+}
+
+fn prune_plan_siblings(plan: LogicalPlan, ansi_enabled: bool) -> Result<Transformed<LogicalPlan>> {
+    let mut schema = datafusion::common::DFSchema::empty();
+    for input in plan.inputs() {
+        schema.merge(input.schema());
+    }
+    let transformed = plan.map_expressions(|expr| {
+        expr.transform_up(|node| prune_siblings(node, &schema, ansi_enabled))
+    })?;
+    if transformed.transformed {
+        transformed.map_data(LogicalPlan::recompute_schema)
+    } else {
+        Ok(transformed)
+    }
+}
+
+fn prune_siblings(
+    expr: Expr,
+    schema: &datafusion::common::DFSchema,
+    ansi_enabled: bool,
+) -> Result<Transformed<Expr>> {
+    let Expr::ScalarFunction(function) = expr else {
+        return Ok(Transformed::no(expr));
+    };
+    if function.func.name() != SPARK_AS_NAME || function.args.len() <= 2 {
+        return Ok(Transformed::no(Expr::ScalarFunction(function)));
+    }
+    let datafusion::logical_expr::expr::ScalarFunction { func, args } = function;
+    let mut kept = Vec::with_capacity(args.len());
+    let mut chosen = Vec::new();
+    let mut falls_back = false;
+    for (position, arg) in args.into_iter().enumerate() {
+        if position < 2 {
+            kept.push(arg);
+            continue;
+        }
+        let sibling = match arg {
+            Expr::IsNull(inner) => *inner,
+            other => other,
+        };
+        match datafusion::logical_expr::ExprSchemable::get_type(&sibling, schema) {
+            Err(error) if error.to_string().contains("No function matches") => chosen.push(sibling),
+            Err(_) => falls_back = true,
+            Ok(_) if ansi_enabled && folds_to_a_constant(&sibling) => chosen.push(sibling),
+            Ok(_) => {}
+        }
+    }
+    if !falls_back {
+        kept.extend(chosen);
+    }
+    Ok(Transformed::yes(Expr::ScalarFunction(
+        datafusion::logical_expr::expr::ScalarFunction::new_udf(func, kept),
+    )))
+}
+
 #[must_use]
 pub fn spark_as_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkAs::new()))
