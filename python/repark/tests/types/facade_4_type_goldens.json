@@ -381,15 +381,17 @@
     "typeName": "date"
   },
   "day_time_interval": {
-    "arrow": "string",
+    "arrow": "duration[us]",
     "class": "DayTimeIntervalType",
     "engine_type": "interval day to second",
     "fromddl_simplestring": {
-      "refused": "ValueError: cannot parse datatype: 'interval day to second'"
+      "class": "DayTimeIntervalType",
+      "simpleString": "interval day to second"
     },
     "json": "\"interval day to second\"",
     "json_roundtrip": {
-      "refused": "ValueError: cannot parse datatype: 'interval day to second'"
+      "class": "DayTimeIntervalType",
+      "simpleString": "interval day to second"
     },
     "repr": "DayTimeIntervalType(0, 3)",
     "simpleString": "interval day to second",
@@ -400,11 +402,13 @@
     "class": "DayTimeIntervalType",
     "engine_type": "interval day",
     "fromddl_simplestring": {
-      "refused": "ValueError: cannot parse datatype: 'interval day'"
+      "class": "DayTimeIntervalType",
+      "simpleString": "interval day"
     },
     "json": "\"interval day\"",
     "json_roundtrip": {
-      "refused": "ValueError: cannot parse datatype: 'interval day'"
+      "class": "DayTimeIntervalType",
+      "simpleString": "interval day"
     },
     "repr": "DayTimeIntervalType(0, 0)",
     "simpleString": "interval day",
@@ -415,11 +419,13 @@
     "class": "DayTimeIntervalType",
     "engine_type": "interval hour to second",
     "fromddl_simplestring": {
-      "refused": "ValueError: cannot parse datatype: 'interval hour to second'"
+      "class": "DayTimeIntervalType",
+      "simpleString": "interval hour to second"
     },
     "json": "\"interval hour to second\"",
     "json_roundtrip": {
-      "refused": "ValueError: cannot parse datatype: 'interval hour to second'"
+      "class": "DayTimeIntervalType",
+      "simpleString": "interval hour to second"
     },
     "repr": "DayTimeIntervalType(1, 3)",
     "simpleString": "interval hour to second",
@@ -1042,7 +1048,7 @@
     "typeName": "struct"
   },
   "struct_interval_char_varchar": {
-    "arrow": "struct<ym: string, dt: string, cal: string, ch: string, vc: string>",
+    "arrow": "struct<ym: string, dt: duration[us], cal: string, ch: string, vc: string>",
     "arrow_schema_back": [
       {
         "class": "StringType",
@@ -1051,10 +1057,10 @@
         "simpleString": "string"
       },
       {
-        "class": "StringType",
+        "class": "DayTimeIntervalType",
         "name": "dt",
         "nullable": true,
-        "simpleString": "string"
+        "simpleString": "interval day to second"
       },
       {
         "class": "StringType",
@@ -1078,18 +1084,113 @@
     "class": "StructType",
     "engine_type": "struct<ym:interval year to month,dt:interval day to second,cal:interval,ch:string,vc:string>",
     "fromddl_simplestring": {
-      "refused": "ValueError: cannot parse datatype: 'interval year to month'"
+      "class": "StructType",
+      "fields": [
+        {
+          "class": "YearMonthIntervalType",
+          "name": "ym",
+          "nullable": true,
+          "simpleString": "interval year to month"
+        },
+        {
+          "class": "DayTimeIntervalType",
+          "name": "dt",
+          "nullable": true,
+          "simpleString": "interval day to second"
+        },
+        {
+          "class": "CalendarIntervalType",
+          "name": "cal",
+          "nullable": true,
+          "simpleString": "interval"
+        },
+        {
+          "class": "CharType",
+          "name": "ch",
+          "nullable": true,
+          "simpleString": "char(8)"
+        },
+        {
+          "class": "VarcharType",
+          "name": "vc",
+          "nullable": true,
+          "simpleString": "varchar(32)"
+        }
+      ],
+      "simpleString": "struct<ym:interval year to month,dt:interval day to second,cal:interval,ch:char(8),vc:varchar(32)>"
     },
     "json": "{\"fields\":[{\"metadata\":{},\"name\":\"ym\",\"nullable\":true,\"type\":\"interval year to month\"},{\"metadata\":{},\"name\":\"dt\",\"nullable\":true,\"type\":\"interval day to second\"},{\"metadata\":{},\"name\":\"cal\",\"nullable\":true,\"type\":\"interval\"},{\"metadata\":{},\"name\":\"ch\",\"nullable\":true,\"type\":\"char(8)\"},{\"metadata\":{},\"name\":\"vc\",\"nullable\":true,\"type\":\"varchar(32)\"}],\"type\":\"struct\"}",
     "json_roundtrip": {
-      "refused": "ValueError: cannot parse datatype: 'interval year to month'"
+      "class": "StructType",
+      "fields": [
+        {
+          "class": "YearMonthIntervalType",
+          "name": "ym",
+          "nullable": true,
+          "simpleString": "interval year to month"
+        },
+        {
+          "class": "DayTimeIntervalType",
+          "name": "dt",
+          "nullable": true,
+          "simpleString": "interval day to second"
+        },
+        {
+          "class": "CalendarIntervalType",
+          "name": "cal",
+          "nullable": true,
+          "simpleString": "interval"
+        },
+        {
+          "class": "CharType",
+          "name": "ch",
+          "nullable": true,
+          "simpleString": "char(8)"
+        },
+        {
+          "class": "VarcharType",
+          "name": "vc",
+          "nullable": true,
+          "simpleString": "varchar(32)"
+        }
+      ],
+      "simpleString": "struct<ym:interval year to month,dt:interval day to second,cal:interval,ch:char(8),vc:varchar(32)>"
     },
     "repr": "StructType([StructField('ym', YearMonthIntervalType(0, 1), True), StructField('dt', DayTimeIntervalType(0, 3), True), StructField('cal', CalendarIntervalType(), True), StructField('ch', CharType(8), True), StructField('vc', VarcharType(32), True)])",
     "simpleString": "struct<ym:interval year to month,dt:interval day to second,cal:interval,ch:char(8),vc:varchar(32)>",
     "toddl": "ym INTERVAL YEAR TO MONTH,dt INTERVAL DAY TO SECOND,cal INTERVAL,ch CHAR(8),vc VARCHAR(32)",
-    "toddl_roundtrip": {
-      "refused": "ValueError: cannot parse datatype: 'ym INTERVAL YEAR TO MONTH,dt INTERVAL DAY TO SECOND,cal INTERVAL,ch CHAR(8),vc VARCHAR(32)'"
-    },
+    "toddl_roundtrip": [
+      {
+        "class": "YearMonthIntervalType",
+        "name": "ym",
+        "nullable": true,
+        "simpleString": "interval year to month"
+      },
+      {
+        "class": "DayTimeIntervalType",
+        "name": "dt",
+        "nullable": true,
+        "simpleString": "interval day to second"
+      },
+      {
+        "class": "CalendarIntervalType",
+        "name": "cal",
+        "nullable": true,
+        "simpleString": "interval"
+      },
+      {
+        "class": "CharType",
+        "name": "ch",
+        "nullable": true,
+        "simpleString": "char(8)"
+      },
+      {
+        "class": "VarcharType",
+        "name": "vc",
+        "nullable": true,
+        "simpleString": "varchar(32)"
+      }
+    ],
     "typeName": "struct"
   },
   "struct_nested3": {
@@ -2491,11 +2592,13 @@
     "class": "YearMonthIntervalType",
     "engine_type": "interval year to month",
     "fromddl_simplestring": {
-      "refused": "ValueError: cannot parse datatype: 'interval year to month'"
+      "class": "YearMonthIntervalType",
+      "simpleString": "interval year to month"
     },
     "json": "\"interval year to month\"",
     "json_roundtrip": {
-      "refused": "ValueError: cannot parse datatype: 'interval year to month'"
+      "class": "YearMonthIntervalType",
+      "simpleString": "interval year to month"
     },
     "repr": "YearMonthIntervalType(0, 1)",
     "simpleString": "interval year to month",
@@ -2506,11 +2609,13 @@
     "class": "YearMonthIntervalType",
     "engine_type": "interval year",
     "fromddl_simplestring": {
-      "refused": "ValueError: cannot parse datatype: 'interval year'"
+      "class": "YearMonthIntervalType",
+      "simpleString": "interval year"
     },
     "json": "\"interval year\"",
     "json_roundtrip": {
-      "refused": "ValueError: cannot parse datatype: 'interval year'"
+      "class": "YearMonthIntervalType",
+      "simpleString": "interval year"
     },
     "repr": "YearMonthIntervalType(0, 0)",
     "simpleString": "interval year",

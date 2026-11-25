@@ -99,7 +99,7 @@ by the goldens.
 | D11 | Arrow `duration[us]` | `DayTimeIntervalType` (`interval day to second`, PySpark's Arrow mapping; MAKE-DT-INTERVAL-OVERFLOW-1, 2026-11-25) | — | `type_key` and df.schema `interval day to second` |
 | D12 | Arrow `month_day_nano_interval` | `StringType` | — | `type_key` `Interval(MonthDayNano)`; df.schema `string` |
 | D13 | Arrow `time64[us]` | `StringType` | — | `type_key` `Time64(Microsecond)`; df.schema `string` |
-| D14 | `DayTimeIntervalType`/`YearMonthIntervalType` | `repark_type_to_arrow` → `string`; `fromDDL` **refuses** `'interval day to second'`/`'interval year to month'`; `interval` → `CalendarIntervalType` | — | — |
+| D14 | `DayTimeIntervalType`/`YearMonthIntervalType` | MAKE-DT-INTERVAL-OVERFLOW-1 delta 1 (2026-11-25): `repark_type_to_arrow(DayTimeIntervalType())` → `duration[us]` (other interval fields and year-month stay `string`); `fromDDL` and `fromJson` read every ANSI spelling (`interval day to second`, `interval hour`, `interval year to month`); `interval` → `CalendarIntervalType` | — | — |
 | D15 | struct field `nullable=False` | preserved by `struct_type_from_arrow`; `toDDL` emits `req INT NOT NULL`; `fromDDL` **refuses** its own `NOT NULL` output | — | `type_key` preserves `false` |
 | D16 | `ArrayType(int, containsNull=False)` | `repark_type_to_arrow` → `list<item: int32>` (item nullable — flag **dropped**); arrow `list<int32 not null>` → `containsNull=True` (flag **dropped** inbound) | — | df.schema `array<int>` (flag invisible on the surface) |
 | D17 | `MapType(str,int, valueContainsNull=False)` | `repark_type_to_arrow` → `map<string, int32>` (value nullable — flag **dropped**); arrow non-null value → `valueContainsNull=True` | — | df.schema `map<string,int>` |

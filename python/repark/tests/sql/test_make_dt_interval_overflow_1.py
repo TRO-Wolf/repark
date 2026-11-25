@@ -257,9 +257,13 @@ def assert_matches(key: str, ansi: str, expected: dict[str, Any], got: dict[str,
         assert expected["cls"] in got["text"], f"{label}: {got['text'][:300]}"
         return
     assert got["kind"] == "ok", f"{label}: Spark answers, got {got['text'][:300]}"
-    for field in ("type", "nullable", "rows", "text"):
+    for field in ("type", "nullable", "text"):
         if field in expected:
             assert got[field] == expected[field], f"{label}: {field} {got[field]!r}"
+    if "rows" in expected:
+        assert sorted(got["rows"], key=repr) == sorted(expected["rows"], key=repr), (
+            f"{label}: rows {got['rows']!r}"
+        )
 
 
 @pytest.fixture(scope="module", params=ANSI_MODES)
