@@ -1,7 +1,7 @@
 # map — task/roadmap/mid-term/cards-2026-11-23/
 
-Cards filed by the orchestrator on 2026-11-23 and 2026-11-24, from the verifiers and builders of PRs #1411 and
-#1413, the builder of SQL-EXPLODE-1, and the outside reviews of 2026-11-23 and 2026-11-24. A severity marked proposed
+Cards filed by the orchestrator from 2026-11-23 to 2026-11-25, from the verifiers and builders of PRs #1411, #1413,
+#1429, #1430 and #1431, the builder of SQL-EXPLODE-1, and the outside reviews of 2026-11-23 and 2026-11-24. A severity marked proposed
 awaits the owner's rating. Each card row records its own status.
 
 ## Cards
@@ -25,7 +25,7 @@ awaits the owner's rating. Each card row records its own status.
   aligned the inventoried Python and Rust SQL string/raw/backtick/comment scanners with Spark 4.1.2 (residual
   still-unlike-Spark list on the card); evidence in
   [task/wo/filter-string-escaped-quote-1/evidence/](../../../wo/filter-string-escaped-quote-1/evidence/).
-- [TRY-CAST-NONNULL-FIELD-1](try-cast-nonnull-field-1-card-2026-11-24.md) (S2) — **fixed (2026-11-24; Delta 1 A-1):**
+- [TRY-CAST-NONNULL-FIELD-1](try-cast-nonnull-field-1-card-2026-11-24.md) (S2) — **merged as #1429 (`14d2404a`, 2026-11-24):**
   shields `TryCast` consumers in physical planning (`__repark_nullable_field__`), post-`ProjectionPushdown`/`FilterPushdown`
   (`TryCastSafeSanityCheck`, incl. `DataSourceExec` `ParquetSource` pushed predicates under `pushdown_filters = true`),
   and cross-ANSI temp views while keeping pruning and `EXPLAIN` byte-identical on non-`TRY_CAST` queries; 9 separate
@@ -37,5 +37,19 @@ awaits the owner's rating. Each card row records its own status.
   `INSERT OVERWRITE` with an invalid constant cast wipes the table where Spark refuses.
 - [SPARK-DOOR-OVER-ACCEPT-SYNTAX-1](spark-door-over-accept-syntax-1-card-2026-11-24.md) (S3) — **card:** `1e2foo`,
   `named_struct(…).a` with a bad sibling, `* EXCLUDE` and `DELETE` without `FROM` answer where Spark refuses.
+- [CSV-JSON-PARTITION-DISCOVERY-1](csv-json-partition-discovery-1-card-2026-11-24.md) (S1) — **card:** CSV and JSON
+  reads of a `key=value/` directory drop the partition columns.
+- [MAKE-DT-INTERVAL-OVERFLOW-1](make-dt-interval-overflow-1-card-2026-11-25.md) (S1) — **card:** `make_dt_interval`
+  answers NULL on overflow, where Spark raises or answers, and types its result as a string.
+- [FILE-EXTENSION-FILTER-1](file-extension-filter-1-card-2026-11-25.md) (S1) — **card:** Parquet directory reads skip
+  files whose names do not end in `.parquet`.
+- [CAST-STRING-GRAMMAR-1](cast-string-grammar-1-card-2026-11-25.md) (S2 proposed) — **card:** string casts to `DATE`,
+  `TIMESTAMP_NTZ`, `DOUBLE` and `DECIMAL` refuse text Spark accepts.
+- [TRY-CAST-PUSHED-PROJECTION-1](try-cast-pushed-projection-1-card-2026-11-25.md) (S2 proposed) — **card:** a shared
+  `TRY_CAST` pushed into the Parquet scan's projection crashes.
+- [ARRAY-REMOVE-NULLABILITY-1](array-remove-nullability-1-card-2026-11-25.md) (S2 proposed) — **card:** `array_remove`
+  with a nullable element declares a non-null result and crashes.
+- [SQL-PATH-PARQUET-DOORS-1](sql-path-parquet-doors-1-card-2026-11-25.md) (S2 proposed) — **card:** SQL reads of a
+  Parquet path refuse where Spark reads them.
 
 Up: [../map.md](../map.md).
