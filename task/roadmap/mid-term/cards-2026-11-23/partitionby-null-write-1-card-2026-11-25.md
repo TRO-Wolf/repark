@@ -66,6 +66,13 @@ holds. The facade's seats are `writer_readwriter.py` `_apply_path_write` and `wr
   on Parquet, CSV and JSON ("not yet supported to write to hive partitions"), where Spark writes `p=1.50`,
   `p=2024-03-01 10%3A30%3A00` and `p=ab`. The text writer accepts decimal and timestamp, as Spark does.
 - **CSV header.** A partitioned CSV write puts a header line in each part; Spark writes none.
+- **Found by the verifier (2026-11-25), each the same on main and on head:**
+  - a value whose escaped name passes `object_store`'s 255-byte limit refuses, where Spark writes it (`"é" * 100`);
+  - a column `P` written through `partitionBy("p")` names its directory `P=`, where Spark writes `p=`;
+  - an empty frame writes a part file at the root, where Spark writes none.
+- **Follow-ups for this writer (class c):** the S3 rename pass renames any key that appeared under the prefix during
+  the write, not only this write's own; a partitioned append lists the prefix four times instead of twice; and a
+  failed rename leaves the staging directory beside the destination, as any failed write does on main.
 - **Dynamic overwrite.** `mode("overwrite")` with `partitionOverwriteMode=dynamic` refuses
   (PLAIN-DYNAMIC-OVERWRITE-GUARD-1), where Spark replaces only the partitions the rows hold.
 - **Read-then-write copy.** A copy of a Spark-written partitioned directory refuses, because RePark's path reader

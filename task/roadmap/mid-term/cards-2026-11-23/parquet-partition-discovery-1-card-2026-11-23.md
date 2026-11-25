@@ -74,7 +74,9 @@ paths, session zone `America/New_York`; RePark main `5caea2a5` / `514281bd4` (th
   all controls (`leaf_read`, `ICEBERG` 20/20, `orc` 73/99, `text` 71/94); all Delta 1 verifier findings F1–F9 closed.
 - **Delta 2 (re-check findings D1-1 to D1-4):** a 522-cell layout, footer-order and propagation matrix
   ([delta2-matrix.md](../../../wo/parquet-partition-discovery-1/evidence/delta2-matrix.md)) equals Spark on 96 cells on
-  main, 360 on `9656eec2`, 334 on `f514246d9` and 512 on the Delta 2 head. Replaying the 719 Step 0 cells and the
+  main, 360 on `9656eec2`, 334 on `f514246d9` and 512 on the Delta 2 head. That count takes two refusals as equal when
+  either side has no error class; when both classes must match, the same matrix gives 506, on the Delta 2 head and on
+  the merged head alike (the F-1 re-check, 2026-11-25). Replaying the 719 Step 0 cells and the
   re-check's seven probe suites (681 cells) on the Delta 2 head moves 51 cells toward Spark and none away (Step 0 stays
   at 356/719).
 - **S3 status:** `ReparkSession::read_parquet` shares the local `ObjectStore` discovery seat with `s3://`/`s3a://` and
@@ -89,7 +91,7 @@ paths, session zone `America/New_York`; RePark main `5caea2a5` / `514281bd4` (th
 
 ## Still unlike Spark
 
-Measured gaps remaining on head (all pre-existing on main; no guard relaxed):
+Measured gaps remaining on head (no guard relaxed; each is present on main unless its item says otherwise):
 
 1. **Parquet `basePath`, `recursiveFileLookup`, and `mergeSchema` options (16 cells across `parquet` and
    `parquet_load`)** — `OPT/*/basePath_leaf`, `OPT/*/basePath_glob`, `OPT/*/recursive_true`, `OPT/*/recursive_false`,

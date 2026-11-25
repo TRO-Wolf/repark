@@ -86,6 +86,9 @@ the full table is [delta2-matrix.md](delta2-matrix.md).
 | `f514246d9` | 334 |
 | Delta 2 head | 512 |
 
+These counts take two refusals as equal when either side has no error class. With both classes required to match, the
+Delta 2 head gives 506 (the F-1 re-check, 2026-11-25).
+
 - **D1-1 (base paths):** Spark's `PartitioningUtils.parsePartitions` rule holds on every layout measured: two
   non-partition prefixes, root beside `sub/`, a `sub/` file (also 0-byte), `a=1/sub/b=2` beside `a=2/sub/b=3`, three
   bases and mixed depths of non-`=` folders refuse `CONFLICTING_DIRECTORY_STRUCTURES` (before
