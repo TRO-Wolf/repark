@@ -20,6 +20,7 @@ use crate::session::df_guards::duplicate_names::recorded_display_names;
 use crate::session::text_write_format::is_text_write_format_option;
 use crate::session::text_write_format::select::{TextWriteCopyParts, merge_spec_options};
 use crate::session::text_write_format::spec::{SPEC_WRITE_ID_KEY, TextWritePathRegistry};
+use crate::spark_nullable::hidden_files::spark_hidden_below;
 
 mod append;
 mod rollback;
@@ -652,8 +653,12 @@ impl ReparkSession {
                     )));
                 }
                 let existing = list_part_keys(&store, scope, format.extension(), url).await?;
-                if !existing.is_empty() {
-                    let part_urls: Vec<String> = existing
+                let visible: Vec<&ObjectPath> = existing
+                    .iter()
+                    .filter(|key| !spark_hidden_below(&prefix, key))
+                    .collect();
+                if !visible.is_empty() {
+                    let part_urls: Vec<String> = visible
                         .iter()
                         .map(|key| {
                             format!(

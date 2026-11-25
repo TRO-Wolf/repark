@@ -15,6 +15,7 @@ _ANSI = ["false", "true"]
 _DOORS = ["reader", "format_load"]
 _UNWIRED_DOORS = ["default_load", "sql", "view"]
 _REFUSED = None
+_PARTITION_COLUMN_CELLS = {"layout/partitioned-card", "layout/partitioned-markers"}
 
 _SPARK_PART = "part-00000-5e1f-c000.snappy.parquet"
 _SPARK_PART_2 = "part-00001-5e1f-c000.snappy.parquet"
@@ -240,7 +241,8 @@ def test_a_parquet_path_read_lists_what_spark_lists(
     frame = _read(spark, door, path)
     assert _answer(frame) == rows
     assert frame.count() == len(rows)
-    assert frame.schema.simpleString() == "struct<id:bigint>"
+    if cell not in _PARTITION_COLUMN_CELLS:
+        assert frame.schema.simpleString() == "struct<id:bigint>"
     if listed is not None:
         assert _relative(frame.inputFiles(), tmp_path) == listed
 

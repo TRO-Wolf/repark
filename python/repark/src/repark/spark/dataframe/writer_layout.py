@@ -95,6 +95,23 @@ def _int96_as_instant(data_type: Any, int96: list[bool], start: int, depth: int)
     return data_type
 
 
+def _spark_hidden_name(name: str) -> bool:
+    return (
+        (name.startswith("_") and "=" not in name)
+        or name.startswith(".")
+        or name.endswith("._COPYING_")
+    )
+
+
+def _visible_part_files(destination: Path, pattern: str) -> list[Path]:
+    return sorted(
+        item
+        for item in destination.rglob(pattern)
+        if item.is_file()
+        and not any(_spark_hidden_name(part) for part in item.relative_to(destination).parts)
+    )
+
+
 def _session_parquet_schema(part_file: Path) -> Any:
     import pyarrow as pa
     import pyarrow.parquet as pa_pq
