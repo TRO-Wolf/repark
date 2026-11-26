@@ -19,9 +19,9 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 mod fragment_canon;
-pub(crate) use fragment_canon::canonicalize_fragment;
 use super::PyColumn;
 use crate::fence::fenced;
+pub(crate) use fragment_canon::canonicalize_fragment;
 
 /// Preserve Spark's `±Inf` result at an exact zero reciprocal-trig divisor.
 pub(super) fn reciprocal_trig_or_inf(divisor: Expr) -> Expr {
