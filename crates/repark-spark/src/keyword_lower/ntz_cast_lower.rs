@@ -109,8 +109,13 @@ pub(super) fn lower_timestamp_ntz_cast(node: &mut Expr) -> bool {
             CastKind::Cast | CastKind::DoubleColon => TIMESTAMP_NTZ_CAST_NAME,
             CastKind::TryCast | CastKind::SafeCast => TRY_TIMESTAMP_NTZ_CAST_NAME,
         };
-        let value = std::mem::replace(expr, Box::new(null_expr()));
-        *node = function_call(name, vec![*value]);
+        let value = *std::mem::replace(expr, Box::new(null_expr()));
+        let operand = if name == TIMESTAMP_NTZ_CAST_NAME && is_string_literal(&value) {
+            function_call(DECIMAL_CAST_NULLABLE_NAME, vec![value])
+        } else {
+            value
+        };
+        *node = function_call(name, vec![operand]);
         return true;
     }
     if let Expr::TypedString(typed) = node
@@ -193,7 +198,11 @@ mod tests {
         )
         .to_string();
         assert!(
-            text.contains("__repark_cast_timestamp_ntz__('2024-01-01')")
+            text.contains(
+                "__repark_cast_timestamp_ntz__(__repark_decimal_cast_nullable__('2024-01-01')) AS a"
+            ) && text.contains(
+                "__repark_cast_timestamp_ntz__(__repark_decimal_cast_nullable__('2024-01-01')) AS b"
+            )
                 && text.contains("__repark_try_cast_timestamp_ntz__('x')"),
             "{text}"
         );

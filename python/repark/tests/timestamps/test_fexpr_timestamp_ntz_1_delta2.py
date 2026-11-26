@@ -238,3 +238,20 @@ def test_typed_timestamp_literals_stay_not_nullable(door: str, ansi: bool) -> No
         frame = _expr_frame(spark, door, fragment)
         assert not frame.schema.fields[0].nullable, fragment
     assert _expr_frame(spark, door, LTZ_NOT_NULLABLE[0]).collect()[0][0] == WALL
+
+
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+@pytest.mark.parametrize("door", EXPR_DOORS)
+def test_typed_literals_stay_not_nullable_under_ntz(door: str, ansi: bool) -> None:
+    spark = _session(ansi, timestamp_type="TIMESTAMP_NTZ")
+    for fragment in (
+        "TIMESTAMP '2024-01-01 02:00:00'",
+        "TIMESTAMP_NTZ '2024-01-01 02:00:00'",
+        "COALESCE(CAST(NULL AS TIMESTAMP_NTZ), TIMESTAMP '2024-01-01 02:00:00')",
+    ):
+        frame = _expr_frame(spark, door, fragment)
+        assert not frame.schema.fields[0].nullable, fragment
+        assert frame.collect()[0][0] == WALL, fragment
+    explicit = _expr_frame(spark, door, "CAST('2024-01-01 02:00:00' AS TIMESTAMP_NTZ)")
+    assert explicit.schema.fields[0].nullable
+    assert explicit.collect()[0][0] == WALL

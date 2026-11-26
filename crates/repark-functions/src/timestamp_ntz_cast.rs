@@ -217,6 +217,17 @@ fn is_string_source(data_type: &DataType) -> bool {
     )
 }
 
+fn string_literal_parses_ntz(scalar: Option<&ScalarValue>) -> bool {
+    match scalar {
+        Some(
+            ScalarValue::Utf8(Some(text))
+            | ScalarValue::LargeUtf8(Some(text))
+            | ScalarValue::Utf8View(Some(text)),
+        ) => parse_timestamp_ntz_wall(text).is_some(),
+        _ => false,
+    }
+}
+
 fn is_cast_source(data_type: &DataType) -> bool {
     matches!(data_type, DataType::Null)
         || is_string_source(data_type)
@@ -304,12 +315,14 @@ impl ScalarUDFImpl for SparkTimestampNtzCast {
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
         let nullable = match args.arg_fields.first() {
             Some(field) => {
+                let scalar = args.scalar_arguments.first().copied().flatten();
                 if !is_cast_source(field.data_type()) {
-                    let scalar = args.scalar_arguments.first().copied().flatten();
                     let arg = scalar.map_or_else(|| field.name().to_owned(), ToString::to_string);
                     return Err(cast_refusal(self.try_cast, &arg, field.data_type(), scalar));
                 }
-                field.is_nullable() || self.try_cast || is_string_source(field.data_type())
+                let may_null_string =
+                    is_string_source(field.data_type()) && !string_literal_parses_ntz(scalar);
+                field.is_nullable() || self.try_cast || may_null_string
             }
             None => true,
         };

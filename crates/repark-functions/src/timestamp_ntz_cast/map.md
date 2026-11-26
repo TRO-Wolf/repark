@@ -23,8 +23,8 @@ parameter here would be a second nanosecond conversion beside that one.
   **WO NTZ-1 re-verify fold (2026-09-28):** the store-wrap idempotence pin
   (an already-wrapped expression keeps a single wrap; `wrap_bare=false`
   leaves the expression alone). **FEXPR-TIMESTAMP-NTZ-1 (2026-11-24):** pins nullable `NULL`
-  output for malformed string inputs under `ansi=false`; delta 2 (2026-11-26) pins valid
-  string literals nullable too, as Spark (R-5 retired); Delta 1 adds DST gap wall, `+HH:MM:SS` / named-zone walls,
+  output for malformed string inputs under `ansi=false` while preserving non-nullability for
+  valid string literals (ntz-1 R-5, which delta 2 keeps for typed literals); Delta 1 adds DST gap wall, `+HH:MM:SS` / named-zone walls,
   and `SparkTimestampNtzCast::simplify` constant-folding pins.
 
 ## Pointers

@@ -1270,8 +1270,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   pass-through subquery nests, so `from_utc_timestamp` / `to_utc_timestamp` /
   `date_trunc` cells store the session wall again; the wrap skips an
   already-wrapped expression. **FEXPR-TIMESTAMP-NTZ-1 (2026-11-24):** `SparkTimestampNtzCast`
-  marks every string-source output nullable, as Spark (delta 2 retired R-5's non-null
-  valid literal; `parse_timestamp_ntz_wall` takes no clock), and `simplify`
+  marks string-source outputs nullable unless the argument is a string literal that parses
+  (R-5 keeps typed literals non-null; delta 2 makes explicit casts nullable at the AST), and `simplify`
   folds constant valid literals/dates/already-NTZ/non-deferred LTZ/NULLs.
 - `timestamp_ltz_ntz.rs` — **ICE-TSNS-FLOOR-DOORS-1 (2026-10-14, R-009):** the `Timestamp` arm of
   `ntz_single` hands every timestamp source to `timestamp_ns_cast::store_micros` with the
