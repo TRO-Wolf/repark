@@ -39,7 +39,7 @@ def _parse_schema_ddl(ddl: str) -> tuple[list[str], list[str]] | None:
     if not stripped or (" " not in stripped and ":" not in stripped and "<" not in stripped):
         return None
 
-    from repark.spark.types import DataType, StructType
+    from repark.spark.types import AnsiIntervalType, ArrayType, DataType, MapType, StructType
 
     try:
         parsed = DataType.fromDDL(stripped)
@@ -49,6 +49,23 @@ def _parse_schema_ddl(ddl: str) -> tuple[list[str], list[str]] | None:
 
     if not isinstance(parsed, StructType) or not parsed.fields:
         return None
+
+    pending: list[Any] = [parsed]
+
+    while pending:
+        data_type = pending.pop()
+
+        if isinstance(data_type, AnsiIntervalType):
+            return None
+
+        if isinstance(data_type, StructType):
+            pending.extend(field.dataType for field in data_type.fields)
+
+        elif isinstance(data_type, ArrayType):
+            pending.append(data_type.elementType)
+
+        elif isinstance(data_type, MapType):
+            pending.extend((data_type.keyType, data_type.valueType))
 
     names = [field.name for field in parsed.fields]
 

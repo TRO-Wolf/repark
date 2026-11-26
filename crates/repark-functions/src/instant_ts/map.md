@@ -25,6 +25,9 @@ Submodules of [instant_ts.rs](../instant_ts.rs) (FEXPR-TIMESTAMP-NTZ-1, 2026-11-
   store-cast, Delta 1 mixed NTZ/LTZ comparison & `MERGE` `CASE` localization, gap/offset/ANSI
   string casts, Spark zone spellings, `date_trunc` LTZ return, and F-A9 nullability pins.
 
+The parent module's `instant_ts.rs::SparkToTimestamp` is not nullable over exactly one non-null timestamp argument,
+as Spark 4.1.2 measures; every other input stays nullable (FEXPR-TIMESTAMP-NTZ-1 delta 2, ruling 3).
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

@@ -184,6 +184,37 @@ fn atomic_type_from_name(lower: &str) -> Option<SparkDataType> {
     })
 }
 
+const DAY_TIME_FIELDS: [&str; 4] = ["day", "hour", "minute", "second"];
+const YEAR_MONTH_FIELDS: [&str; 2] = ["year", "month"];
+
+fn ansi_interval_type(text: &str) -> Option<SparkDataType> {
+    let captures = regex_fullmatch(
+        r"(?i)\Ainterval\s+(year|month|day|hour|minute|second)(?:\s+to\s+(year|month|day|hour|minute|second))?\z",
+        text,
+    )?;
+    let start = captures.get(1)?.as_str().to_lowercase();
+    let end_field = captures.get(2);
+    let end = end_field.map_or_else(|| start.clone(), |field| field.as_str().to_lowercase());
+    for (fields, year_month) in [
+        (&DAY_TIME_FIELDS[..], false),
+        (&YEAR_MONTH_FIELDS[..], true),
+    ] {
+        let start_at = fields.iter().position(|field| *field == start);
+        let end_at = fields.iter().position(|field| *field == end);
+        if let (Some(start_at), Some(end_at)) = (start_at, end_at) {
+            if start_at > end_at || (end_field.is_some() && start_at == end_at) {
+                return None;
+            }
+            return Some(if year_month {
+                SparkDataType::YearMonthInterval { start, end }
+            } else {
+                SparkDataType::DayTimeInterval { start, end }
+            });
+        }
+    }
+    None
+}
+
 fn atomic_type_names_contains(lower: &str) -> bool {
     atomic_type_from_name(lower).is_some()
 }
@@ -208,6 +239,9 @@ fn parse_atomic_token(token: &str) -> Result<Option<SparkDataType>, TypeTableErr
     }
     let lower = stripped.to_lowercase();
     if let Some(data_type) = atomic_type_from_name(lower.as_str()) {
+        return Ok(Some(data_type));
+    }
+    if let Some(data_type) = ansi_interval_type(stripped) {
         return Ok(Some(data_type));
     }
     if let Some(captures) =

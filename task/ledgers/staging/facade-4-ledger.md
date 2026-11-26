@@ -96,10 +96,10 @@ by the goldens.
 | D8 | Arrow `float32` | `FloatType` (`float`) | — | `df.schema`/`type_key` `double`; **DESCRIBE `float`** |
 | D9 | Arrow `int8` / `int16` | `ByteType`/`ShortType` (`tinyint`/`smallint`) | — | `int` (scan and DESCRIBE collapse to `int`) |
 | D10 | Arrow `uint8`/`uint16`/`uint32` | `StringType` | — | `int` (type_key and df.schema) |
-| D11 | Arrow `duration[us]` | `StringType` | — | `type_key` `Duration(Microsecond)`; df.schema `string` |
+| D11 | Arrow `duration[us]` | `DayTimeIntervalType` (`interval day to second`, PySpark's Arrow mapping; MAKE-DT-INTERVAL-OVERFLOW-1, 2026-11-25) | — | `type_key` and df.schema `interval day to second` |
 | D12 | Arrow `month_day_nano_interval` | `StringType` | — | `type_key` `Interval(MonthDayNano)`; df.schema `string` |
 | D13 | Arrow `time64[us]` | `StringType` | — | `type_key` `Time64(Microsecond)`; df.schema `string` |
-| D14 | `DayTimeIntervalType`/`YearMonthIntervalType` | `repark_type_to_arrow` → `string`; `fromDDL` **refuses** `'interval day to second'`/`'interval year to month'`; `interval` → `CalendarIntervalType` | — | — |
+| D14 | `DayTimeIntervalType`/`YearMonthIntervalType` | MAKE-DT-INTERVAL-OVERFLOW-1 delta 1 (2026-11-25): `repark_type_to_arrow(DayTimeIntervalType())` → `duration[us]` (other interval fields and year-month stay `string`); `fromDDL` and `fromJson` read every ANSI spelling (`interval day to second`, `interval hour`, `interval year to month`); `interval` → `CalendarIntervalType` | — | — |
 | D15 | struct field `nullable=False` | preserved by `struct_type_from_arrow`; `toDDL` emits `req INT NOT NULL`; `fromDDL` **refuses** its own `NOT NULL` output | — | `type_key` preserves `false` |
 | D16 | `ArrayType(int, containsNull=False)` | `repark_type_to_arrow` → `list<item: int32>` (item nullable — flag **dropped**); arrow `list<int32 not null>` → `containsNull=True` (flag **dropped** inbound) | — | df.schema `array<int>` (flag invisible on the surface) |
 | D17 | `MapType(str,int, valueContainsNull=False)` | `repark_type_to_arrow` → `map<string, int32>` (value nullable — flag **dropped**); arrow non-null value → `valueContainsNull=True` | — | df.schema `map<string,int>` |
@@ -247,6 +247,9 @@ recorded in the census table above.
     *Does the unified table keep the string degradation on the facade
     surface?* Lean: yes — raw Arrow names on a Spark surface are a leak;
     the type_key can keep its internal spelling.
+    *2026-11-25:* `duration[us]` now maps to `DayTimeIntervalType` on every
+    surface, as PySpark maps it (MAKE-DT-INTERVAL-OVERFLOW-1); the others keep
+    the string degradation.
 
 Step 1 stops here; implementation is a later round.
 

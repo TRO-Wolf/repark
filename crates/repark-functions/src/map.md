@@ -550,6 +550,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   month arithmetic, zone conversion, add/diff, dateadd/datediff arity routes;
   scalar args and column casts hoist out of the row loops). Details in
   [`temporal_ctor/map.md`](temporal_ctor/map.md).
+  **MAKE-DT-INTERVAL-OVERFLOW-1 (2026-11-25):** `expr_fn::make_dt_interval` builds the
+  `temporal_ctor/day_time.rs` UDF, which also replaces the `datafusion-spark` registration by name.
 - `lib.rs` — crate-root under `check_lib_rs`.
   **FNP-BITMAP-FACADE-1 (2026-09-15):** `mod bitmap_agg;` flips to `pub mod bitmap_agg;`
   (same line count) so `repark-python`'s `unary_aggregate_udaf` can reach the three
@@ -561,9 +563,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **TIMESTAMP_LTZ**). Parsed from the builder map in `SparkExtension::configure`.
   Missing carrier also defaults LTZ. Invalid value
   fail-louds naming `TIMESTAMP_LTZ` and `TIMESTAMP_NTZ`. Ledger:
-  `task/q10-timestamptype-ledger.md`. **FEXPR-TIMESTAMP-NTZ-1 (2026-11-24):** adds
-  `DeferredSparkTimestampTypeConfig` (`with_deferred_spark_timestamp_type` /
-  `is_spark_timestamp_type_deferred`) for fragment contexts.
+  `task/q10-timestamptype-ledger.md`. **FEXPR-TIMESTAMP-NTZ-1:** `DeferredSparkTimestampTypeConfig`
+  serves fragment contexts.
 - `ansi.rs` — **U5 / Q10=A:** Spark-door `spark.sql.ansi.enabled` carrier; `decimal_legacy.rs` (DECIMAL-COMMON-TYPE-1) carries the decimal legacy flag alike
   (`SparkAnsiConfig`, `PREFIX = repark.ansi`, default **TRUE**) + the embedded
   `__repark_ansi_nonzero_divisor__` raise kernel. Parsed from the builder map in
@@ -1271,9 +1272,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `date_trunc` cells store the session wall again; the wrap skips an
   already-wrapped expression. **FEXPR-TIMESTAMP-NTZ-1 (2026-11-24):** `SparkTimestampNtzCast`
   marks string-source outputs nullable unless the argument is a string literal that parses
-  (R-5 keeps typed literals non-null; delta 2 makes explicit casts nullable at the AST, and
-  `instant_ts::SparkToTimestamp` is not nullable over one non-null timestamp; `cast_arg_name` peels the
-  wrap), and `simplify`
+  (R-5 keeps typed literals non-null; delta 2 makes explicit casts nullable at the AST and
+  `cast_arg_name` peels that wrap), and `simplify`
   folds constant valid literals/dates/already-NTZ/non-deferred LTZ/NULLs.
 - `timestamp_ltz_ntz.rs` — **ICE-TSNS-FLOOR-DOORS-1 (2026-10-14, R-009):** the `Timestamp` arm of
   `ntz_single` hands every timestamp source to `timestamp_ns_cast::store_micros` with the

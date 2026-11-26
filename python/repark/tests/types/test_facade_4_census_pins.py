@@ -565,12 +565,16 @@ def _build_rows() -> list[tuple[str, str, list[tuple[str, str, Any]]]]:
             "D11",
             "Arrow duration[us]",
             [
-                ("arrow_in", pa.duration("us"), "StringType:string"),
+                ("arrow_in", pa.duration("us"), "DayTimeIntervalType:interval day to second"),
                 ("rung", "1 day", ("string", "StringType:string", "string", "varchar")),
                 (
                     "reader",
                     _pa(pa.duration("us")),
-                    ([("c", "Duration(Microsecond)", True)], "struct<c:string>", [("c", "string")]),
+                    (
+                        [("c", "interval day to second", True)],
+                        "struct<c:interval day to second>",
+                        [("c", "interval day to second")],
+                    ),
                 ),
             ],
         ),
@@ -606,17 +610,13 @@ def _build_rows() -> list[tuple[str, str, list[tuple[str, str, Any]]]]:
             "D14",
             "interval DDL refusal + string degradation",
             [
-                ("arrow_out", _pa_daytime_hint(), "string"),
+                ("arrow_out", _pa_daytime_hint(), "duration[us]"),
                 ("arrow_out", _pa_yearmonth_hint(), "string"),
-                (
-                    "fromddl",
-                    "interval day to second",
-                    "REFUSED ValueError: cannot parse datatype: 'interval day to second'",
-                ),
+                ("fromddl", "interval day to second", "DayTimeIntervalType:interval day to second"),
                 (
                     "fromddl",
                     "interval year to month",
-                    "REFUSED ValueError: cannot parse datatype: 'interval year to month'",
+                    "YearMonthIntervalType:interval year to month",
                 ),
                 ("fromddl", "interval", "CalendarIntervalType:interval"),
                 ("rung", "interval 1 year", ("string", "StringType:string", "string", "varchar")),
