@@ -565,7 +565,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   fail-louds naming `TIMESTAMP_LTZ` and `TIMESTAMP_NTZ`. Ledger:
   `task/q10-timestamptype-ledger.md`. **FEXPR-TIMESTAMP-NTZ-1 narrow (2026-11-26):**
   `typed_literal_resolves_ntz` is Spark's rule for a bare `TIMESTAMP '…'` under `TIMESTAMP_NTZ`: the text parses,
-  carries no zone, is not time-only, and has an NTZ wall; the fragment door's respelling reads it.
+  carries no zone, is not time-only, and has an NTZ wall (`parse_timestamp_ntz_wall`, which refuses `hh:mm`
+  without seconds today); the fragment door's respelling reads it.
 - `ansi.rs` — **U5 / Q10=A:** Spark-door `spark.sql.ansi.enabled` carrier; `decimal_legacy.rs` (DECIMAL-COMMON-TYPE-1) carries the decimal legacy flag alike
   (`SparkAnsiConfig`, `PREFIX = repark.ansi`, default **TRUE**) + the embedded
   `__repark_ansi_nonzero_divisor__` raise kernel. Parsed from the builder map in
