@@ -95,6 +95,23 @@ def _int96_as_instant(data_type: Any, int96: list[bool], start: int, depth: int)
     return data_type
 
 
+def _spark_hidden_name(name: str) -> bool:
+    return (
+        (name.startswith("_") and "=" not in name)
+        or name.startswith(".")
+        or name.endswith("._COPYING_")
+    )
+
+
+def _visible_part_files(destination: Path, pattern: str) -> list[Path]:
+    return sorted(
+        item
+        for item in destination.rglob(pattern)
+        if item.is_file()
+        and not any(_spark_hidden_name(part) for part in item.relative_to(destination).parts)
+    )
+
+
 def _session_parquet_schema(part_file: Path) -> Any:
     import pyarrow as pa
     import pyarrow.parquet as pa_pq
@@ -194,6 +211,7 @@ def run_through_temp_view(
     dynamic_overwrite: bool = False,
     source_by_name: bool = False,
     duplicate_tolerant: bool = False,
+    hive_partitions: list[str] | None = None,
 ) -> None:
     """Register a temp view, run the built write SQL with options, drop the view."""
     dataframe._ensure_alive()
@@ -202,6 +220,8 @@ def run_through_temp_view(
     registered = _registration_frame(
         dataframe, duplicate_tolerant=duplicate_tolerant, writer_v2=prefix == "_repark_writer_v2_"
     )
+    if hive_partitions:
+        registered = _native.hive_partition_frame(registered, list(hive_partitions))
     session.create_or_replace_temp_view(view_name, registered)
     try:
         _native.session_sql_with_write_options(
@@ -540,8 +560,23 @@ def _merge_path_write_tree(staging: Any, destination: Any) -> None:
 
 def partitioned_by_sql_clause(frame_columns: list[str], partition_columns: list[str]) -> str:
     """Build the path ``PARTITIONED BY`` clause for configured identity columns."""
-    if not partition_columns:
+    return _partition_clause(_resolved_partition_columns(frame_columns, partition_columns))
+
+
+def _partition_clause(resolved: list[str]) -> str:
+    if not resolved:
         return ""
+    return " PARTITIONED BY (" + ", ".join(resolved) + ")"
+
+
+def _spell_partition_dirs(staging: Any, resolved: list[str]) -> None:
+    if resolved and Path(staging).is_dir():
+        _native.respell_hive_partition_dirs(str(staging), len(resolved))
+
+
+def _resolved_partition_columns(
+    frame_columns: list[str], partition_columns: list[str]
+) -> list[str]:
     frame_by_case = {column.casefold(): column for column in frame_columns}
     resolved: list[str] = []
     seen_casefold: set[str] = set()
@@ -567,7 +602,7 @@ def partitioned_by_sql_clause(frame_columns: list[str], partition_columns: list[
             )
         seen_casefold.add(key)
         resolved.append(matched)
-    return " PARTITIONED BY (" + ", ".join(resolved) + ")"
+    return resolved
 
 
 def table_of_ref_target(qualified: str) -> str:
