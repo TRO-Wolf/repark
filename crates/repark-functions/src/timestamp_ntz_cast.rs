@@ -468,6 +468,11 @@ fn cast_arg_name(arg: &Expr) -> Option<String> {
             _,
         ) => Some(text.clone()),
         Expr::Column(column) => Some(column.name.clone()),
+        Expr::ScalarFunction(function)
+            if function.func.name() == crate::decimal_cast::DECIMAL_CAST_NULLABLE_NAME =>
+        {
+            function.args.first().and_then(cast_arg_name)
+        }
         _ => None,
     }
 }

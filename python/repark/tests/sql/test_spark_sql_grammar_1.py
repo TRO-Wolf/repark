@@ -240,15 +240,15 @@ def test_pg_not_rlike(spark: ReparkSession) -> None:
 def test_pg_ltz_cast(spark: ReparkSession) -> None:
     """PG-ltz-cast: ``CAST(x AS TIMESTAMP_LTZ)`` answers ``TIMESTAMP``.
 
-    The literal-only cell folds to non-null, exactly like a plain
-    ``CAST('…' AS TIMESTAMP)`` on this door; Spark types it nullable.
+    The literal-only cell is nullable, as Spark types it (FEXPR-TIMESTAMP-NTZ-1
+    delta 2 moved it off the folded non-null answer).
     """
     table = _table(spark, "SELECT CAST('2024-01-02 03:04:05' AS TIMESTAMP_LTZ) AS v")
     assert table.column("v").to_pylist() == [
         datetime.datetime(2024, 1, 2, 3, 4, 5, tzinfo=datetime.UTC)
     ]
     assert table.schema.field("v").type == pa.timestamp("us", tz="UTC")
-    assert table.schema.field("v").nullable is False
+    assert table.schema.field("v").nullable is True
 
 
 def test_pg_ltz_cast_nullable_frame(spark: ReparkSession) -> None:
@@ -285,13 +285,13 @@ def test_pg_ntz_cast_answers_the_wall(spark: ReparkSession) -> None:
     """PG-ntz-cast: ``CAST(x AS TIMESTAMP_NTZ)`` answers the naive wall.
 
     pins: ntz-1/C-002. Spark types the literal-only cell nullable
-    (``ntz5-nullable-spark.json``: True under ANSI off and on); RePark folds
-    it to non-null (ntz-1 R-5).
+    (``ntz5-nullable-spark.json``: True under ANSI off and on), and so does RePark
+    since FEXPR-TIMESTAMP-NTZ-1 delta 2.
     """
     table = _table(spark, "SELECT CAST('2024-01-02 03:04:05' AS TIMESTAMP_NTZ) AS v")
     assert table.column("v").to_pylist() == [datetime.datetime(2024, 1, 2, 3, 4, 5)]
     assert table.schema.field("v").type == pa.timestamp("us")
-    assert table.schema.field("v").nullable is False
+    assert table.schema.field("v").nullable is True
 
 
 def test_pg_struct_dot(spark: ReparkSession) -> None:
