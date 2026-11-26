@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use std::ops::ControlFlow;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use datafusion::arrow::datatypes::{DataType, TimeUnit};
 use datafusion::common::tree_node::TreeNode;
@@ -14,11 +15,11 @@ use repark_core::{CatalogRegistry, TempViewSession};
 
 use crate::write_options::StatementWriteOptions;
 
-const CACHE_VIEW_PREFIX: &str = "__repark_cache_";
 const WRITER_VIEW: &str = "_repark_writer_";
 const WRITER_V2_VIEW: &str = "_repark_writer_v2_";
 const PROBE: &str = "__repark_const_cast_probe";
 const MAX_DEPTH: usize = 64;
+static LIVE_CACHE_VIEWS: AtomicUsize = AtomicUsize::new(0);
 const IDENTITY_MARKERS: [&str; 1] = ["__repark_decimal_cast_nullable__"];
 const CAST_FUNCTIONS: [&str; 4] = [
     "__repark_parse_java_double__",
@@ -41,12 +42,26 @@ enum Value {
     Other,
 }
 
+pub fn note_cache_view(held: bool) {
+    count_cache_view(&LIVE_CACHE_VIEWS, held);
+}
+
+fn count_cache_view(counter: &AtomicUsize, held: bool) {
+    if held {
+        counter.fetch_add(1, Ordering::SeqCst);
+    } else {
+        let _released = counter.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |live| {
+            live.checked_sub(1)
+        });
+    }
+}
+
 pub(crate) fn session_holds_cache(temp_views: Option<&dyn TempViewSession>) -> bool {
-    temp_views.is_some_and(|views| {
-        views.list_temp_view_names().map_or(true, |names| {
-            names.iter().any(|name| name.starts_with(CACHE_VIEW_PREFIX))
-        })
-    })
+    stands_down(LIVE_CACHE_VIEWS.load(Ordering::SeqCst), temp_views)
+}
+
+fn stands_down(live_cache_views: usize, temp_views: Option<&dyn TempViewSession>) -> bool {
+    temp_views.is_some_and(|views| live_cache_views > 0 || views.temp_view_home().is_err())
 }
 
 pub(crate) async fn refuse_overwrite(
@@ -311,6 +326,7 @@ fn with_probe_operand(expr: &Expr) -> Option<Expr> {
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use datafusion::arrow::datatypes::{DataType, Field, Schema, TimeUnit};
     use datafusion::logical_expr::expr_fn::exists;
@@ -318,7 +334,7 @@ mod tests {
     use datafusion::prelude::{col, lit};
 
     use super::{
-        Door, constant_casts, reads_only_literals, session_holds_cache, spark_cast_raises,
+        Door, constant_casts, count_cache_view, reads_only_literals, spark_cast_raises, stands_down,
     };
 
     struct Views(Option<Vec<&'static str>>);
@@ -340,7 +356,10 @@ mod tests {
         }
 
         fn temp_view_home(&self) -> repark_common::Result<Vec<String>> {
-            Ok(Vec::new())
+            self.0
+                .as_ref()
+                .map(|_| Vec::new())
+                .ok_or_else(|| repark_common::Error::Analysis("no home".to_string()))
         }
 
         fn list_temp_view_names(&self) -> repark_common::Result<Vec<String>> {
@@ -356,17 +375,29 @@ mod tests {
     }
 
     #[test]
-    fn any_cached_frame_stands_the_guard_down() {
-        let cached = Views(Some(vec!["tv_x", "__repark_cache_ab12"]));
+    fn a_cache_live_in_any_session_stands_the_guard_down() {
         let plain = Views(Some(vec![
             "tv_x",
             "_repark_writer_ab12",
             "__repark_ckpt_ab12",
         ]));
-        assert!(session_holds_cache(Some(&cached)));
-        assert!(!session_holds_cache(Some(&plain)));
-        assert!(session_holds_cache(Some(&Views(None))));
-        assert!(!session_holds_cache(None));
+        let listed = Views(Some(vec!["tv_x", "__repark_cache_ab12"]));
+        assert!(stands_down(1, Some(&plain)));
+        assert!(!stands_down(0, Some(&plain)));
+        assert!(!stands_down(0, Some(&listed)));
+        assert!(stands_down(0, Some(&Views(None))));
+        assert!(!stands_down(1, None));
+    }
+
+    #[test]
+    fn the_live_cache_count_stops_at_zero() {
+        let counter = AtomicUsize::new(0);
+        count_cache_view(&counter, false);
+        assert_eq!(counter.load(Ordering::SeqCst), 0);
+        count_cache_view(&counter, true);
+        count_cache_view(&counter, true);
+        count_cache_view(&counter, false);
+        assert_eq!(counter.load(Ordering::SeqCst), 1);
     }
 
     fn ltz() -> DataType {

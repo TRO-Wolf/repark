@@ -23,6 +23,7 @@ def _drop_cache_view_registration(
     view_name: str,
 ) -> None:
     """Finalizer callback: drop the registration unless the session already stopped."""
+    _native.note_cache_view(False)
     if not alive_token.get("alive", True):
         return
     try:
@@ -54,6 +55,7 @@ class CacheViewHandle:
         self._alive_token = alive_token
         self._view_name = view_name
         self._released = False
+        _native.note_cache_view(True)
         self._finalizer = weakref.finalize(
             self, _drop_cache_view_registration, session, alive_token, view_name
         )
@@ -83,6 +85,7 @@ class CacheViewHandle:
             self._session.release_lazy_cache(self._view_name)
             self._session.drop_temp_view(self._view_name)
         self._released = True
+        _native.note_cache_view(False)
 
 
 def union_handles(own: tuple[Any, ...], other: tuple[Any, ...]) -> tuple[Any, ...]:

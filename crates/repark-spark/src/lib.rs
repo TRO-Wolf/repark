@@ -75,6 +75,7 @@ pub use repark_functions::declared_refuse::{
     refuse_in_sql as refuse_declared_function_in_sql,
     refuse_in_statement as refuse_declared_function_in_statement,
 };
+pub use insert_overwrite::const_cast::note_cache_view;
 pub use router::{
     execute, execute_static_overwrite, execute_with_read_only, execute_with_statement_options,
 };

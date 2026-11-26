@@ -35,7 +35,11 @@ conformance it calls before staging.
   `DOUBLE` minus `nan`, `inf`, `infinity` and their `d` / `f` forms, measured on Spark 4.1.2). A listed value runs through
   RePark's own cast on one row, and the guard refuses only with that cast's `[CAST_INVALID_INPUT]` error. A cast's
   operand may sit in the session's `__repark_decimal_cast_nullable__` identity marker. It stands down while the session
-  holds a cached frame (`session_holds_cache`, read by the router into `StatementWriteOptions::cached_frames`). Its unit tests pin the table,
+  holds a cached frame (`session_holds_cache`, read by the router into `StatementWriteOptions::cached_frames`). Delta 2
+  (2026-11-26) makes that process-wide: `LIVE_CACHE_VIEWS` counts the live `__repark_cache_*` views of every session,
+  moved by `note_cache_view` (re-exported from `lib.rs`; `cache_handle.py` calls it through `_native.note_cache_view`).
+  `stands_down` still stands down when a catalog replaced the session's temp-view home, as the delta-1 listing did. The
+  count's unit tests use a local counter, so no test moves the process count. Its unit tests pin the table,
   the scope test and the relation check; `tests/insert_overwrite_const_cast.rs` plans through a full session. Card:
   [insert-overwrite-const-cast-1](../../../../task/roadmap/mid-term/cards-2026-11-23/insert-overwrite-const-cast-1-card-2026-11-24.md).
 

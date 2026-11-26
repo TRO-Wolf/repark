@@ -16,7 +16,13 @@ pub fn retained_cache_bytes(session: PyRef<'_, PyReparkSession>, py: Python<'_>)
     })
 }
 
+#[pyfunction]
+pub fn note_cache_view(held: bool) {
+    repark_spark::note_cache_view(held);
+}
+
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(retained_cache_bytes, module)?)?;
+    module.add_function(wrap_pyfunction!(note_cache_view, module)?)?;
     Ok(())
 }
