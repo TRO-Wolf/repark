@@ -139,7 +139,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   / LIKE scans run through `_sql_built`.
   **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** `getDatabase` reads the stored comment and location through
   `_native.namespace_metadata` instead of parsing the display-masked `DESCRIBE NAMESPACE`.
-  **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 2 (2026-10-29):** `tableExists` quotes a one-part name only when the caller quoted it (an unquoted non-ASCII name stays an error, as in Spark), and `dropTempView` passes the literal name, quoted, so it matches only the folded literal as Spark does (C-021).
+  **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 2 (2026-10-29):** `tableExists` quotes a one-part name only when the caller quoted it (an unquoted non-ASCII name stays an error, as in Spark), and `dropTempView` passes the literal name, quoted, so it matches only the folded literal as Spark does (C-021). `clear_cache` also releases collected cache handles from the const-cast guard's count (INSERT-OVERWRITE-CONST-CAST-1 delta 2).
 - `catalog_surface.py` — **IDENT-DIALECT-1/1B (2026-11-03):** the identifier grammar runs first in `_resolve_table_identity` and `create_table`. **CATALOG-SURFACE-1 (2026-09-14):** the thirteen-name second
   half of the `Catalog` surface — `getTable` / `listColumns` / `listFunctions` / `getFunction`
   metadata (DESCRIBE + SHOW PARTITIONS + the `repark.spark.functions` export table), the

@@ -36,7 +36,7 @@ conformance it calls before staging.
   RePark's own cast on one row, and the guard refuses only with that cast's `[CAST_INVALID_INPUT]` error. A cast's
   operand may sit in the session's `__repark_decimal_cast_nullable__` identity marker. It stands down while the session
   holds a cached frame (`session_holds_cache`, read by the router into `StatementWriteOptions::cached_frames`). Delta 2
-  (2026-11-26) makes that process-wide: `LIVE_CACHE_VIEWS` counts the live `__repark_cache_*` views of every session,
+  (2026-11-26) makes that process-wide: `LIVE_CACHE_VIEWS` counts the caches of every session (a collected one stays counted until `clearCache()`, as in Spark),
   moved by `note_cache_view` (re-exported from `lib.rs`; `cache_handle.py` calls it through `_native.note_cache_view`).
   `stands_down` still stands down when a catalog replaced the session's temp-view home, as the delta-1 listing did. The
   count's unit tests use a local counter, so no test moves the process count. Its unit tests pin the table,
