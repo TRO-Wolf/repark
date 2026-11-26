@@ -480,7 +480,10 @@ fn to_timestamp_is_not_nullable_only_over_one_non_null_timestamp() {
     assert!(!nullable_over(vec![field(ntz.clone(), false)]));
     assert!(!nullable_over(vec![field(ltz_timestamp_type(), false)]));
     assert!(nullable_over(vec![field(ntz.clone(), true)]));
-    assert!(nullable_over(vec![field(ntz, false), field(DataType::Utf8, false)]));
+    assert!(nullable_over(vec![
+        field(ntz, false),
+        field(DataType::Utf8, false)
+    ]));
     for data_type in [
         DataType::Utf8,
         DataType::Date32,
@@ -489,7 +492,10 @@ fn to_timestamp_is_not_nullable_only_over_one_non_null_timestamp() {
         DataType::Int64,
         DataType::Decimal128(10, 2),
     ] {
-        assert!(nullable_over(vec![field(data_type.clone(), false)]), "{data_type}");
+        assert!(
+            nullable_over(vec![field(data_type.clone(), false)]),
+            "{data_type}"
+        );
     }
 }
 

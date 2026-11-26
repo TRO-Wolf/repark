@@ -202,8 +202,7 @@ mod tests {
                 "__repark_cast_timestamp_ntz__(__repark_decimal_cast_nullable__('2024-01-01')) AS a"
             ) && text.contains(
                 "__repark_cast_timestamp_ntz__(__repark_decimal_cast_nullable__('2024-01-01')) AS b"
-            )
-                && text.contains("__repark_try_cast_timestamp_ntz__('x')"),
+            ) && text.contains("__repark_try_cast_timestamp_ntz__('x')"),
             "{text}"
         );
         let escaped = lowered("SELECT TIMESTAMP_NTZ '2024-01-01 00:00:00' AS v").to_string();
@@ -289,7 +288,10 @@ mod tests {
             text.contains("__repark_try_cast_timestamp_ltz__('x') AS c"),
             "{text}"
         );
-        assert!(text.contains("__repark_cast_timestamp_ltz__(s) AS d"), "{text}");
+        assert!(
+            text.contains("__repark_cast_timestamp_ltz__(s) AS d"),
+            "{text}"
+        );
         assert!(
             text.contains("__repark_cast_timestamp_ltz__('2024-01-01 02:00:00Z') AS e"),
             "{text}"
