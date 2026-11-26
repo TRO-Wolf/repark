@@ -19,9 +19,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 mod fragment_canon;
-
 pub(crate) use fragment_canon::canonicalize_fragment;
-
 use super::PyColumn;
 use crate::fence::fenced;
 
