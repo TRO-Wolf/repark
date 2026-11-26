@@ -54,6 +54,10 @@ def build(base: Path) -> None:
         _table(root / "mixed_case", fmt, {"p=1": [(1, "a")], "P=2": [(2, "b")]})
         _table(root / "hidden", fmt, ROWS)
         _table(root / "zero", fmt, ROWS)
+        _place(root / "rootmix" / f"part-root{ext}", _body(fmt, [(9, "z")]))
+        _table(root / "rootmix", fmt, {"p=1": [(1, "a")]})
+        _place(root / "under_eq" / f"part-root{ext}", _body(fmt, [(9, "z")]))
+        _table(root / "under_eq", fmt, {"_c0=1": [(1, "a")]})
         _place(root / "zero" / "p=3" / f"empty{ext}", "")
         _place(root / "hidden" / "_temporary" / "0" / f"part-t{ext}", _body(fmt, [(9, "z")]))
         _place(root / "hidden" / f".hidden{ext}", _body(fmt, [(8, "y")]))
@@ -210,21 +214,45 @@ def cases() -> list[dict[str, Any]]:
                     "kind": "protected",
                 }
             )
-        for ddl in (
-            "p INT, id BIGINT, s STRING",
-            "id BIGINT, s STRING",
-            "id BIGINT, s STRING, p STRING",
-        ):
+        json_schema = {"schema": "id BIGINT, s STRING"}
+        out.append(
+            {
+                "fmt": "json",
+                "path": "one_level",
+                "query": "read",
+                "ansi": ansi,
+                "kind": "target",
+                "conf": json_schema,
+            }
+        )
+        for fmt in FORMATS:
+            out.append(
+                {"fmt": fmt, "path": "rootmix", "query": "files", "ansi": ansi, "kind": "protected"}
+            )
+            out.append(
+                {"fmt": fmt, "path": "rootmix", "query": "read", "ansi": ansi, "kind": "target"}
+            )
+        for fmt in ("csvh", "json"):
             out.append(
                 {
-                    "fmt": "json",
-                    "path": "one_level",
-                    "query": "read",
+                    "fmt": fmt,
+                    "path": "under_eq",
+                    "query": "files",
                     "ansi": ansi,
-                    "kind": "target",
-                    "conf": {"schema": ddl},
+                    "kind": "protected",
                 }
             )
+    date_schema = {"schema": "id BIGINT, s STRING, p DATE"}
+    out.append(
+        {
+            "fmt": "json",
+            "path": "strings",
+            "query": "read",
+            "ansi": "false",
+            "kind": "protected",
+            "conf": date_schema,
+        }
+    )
     for case in out:
         parts = [
             case["kind"],

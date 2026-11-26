@@ -3501,57 +3501,6 @@
   "case": {
    "ansi": "true",
    "conf": {
-    "schema": "p INT, id BIGINT, s STRING"
-   },
-   "fmt": "json",
-   "id": "target/json/read/one_level/read/ansi=true/schema=p_INT,_id_BIGINT,_s_STRING",
-   "kind": "target",
-   "path": "one_level",
-   "query": "read"
-  },
-  "expected": {
-   "rows": [
-    [
-     1,
-     "a",
-     1
-    ],
-    [
-     2,
-     "b",
-     1
-    ],
-    [
-     3,
-     "c",
-     2
-    ],
-    [
-     4,
-     "d",
-     2
-    ]
-   ],
-   "schema": [
-    [
-     "id",
-     "bigint"
-    ],
-    [
-     "s",
-     "string"
-    ],
-    [
-     "p",
-     "int"
-    ]
-   ]
-  }
- },
- {
-  "case": {
-   "ansi": "true",
-   "conf": {
     "schema": "id BIGINT, s STRING"
    },
    "fmt": "json",
@@ -3602,13 +3551,124 @@
  {
   "case": {
    "ansi": "true",
-   "conf": {
-    "schema": "id BIGINT, s STRING, p STRING"
-   },
-   "fmt": "json",
-   "id": "target/json/read/one_level/read/ansi=true/schema=id_BIGINT,_s_STRING,_p_STRING",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/rootmix/files/ansi=true",
+   "kind": "protected",
+   "path": "rootmix",
+   "query": "files"
+  },
+  "expected": {
+   "files": [
+    "p=1/part-00000.csv",
+    "rootmix/part-root.csv"
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/rootmix/read/ansi=true",
    "kind": "target",
-   "path": "one_level",
+   "path": "rootmix",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "protected/csvn/read/rootmix/files/ansi=true",
+   "kind": "protected",
+   "path": "rootmix",
+   "query": "files"
+  },
+  "expected": {
+   "files": [
+    "p=1/part-00000.csv",
+    "rootmix/part-root.csv"
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/rootmix/read/ansi=true",
+   "kind": "target",
+   "path": "rootmix",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "protected/json/read/rootmix/files/ansi=true",
+   "kind": "protected",
+   "path": "rootmix",
+   "query": "files"
+  },
+  "expected": {
+   "files": [
+    "p=1/part-00000.json",
+    "rootmix/part-root.json"
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/rootmix/read/ansi=true",
+   "kind": "target",
+   "path": "rootmix",
    "query": "read"
   },
   "expected": {
@@ -3616,22 +3676,7 @@
     [
      1,
      "a",
-     "1"
-    ],
-    [
-     2,
-     "b",
-     "1"
-    ],
-    [
-     3,
-     "c",
-     "2"
-    ],
-    [
-     4,
-     "d",
-     "2"
+     1
     ]
    ],
    "schema": [
@@ -3645,8 +3690,40 @@
     ],
     [
      "p",
-     "string"
+     "int"
     ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/under_eq/files/ansi=true",
+   "kind": "protected",
+   "path": "under_eq",
+   "query": "files"
+  },
+  "expected": {
+   "files": [
+    "_c0=1/part-00000.csv",
+    "under_eq/part-root.csv"
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "protected/json/read/under_eq/files/ansi=true",
+   "kind": "protected",
+   "path": "under_eq",
+   "query": "files"
+  },
+  "expected": {
+   "files": [
+    "_c0=1/part-00000.json",
+    "under_eq/part-root.json"
    ]
   }
  },
@@ -7152,57 +7229,6 @@
   "case": {
    "ansi": "false",
    "conf": {
-    "schema": "p INT, id BIGINT, s STRING"
-   },
-   "fmt": "json",
-   "id": "target/json/read/one_level/read/ansi=false/schema=p_INT,_id_BIGINT,_s_STRING",
-   "kind": "target",
-   "path": "one_level",
-   "query": "read"
-  },
-  "expected": {
-   "rows": [
-    [
-     1,
-     "a",
-     1
-    ],
-    [
-     2,
-     "b",
-     1
-    ],
-    [
-     3,
-     "c",
-     2
-    ],
-    [
-     4,
-     "d",
-     2
-    ]
-   ],
-   "schema": [
-    [
-     "id",
-     "bigint"
-    ],
-    [
-     "s",
-     "string"
-    ],
-    [
-     "p",
-     "int"
-    ]
-   ]
-  }
- },
- {
-  "case": {
-   "ansi": "false",
-   "conf": {
     "schema": "id BIGINT, s STRING"
    },
    "fmt": "json",
@@ -7253,13 +7279,124 @@
  {
   "case": {
    "ansi": "false",
-   "conf": {
-    "schema": "id BIGINT, s STRING, p STRING"
-   },
-   "fmt": "json",
-   "id": "target/json/read/one_level/read/ansi=false/schema=id_BIGINT,_s_STRING,_p_STRING",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/rootmix/files/ansi=false",
+   "kind": "protected",
+   "path": "rootmix",
+   "query": "files"
+  },
+  "expected": {
+   "files": [
+    "p=1/part-00000.csv",
+    "rootmix/part-root.csv"
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/rootmix/read/ansi=false",
    "kind": "target",
-   "path": "one_level",
+   "path": "rootmix",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "protected/csvn/read/rootmix/files/ansi=false",
+   "kind": "protected",
+   "path": "rootmix",
+   "query": "files"
+  },
+  "expected": {
+   "files": [
+    "p=1/part-00000.csv",
+    "rootmix/part-root.csv"
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/rootmix/read/ansi=false",
+   "kind": "target",
+   "path": "rootmix",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "protected/json/read/rootmix/files/ansi=false",
+   "kind": "protected",
+   "path": "rootmix",
+   "query": "files"
+  },
+  "expected": {
+   "files": [
+    "p=1/part-00000.json",
+    "rootmix/part-root.json"
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/rootmix/read/ansi=false",
+   "kind": "target",
+   "path": "rootmix",
    "query": "read"
   },
   "expected": {
@@ -7267,22 +7404,7 @@
     [
      1,
      "a",
-     "1"
-    ],
-    [
-     2,
-     "b",
-     "1"
-    ],
-    [
-     3,
-     "c",
-     "2"
-    ],
-    [
-     4,
-     "d",
-     "2"
+     1
     ]
    ],
    "schema": [
@@ -7296,7 +7418,80 @@
     ],
     [
      "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/under_eq/files/ansi=false",
+   "kind": "protected",
+   "path": "under_eq",
+   "query": "files"
+  },
+  "expected": {
+   "files": [
+    "_c0=1/part-00000.csv",
+    "under_eq/part-root.csv"
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "protected/json/read/under_eq/files/ansi=false",
+   "kind": "protected",
+   "path": "under_eq",
+   "query": "files"
+  },
+  "expected": {
+   "files": [
+    "_c0=1/part-00000.json",
+    "under_eq/part-root.json"
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {
+    "schema": "id BIGINT, s STRING, p DATE"
+   },
+   "fmt": "json",
+   "id": "protected/json/read/strings/read/ansi=false/schema=id_BIGINT,_s_STRING,_p_DATE",
+   "kind": "protected",
+   "path": "strings",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     null
+    ],
+    [
+     2,
+     "b",
+     null
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
      "string"
+    ],
+    [
+     "p",
+     "date"
     ]
    ]
   }

@@ -722,12 +722,11 @@ class DataFrameReader:
 
         if schema is not None:
             fields = _schema_fields(schema)
-            typed = {field["name"].casefold(): field["dataType"] for field in fields}
             folded = {name.casefold(): name for name in parts}
-            fields = [field for field in fields if field["name"].casefold() not in folded]
+            if any(field["name"].casefold() in folded for field in fields):
+                columns, folded = [name for name in columns if name not in parts], {}
             fields += [
-                {"name": name, "dataType": typed.get(key, frame.schema[name].dataType)}
-                for key, name in folded.items()
+                {"name": name, "dataType": frame.schema[name].dataType} for name in folded.values()
             ]
             if not fields:
                 return frame

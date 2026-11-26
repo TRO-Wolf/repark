@@ -19,9 +19,13 @@ use datafusion::datasource::physical_plan::{FileGroup, FileScanConfigBuilder};
 use datafusion::datasource::table_schema::TableSchema;
 use datafusion::datasource::{TableProvider, TableType};
 use datafusion::error::{DataFusionError, Result as DataFusionResult};
+use datafusion::execution::TaskContext;
 use datafusion::logical_expr::{Expr, LogicalPlan, TableProviderFilterPushDown};
-use datafusion::physical_plan::ExecutionPlan;
 use datafusion::physical_plan::empty::EmptyExec;
+use datafusion::physical_plan::union::UnionExec;
+use datafusion::physical_plan::{
+    DisplayAs, DisplayFormatType, ExecutionPlan, PlanProperties, SendableRecordBatchStream,
+};
 use datafusion::prelude::{DataFrame, ParquetReadOptions, SessionConfig, SessionContext};
 use futures::TryStreamExt;
 use object_store::ObjectMeta;
@@ -396,8 +400,60 @@ pub(crate) struct PartitionedParquetProvider {
     partition_fields: Vec<FieldRef>,
     table_schema: SchemaRef,
     files: Vec<PartitionedFile>,
+    listed: Vec<PartitionedFile>,
     format: Arc<dyn FileFormat>,
     target_partitions: usize,
+}
+
+#[derive(Debug)]
+struct ListedOnlyExec {
+    listed: Arc<dyn ExecutionPlan>,
+    empty: Arc<EmptyExec>,
+}
+
+impl DisplayAs for ListedOnlyExec {
+    fn fmt_as(
+        &self,
+        _: DisplayFormatType,
+        formatter: &mut std::fmt::Formatter,
+    ) -> std::fmt::Result {
+        write!(formatter, "ListedOnlyExec")
+    }
+}
+
+impl ExecutionPlan for ListedOnlyExec {
+    fn name(&self) -> &'static str {
+        "ListedOnlyExec"
+    }
+
+    fn properties(&self) -> &Arc<PlanProperties> {
+        self.empty.properties()
+    }
+
+    fn children(&self) -> Vec<&Arc<dyn ExecutionPlan>> {
+        vec![&self.listed]
+    }
+
+    fn with_new_children(
+        self: Arc<Self>,
+        children: Vec<Arc<dyn ExecutionPlan>>,
+    ) -> DataFusionResult<Arc<dyn ExecutionPlan>> {
+        match children.into_iter().next() {
+            Some(listed) => Ok(Arc::new(Self {
+                listed,
+                empty: Arc::clone(&self.empty),
+            })),
+            None => Ok(self),
+        }
+    }
+
+    fn execute(
+        &self,
+        partition: usize,
+        context: Arc<TaskContext>,
+    ) -> DataFusionResult<SendableRecordBatchStream> {
+        self.empty.execute(partition, context)
+    }
 }
 
 impl PartitionedParquetProvider {
@@ -437,15 +493,36 @@ impl TableProvider for PartitionedParquetProvider {
             &self.table_schema,
             filters,
         )?;
-        if kept.is_empty() {
-            let projected = match projection {
-                None => Arc::clone(&self.table_schema),
-                Some(indices) => Arc::new(self.table_schema.project(indices)?),
-            };
-            return Ok(Arc::new(EmptyExec::new(projected)));
+        let projected = match projection {
+            None => Arc::clone(&self.table_schema),
+            Some(indices) => Arc::new(self.table_schema.project(indices)?),
+        };
+        let scanned: Arc<dyn ExecutionPlan> = if kept.is_empty() {
+            Arc::new(EmptyExec::new(Arc::clone(&projected)))
+        } else {
+            self.scan_files(state, kept, projection, limit).await?
+        };
+        if self.listed.is_empty() {
+            return Ok(scanned);
         }
+        let listed = self
+            .scan_files(state, self.listed.clone(), projection, Some(0))
+            .await?;
+        let empty = Arc::new(EmptyExec::new(projected));
+        UnionExec::try_new(vec![scanned, Arc::new(ListedOnlyExec { listed, empty })])
+    }
+}
+
+impl PartitionedParquetProvider {
+    async fn scan_files(
+        &self,
+        state: &dyn Session,
+        files: Vec<PartitionedFile>,
+        projection: Option<&Vec<usize>>,
+        limit: Option<usize>,
+    ) -> DataFusionResult<Arc<dyn ExecutionPlan>> {
         let target = self.target_partitions.max(1);
-        let file_groups = FileGroup::new(kept).split_files(target);
+        let file_groups = FileGroup::new(files).split_files(target);
         let table_schema =
             TableSchema::new(Arc::clone(&self.file_schema), self.partition_fields.clone());
         let file_source = self.format.file_source(table_schema);
@@ -633,10 +710,9 @@ async fn read_discovered(
     }
     refuse_conflicting_directory_structures(&table_url, &visible)?;
     let footer = footer_file(&visible).cloned();
-    let kept: Vec<DiscoveredEntry> = visible
+    let (kept, unscanned): (Vec<DiscoveredEntry>, Vec<DiscoveredEntry>) = visible
         .into_iter()
-        .filter(|(_, specs, _, _)| !specs.is_empty())
-        .collect();
+        .partition(|(_, specs, _, _)| !specs.is_empty());
     let mut seen_norm: Vec<Vec<String>> = Vec::new();
     let mut display_by_norm: HashMap<Vec<String>, (Vec<String>, PathBuf)> = HashMap::new();
     for (meta, specs, _, _) in &kept {
@@ -773,12 +849,25 @@ async fn read_discovered(
             file
         })
         .collect();
+    let listed: Vec<PartitionedFile> = unscanned
+        .into_iter()
+        .filter(|_| !parquet)
+        .map(|(meta, _, _, _)| {
+            let mut file: PartitionedFile = meta.into();
+            file.partition_values = partition_fields
+                .iter()
+                .map(|field| scalar_from_partition_text(None, field.data_type(), zone))
+                .collect();
+            file
+        })
+        .collect();
     let provider = Arc::new(PartitionedParquetProvider {
         table_url,
         file_schema: scan_file_schema,
         partition_fields,
         table_schema: provider_schema,
         files: partitioned_files,
+        listed,
         format: spec.format,
         target_partitions: spec.target_partitions,
     });

@@ -475,3 +475,33 @@ async fn json_overlap_takes_the_directory_value_and_case_rule() {
         .to_string();
     assert!(refused.contains("[CONFLICTING_PARTITION_COLUMN_NAMES]"));
 }
+
+#[tokio::test]
+async fn root_files_beside_partitions_are_listed_but_not_read() {
+    let dir = tempfile::tempdir().unwrap();
+    let session = ReparkSession::new().unwrap();
+    let csv = dir.path().join("csv");
+    write_text(&csv.join("part-root.csv"), "id,s\n9,z\n");
+    write_text(&csv.join("p=1/part-0.csv"), "id,s\n1,a\n");
+    let header = text_options(&[("header", "true"), ("text_scan", "header")]);
+    let frame = session
+        .read_csv(csv.to_str().unwrap(), &header)
+        .await
+        .unwrap();
+    let plan = frame.clone().create_physical_plan().await.unwrap();
+    let listed = crate::plan_introspect::input_files(&plan);
+    assert!(
+        listed
+            .iter()
+            .any(|name| name.ends_with("csv/part-root.csv"))
+    );
+    assert_eq!(listed.len(), 2);
+    assert_eq!(row_count(frame).await, 1);
+    let parquet = dir.path().join("parquet");
+    write_rows(&parquet.join("part-root.parquet"), &[(9, "z")]);
+    write_rows(&parquet.join("p=1/part-0.parquet"), &[(1, "a")]);
+    let frame = read(&session, dir.path(), "parquet").await.unwrap();
+    let plan = frame.clone().create_physical_plan().await.unwrap();
+    assert_eq!(crate::plan_introspect::input_files(&plan).len(), 1);
+    assert_eq!(row_count(frame).await, 1);
+}
