@@ -550,6 +550,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   month arithmetic, zone conversion, add/diff, dateadd/datediff arity routes;
   scalar args and column casts hoist out of the row loops). Details in
   [`temporal_ctor/map.md`](temporal_ctor/map.md).
+  **MAKE-DT-INTERVAL-OVERFLOW-1 (2026-11-25):** `expr_fn::make_dt_interval` builds the
+  `temporal_ctor/day_time.rs` UDF, which also replaces the `datafusion-spark` registration by name.
 - `lib.rs` — crate-root under `check_lib_rs`.
   **FNP-BITMAP-FACADE-1 (2026-09-15):** `mod bitmap_agg;` flips to `pub mod bitmap_agg;`
   (same line count) so `repark-python`'s `unary_aggregate_udaf` can reach the three

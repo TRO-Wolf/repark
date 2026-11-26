@@ -12,7 +12,8 @@ ceiling.
 
 - `parse.rs` — the text→descriptor half of the table: `parse_ddl` and
   `sql_type_from_token` (re-exported at `type_table::` so call sites are
-  unchanged), field lists, `decimal(p,s)`, `char`/`varchar`, interval and
+  unchanged), field lists, `decimal(p,s)`, `char`/`varchar`, interval (ANSI `interval day to second`
+  and `interval year to month` spellings since MAKE-DT-INTERVAL-OVERFLOW-1) and
   `time(p)` spellings, Python-faithful trim/int semantics, and the
   process-local `OnceLock` regex cache (per-call `Regex::new` was the
   first-pass `fromDDL` regression; compiled once now). S2-21 remediation

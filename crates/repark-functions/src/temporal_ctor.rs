@@ -22,6 +22,7 @@ use crate::session_time_zone::session_time_zone_from_options;
 pub mod adddiff;
 pub mod arith;
 pub mod date_alias;
+pub mod day_time;
 pub mod intervals;
 pub mod make;
 
@@ -69,6 +70,7 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
     .chain(date_alias::functions())
     .chain(arith::functions())
     .chain(intervals::functions())
+    .chain(day_time::functions())
     .collect()
 }
 

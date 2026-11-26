@@ -32,7 +32,7 @@ the module's tests.
   Spark 4.1.2 `fractional_to_integral` (`java_float_text` without `F`, `java_double_text` with `D` for finite only,
   JVM saturate-to-i32-then-wrap for TINYINT/SMALLINT/INT and saturate-to-i64 for BIGINT, `2^63` accepted as `i64::MAX`
   in both ANSI modes, `NaN -> 0`). Dictionary inputs decode before narrowing; `Null` sources return typed null arrays.
-- `rewrite.rs` — `rewrite_map_casts`: tokenizes the statement with the Spark dialect (strings, quoted identifiers and
+- `rewrite.rs` — `map_cast_token` also names `intervaldaytosecond` `INTERVAL DAY TO SECOND` (MAKE-DT-INTERVAL-OVERFLOW-1). `rewrite_map_casts`: tokenizes the statement with the Spark dialect (strings, quoted identifiers and
   comments, `/*! … */` hints included, stay opaque), finds each `CAST(` / `TRY_CAST(` whose top-level `AS` target names
   `MAP <`, and splices the UDF call in by byte span so every other byte of the statement stays
   verbatim; operands are rewritten recursively (depth 64). `map_cast_target` parses the target
