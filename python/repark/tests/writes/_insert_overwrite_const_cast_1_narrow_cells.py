@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 import hashlib
 import re
 from typing import Any, NamedTuple
@@ -171,6 +172,7 @@ CACHE_SOURCES: dict[str, str] = {
     "matching": "SELECT 'x' AS s",
     "unpersisted": "SELECT 'x' AS s",
     "unrelated": "SELECT 7 AS n",
+    "collected": "SELECT 'x' AS s",
 }
 
 SIBLING_MODES: tuple[str, ...] = (
@@ -184,6 +186,8 @@ SIBLING_MODES: tuple[str, ...] = (
     "uncache_sql",
     "clear_sibling",
     "clear_main",
+    "frame_collected",
+    "session_collected",
 )
 
 SIBLING_RELEASED: frozenset[str] = frozenset(
@@ -352,8 +356,7 @@ def cached_frame(spark: Any, key: str) -> Any:
     frame.count()
     if mode == "unpersisted":
         frame.unpersist()
-        return None
-    return frame
+    return None if mode in ("unpersisted", "collected") else frame
 
 
 def sibling_cache(spark: Any, key: str) -> tuple[Any, Any] | None:
@@ -376,7 +379,9 @@ def sibling_cache(spark: Any, key: str) -> tuple[Any, Any] | None:
         if mode != "cache_nocount":
             frame.count()
     release_sibling(spark, sibling, frame, mode)
-    return sibling, frame
+    if mode == "session_collected":
+        return None
+    return sibling, None if mode == "frame_collected" else frame
 
 
 def release_sibling(spark: Any, sibling: Any, frame: Any, mode: str) -> None:
@@ -400,6 +405,8 @@ def run_cell(spark: Any, functions: Any, namespace: str, key: str, cell: Cell) -
     spark.conf.set("spark.sql.ansi.enabled", cell.ansi)
     frame = cached_frame(spark, key)
     held = sibling_cache(spark, key)
+    if "collected" in key:
+        gc.collect()
     try:
         act(spark, functions, cell, table, source)
         outcome: dict[str, Any] = {"ok": True, "cls": None}
@@ -411,6 +418,9 @@ def run_cell(spark: Any, functions: Any, namespace: str, key: str, cell: Cell) -
             frame.unpersist()
         if held is not None:
             held[0].catalog.clearCache()
+        if "collected" in key:
+            gc.collect()
+            spark.catalog.clearCache()
     partitioned = cell.door in PARTITIONED_DOORS
     outcome["rows"] = None if cell.door == "ctl_read" else table_rows(spark, table, partitioned)
     return outcome

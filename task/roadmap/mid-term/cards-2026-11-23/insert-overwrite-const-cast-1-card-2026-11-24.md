@@ -1,7 +1,7 @@
 # Card INSERT-OVERWRITE-CONST-CAST-1: an empty `INSERT OVERWRITE` with an invalid constant cast wipes the table under ANSI
 
 **Date:** 2026-11-24. **Filed by:** the orchestrator (`claude-opus-5-5`), from an outside review, measured here.
-**Severity:** S2 (owner, 2026-11-24). **Status:** narrow fix built (2026-11-25), on branch
+**Severity:** S2 (owner, 2026-11-24). **Status:** narrow fix built (2026-11-25; delta 2, 2026-11-26), on branch
 `fix/insert-overwrite-const-cast-1-narrow`. It replaces parked PR #1431, whose broad guard copied Spark's constant
 folding and false-refused writes Spark makes in two review rounds.
 
@@ -43,12 +43,18 @@ The guard acts only where the answer is certain. Everything else stays exactly a
   listed type. The guard then runs RePark's cast on the value and refuses only with that cast's error, so it never
   refuses a value RePark's cast accepts.
 - **Where:** once per statement, before the door wipes, replaces or commits; the table is unchanged.
-- **Cached frames (delta 1):** after `spark.sql("SELECT 'x' AS s").cache()`, Spark's cache manager swaps the matching
-  fragment of the source for the cached relation, does not fold the cast, and writes. RePark does not match cached
-  plans, so the guard stands down while the session holds any cached frame (a `__repark_cache_` view: `cache()`,
-  `persist()`, `catalog.cacheTable`). `unpersist()` and `uncacheTable` remove the view, and the guard acts again.
-- **Size:** `crates/repark-spark/src/insert_overwrite/const_cast.rs` holds 294 product lines (plus its unit tests); the
-  doors add 14 lines of wiring. The Spark door plans `CAST(s AS TIMESTAMP)` as
+- **Cached frames (delta 1; process-wide in delta 2):** after `spark.sql("SELECT 'x' AS s").cache()`, Spark's cache
+  manager swaps the matching fragment of the source for the cached relation, does not fold the cast, and writes. That
+  cache manager is shared by every session of the process, so a cache made in `spark.newSession()` has the same effect.
+  RePark does not match cached plans, so **the guard stands down whenever any cache is live in the process** (owner
+  ruling, 2026-11-26): any `__repark_cache_` view in any session, made by `cache()`, `persist()`, `catalog.cacheTable`
+  or SQL `CACHE TABLE`. One process-wide count (`cache_handle.py::CacheViewHandle`, read by
+  `const_cast.rs::session_holds_cache`) decides it. A cache counts from `cache()` until `unpersist()`, `uncacheTable`,
+  `UNCACHE TABLE` or `clearCache()` releases it, and the guard then acts again. A cached frame the program lets go stays
+  counted until a `clearCache()`, because Spark keeps its cache after the DataFrame object is collected and writes.
+- **Size:** `crates/repark-spark/src/insert_overwrite/const_cast.rs` holds 309 product lines (plus its unit tests); the
+  doors add 14 lines of wiring. The process-wide count adds a re-export in `lib.rs`, one `#[pyfunction]` in
+  `repark-python/src/cache_budget.rs` and three calls in `cache_handle.py` (delta 2). The Spark door plans `CAST(s AS TIMESTAMP)` as
   `to_timestamp(__repark_decimal_cast_nullable__(s))`; the guard looks through that identity marker (delta 1).
 
 ## Still unlike Spark (left as on main, each measured on main and the narrow head)
@@ -81,8 +87,21 @@ main (the head re-measure is recorded with the PR).
   `[NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION]`: not a string literal.
 - **Whole-table BY NAME and any-schema tables:** a whole-table overwrite routed by name (`insert_by_name.rs`) is not
   guarded. A BY NAME overwrite with a static `PARTITION` spec delegates to the partition path, so it is guarded.
-- **An unrelated cached frame:** the guard stands down while the session holds any cached frame (below), so with an
-  unrelated cache such as `SELECT 7 AS n` the overwrite writes as on main, where Spark raises.
+- **An unrelated cached frame:** the guard stands down while any session of the process holds any cached frame, so
+  with an unrelated cache such as `SELECT 7 AS n`, in this session or another, the overwrite writes as on main, where
+  Spark raises.
+- **`clearCache()` in another session:** RePark's `clearCache()` clears only its own session's caches; Spark's clears
+  the shared cache manager. After `spark.catalog.clearCache()` while a sibling session holds a cache, the guard stays
+  down and the overwrite writes as on main, where Spark raises (delta 2, measured on five doors).
+- **A temp view dropped over a cache:** after `catalog.cacheTable("dv")` and `dropTempView("dv")`, or after a cached
+  frame's temp view is dropped by name, Spark uncaches and raises. RePark keeps the `__repark_cache_` view, so the guard
+  stays down until that cache is released, and the overwrite writes as on main.
+- **A collected cache and an equal plan:** Spark also releases a collected frame's cache when a new frame with the
+  same plan is `unpersist()`ed. RePark does not match plans, so only `clearCache()` releases it; until then the
+  overwrite writes as on main, where Spark raises.
+- **After `stop()`:** cached frames from a stopped session, held or collected, keep the count up, so a later session's
+  overwrite writes as on main until they are released or a `clearCache()` runs; Spark's stopped context drops its
+  caches, and a new session raises.
 - **Error class on the partition path:** `CAST('x' AS TIMESTAMP)` into an `INT` or `DOUBLE` partitioned column raises
   `[CAST_INVALID_INPUT]`, where Spark raises `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]`: the guard runs before
   the store's type check. The rows are kept, as in Spark; main wiped.

@@ -26,6 +26,7 @@ def spark(tmp_path: Path) -> Iterator[Any]:
         .config("spark.sql.session.timeZone", "UTC")
         .getOrCreate()
     )
+    session.catalog.clearCache()
     setup(session, NAMESPACE)
     yield session
     session.stop()
