@@ -173,6 +173,23 @@ CACHE_SOURCES: dict[str, str] = {
     "unrelated": "SELECT 7 AS n",
 }
 
+SIBLING_MODES: tuple[str, ...] = (
+    "cache_count",
+    "cache_nocount",
+    "persist",
+    "cacheTable",
+    "sql_cache",
+    "unpersist",
+    "uncacheTable",
+    "uncache_sql",
+    "clear_sibling",
+    "clear_main",
+)
+
+SIBLING_RELEASED: frozenset[str] = frozenset(
+    {"unpersist", "uncacheTable", "uncache_sql", "clear_sibling"}
+)
+
 CONTROL_DOORS: tuple[str, ...] = (
     "ctl_insert_into",
     "ctl_sql_rtas",
@@ -212,6 +229,11 @@ def build_cells() -> dict[str, Cell]:
             for type_key in ("DOUBLE", "TIMESTAMP"):
                 source = CARD.format(T=TYPES[type_key], V="x")
                 cells[f"cache/{mode}/{door}/{type_key}"] = Cell("true", door, type_key, source)
+    for mode in SIBLING_MODES:
+        for door in CACHE_DOORS:
+            for type_key in ("DOUBLE", "TIMESTAMP"):
+                source = CARD.format(T=TYPES[type_key], V="x")
+                cells[f"sibling/{mode}/{door}/{type_key}"] = Cell("true", door, type_key, source)
     for name, (type_key, source) in ATTACKS.items():
         for door in ("sql_overwrite", "sql_static_part", "v1_insert_into_overwrite"):
             cells[f"attack/{name}/{door}"] = Cell("true", door, type_key, source)
@@ -235,6 +257,8 @@ def guarded(key: str, cell: Cell) -> bool:
     kind = key.split("/", 1)[0]
     if kind == "cache":
         return key.split("/")[1] == "unpersisted"
+    if kind == "sibling":
+        return key.split("/")[1] in SIBLING_RELEASED
     if kind not in ("card", "door", "shape") or cell.ansi != "true":
         return False
     if cell.door not in CARD_DOORS or cell.type_key not in GUARDED_TYPES:
@@ -332,6 +356,42 @@ def cached_frame(spark: Any, key: str) -> Any:
     return frame
 
 
+def sibling_cache(spark: Any, key: str) -> tuple[Any, Any] | None:
+    kind, mode = key.split("/")[:2]
+    if kind != "sibling":
+        return None
+    sibling = spark.newSession()
+    frame = sibling.sql("SELECT 'x' AS s")
+    if mode in ("cacheTable", "uncacheTable", "sql_cache", "uncache_sql"):
+        frame.createOrReplaceTempView("sibling_v")
+        if mode in ("cacheTable", "uncacheTable"):
+            sibling.catalog.cacheTable("sibling_v")
+        else:
+            sibling.sql("CACHE TABLE sibling_v").collect()
+    elif mode == "persist":
+        frame.persist()
+        frame.count()
+    else:
+        frame.cache()
+        if mode != "cache_nocount":
+            frame.count()
+    release_sibling(spark, sibling, frame, mode)
+    return sibling, frame
+
+
+def release_sibling(spark: Any, sibling: Any, frame: Any, mode: str) -> None:
+    if mode == "unpersist":
+        frame.unpersist()
+    elif mode == "uncacheTable":
+        sibling.catalog.uncacheTable("sibling_v")
+    elif mode == "uncache_sql":
+        sibling.sql("UNCACHE TABLE sibling_v").collect()
+    elif mode == "clear_sibling":
+        sibling.catalog.clearCache()
+    elif mode == "clear_main":
+        spark.catalog.clearCache()
+
+
 def run_cell(spark: Any, functions: Any, namespace: str, key: str, cell: Cell) -> dict[str, Any]:
     table = f"{namespace}.t_{hashlib.sha1(key.encode()).hexdigest()[:12]}"
     source = cell.source.format(SRC=f"{namespace}.src_x", L=f"{namespace}.left_ids")
@@ -339,6 +399,7 @@ def run_cell(spark: Any, functions: Any, namespace: str, key: str, cell: Cell) -
         seed(spark, table, cell)
     spark.conf.set("spark.sql.ansi.enabled", cell.ansi)
     frame = cached_frame(spark, key)
+    held = sibling_cache(spark, key)
     try:
         act(spark, functions, cell, table, source)
         outcome: dict[str, Any] = {"ok": True, "cls": None}
@@ -348,6 +409,8 @@ def run_cell(spark: Any, functions: Any, namespace: str, key: str, cell: Cell) -
         spark.conf.set("spark.sql.ansi.enabled", "true")
         if frame is not None:
             frame.unpersist()
+        if held is not None:
+            held[0].catalog.clearCache()
     partitioned = cell.door in PARTITIONED_DOORS
     outcome["rows"] = None if cell.door == "ctl_read" else table_rows(spark, table, partitioned)
     return outcome
