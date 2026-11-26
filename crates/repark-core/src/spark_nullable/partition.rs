@@ -701,20 +701,19 @@ async fn read_discovered(
     if kept_metas.is_empty() {
         kept_metas.extend(footer);
     }
-    let sparked_file_schema: SchemaRef = match spec.file_schema {
-        Some(schema) => schema,
-        None => {
-            let inferred = spec
-                .format
-                .infer_schema(&context.state(), &store, &kept_metas)
-                .await
-                .map_err(engine_err)?;
-            if parquet {
-                let relaxed = relax_schema_to_nullable(inferred.as_ref());
-                Arc::new(promote_parquet_null_types(&relaxed))
-            } else {
-                inferred
-            }
+    let sparked_file_schema: SchemaRef = if let Some(schema) = spec.file_schema {
+        schema
+    } else {
+        let inferred = spec
+            .format
+            .infer_schema(&context.state(), &store, &kept_metas)
+            .await
+            .map_err(engine_err)?;
+        if parquet {
+            let relaxed = relax_schema_to_nullable(inferred.as_ref());
+            Arc::new(promote_parquet_null_types(&relaxed))
+        } else {
+            inferred
         }
     };
     let mut scan_file_fields: Vec<Field> = Vec::new();
