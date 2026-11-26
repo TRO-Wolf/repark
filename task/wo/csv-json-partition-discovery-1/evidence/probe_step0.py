@@ -55,7 +55,9 @@ def write_fmt(df: Any, fmt: str, out: Path, parts: list[str]) -> None:
 
 
 def data_files(d: Path, ext: str) -> list[Path]:
-    return sorted(p for p in d.rglob(f"*{ext}") if p.is_file() and not p.name.startswith((".", "_")))
+    return sorted(
+        p for p in d.rglob(f"*{ext}") if p.is_file() and not p.name.startswith((".", "_"))
+    )
 
 
 def place(src: Path, dst: Path) -> None:
@@ -70,21 +72,75 @@ def make_fixtures(fx: Path, work: Path) -> None:
         shutil.rmtree(fx)
     fx.mkdir(parents=True)
     spark = spark_session(work)
-    base = st.StructType([st.StructField("id", st.LongType()), st.StructField("p", st.IntegerType()), st.StructField("s", st.StringType())])
+    base = st.StructType(
+        [
+            st.StructField("id", st.LongType()),
+            st.StructField("p", st.IntegerType()),
+            st.StructField("s", st.StringType()),
+        ]
+    )
     rows = [(1, 1, "a"), (2, 1, "b"), (3, 2, "c"), (4, 2, "d")]
-    two = st.StructType([st.StructField("id", st.LongType()), st.StructField("year", st.IntegerType()), st.StructField("month", st.IntegerType()), st.StructField("s", st.StringType())])
-    sp = st.StructType([st.StructField("id", st.LongType()), st.StructField("p", st.StringType()), st.StructField("s", st.StringType())])
-    dp = st.StructType([st.StructField("id", st.LongType()), st.StructField("p", st.DateType()), st.StructField("s", st.StringType())])
+    two = st.StructType(
+        [
+            st.StructField("id", st.LongType()),
+            st.StructField("year", st.IntegerType()),
+            st.StructField("month", st.IntegerType()),
+            st.StructField("s", st.StringType()),
+        ]
+    )
+    sp = st.StructType(
+        [
+            st.StructField("id", st.LongType()),
+            st.StructField("p", st.StringType()),
+            st.StructField("s", st.StringType()),
+        ]
+    )
+    dp = st.StructType(
+        [
+            st.StructField("id", st.LongType()),
+            st.StructField("p", st.DateType()),
+            st.StructField("s", st.StringType()),
+        ]
+    )
     manifest: dict[str, Any] = {}
     for fmt in FORMATS:
         root = fx / fmt
         ext = EXT[fmt]
         write_fmt(spark.createDataFrame(rows, base), fmt, root / "one_level", ["p"])
-        write_fmt(spark.createDataFrame([(1, 2024, 1, "a"), (2, 2024, 2, "b"), (3, 2025, 1, "c")], two), fmt, root / "two_level", ["year", "month"])
-        write_fmt(spark.createDataFrame([(1, None, "a"), (2, 1, "b")], base), fmt, root / "hive_default", ["p"])
-        write_fmt(spark.createDataFrame([(1, "a b", "w"), (2, "a/b", "x"), (3, "50%", "y"), (4, "c=d", "z")], sp), fmt, root / "escaped", ["p"])
-        write_fmt(spark.createDataFrame([(1, "alpha", "a"), (2, "beta", "b")], sp), fmt, root / "str_vals", ["p"])
-        write_fmt(spark.createDataFrame([(1, datetime.date(2024, 1, 2), "a"), (2, datetime.date(2024, 7, 15), "b")], dp), fmt, root / "date_vals", ["p"])
+        write_fmt(
+            spark.createDataFrame([(1, 2024, 1, "a"), (2, 2024, 2, "b"), (3, 2025, 1, "c")], two),
+            fmt,
+            root / "two_level",
+            ["year", "month"],
+        )
+        write_fmt(
+            spark.createDataFrame([(1, None, "a"), (2, 1, "b")], base),
+            fmt,
+            root / "hive_default",
+            ["p"],
+        )
+        write_fmt(
+            spark.createDataFrame(
+                [(1, "a b", "w"), (2, "a/b", "x"), (3, "50%", "y"), (4, "c=d", "z")], sp
+            ),
+            fmt,
+            root / "escaped",
+            ["p"],
+        )
+        write_fmt(
+            spark.createDataFrame([(1, "alpha", "a"), (2, "beta", "b")], sp),
+            fmt,
+            root / "str_vals",
+            ["p"],
+        )
+        write_fmt(
+            spark.createDataFrame(
+                [(1, datetime.date(2024, 1, 2), "a"), (2, datetime.date(2024, 7, 15), "b")], dp
+            ),
+            fmt,
+            root / "date_vals",
+            ["p"],
+        )
         fa = data_files(root / "one_level" / "p=1", ext)[0]
         fb = data_files(root / "one_level" / "p=2", ext)[0]
         place(fa, root / "conflict" / "a=1" / f"part-0{ext}")
@@ -157,7 +213,13 @@ def enc_err(exc: BaseException) -> dict[str, Any]:
             cond = None
     text = str(exc)
     m = re.search(r"\[([A-Z0-9_.]+)\]", text)
-    return {"status": "err", "condition": cond, "cond_msg": m.group(1) if m else None, "type": type(exc).__name__, "message": text.splitlines()[0][:200] if text else ""}
+    return {
+        "status": "err",
+        "condition": cond,
+        "cond_msg": m.group(1) if m else None,
+        "type": type(exc).__name__,
+        "message": text.splitlines()[0][:200] if text else "",
+    }
 
 
 def rel_files(files: list[str], fx: Path, engine: str) -> list[str]:
@@ -168,7 +230,7 @@ def rel_files(files: list[str], fx: Path, engine: str) -> list[str]:
     for f in files:
         t = re.sub(r"^file:(//)?", "", unquote(f) if engine == "spark" else f)
         t = "/" + t.lstrip("/")
-        out.append(t[len(root) + 1:] if t.startswith(root) else t)
+        out.append(t[len(root) + 1 :] if t.startswith(root) else t)
     return sorted(out)
 
 
@@ -200,7 +262,14 @@ class Probe:
             r = r.schema(schema)
         return r
 
-    def read(self, fmt: str, door: str, path: Any, opts: dict[str, str] | None = None, schema: str | None = None) -> Any:
+    def read(
+        self,
+        fmt: str,
+        door: str,
+        path: Any,
+        opts: dict[str, str] | None = None,
+        schema: str | None = None,
+    ) -> Any:
         r = self.reader(fmt, door, opts or {}, schema)
         kind = "json" if fmt == "json" else "csv"
         if door == "load":
@@ -248,15 +317,36 @@ class Probe:
         }
 
     def primary(self, fmt: str, ansi: str) -> None:
-        load_layouts = {"one_level", "two_level", "flat", "hidden", "leaf_p1", "file", "conflict", "date_vals"}
+        load_layouts = {
+            "one_level",
+            "two_level",
+            "flat",
+            "hidden",
+            "leaf_p1",
+            "file",
+            "conflict",
+            "date_vals",
+        }
         for name, path in self.paths(fmt).items():
             doors = ["read", "load"] if name in load_layouts else ["read"]
             for door in doors:
                 k = f"P/{fmt}/{door}/{name}/ansi={ansi}"
                 self.cell(f"{k}/read", lambda d=door, p=path: self.frame_obs(self.read(fmt, d, p)))
-                self.cell(f"{k}/where_p2", lambda d=door, p=path: self.frame_obs(self.read(fmt, d, p).where("p = 2")))
-                self.cell(f"{k}/count", lambda d=door, p=path: {"status": "ok", "count": self.read(fmt, d, p).count()})
-                self.cell(f"{k}/files", lambda d=door, p=path: {"status": "ok", "files": rel_files(self.read(fmt, d, p).inputFiles(), self.fx, self.engine)})
+                self.cell(
+                    f"{k}/where_p2",
+                    lambda d=door, p=path: self.frame_obs(self.read(fmt, d, p).where("p = 2")),
+                )
+                self.cell(
+                    f"{k}/count",
+                    lambda d=door, p=path: {"status": "ok", "count": self.read(fmt, d, p).count()},
+                )
+                self.cell(
+                    f"{k}/files",
+                    lambda d=door, p=path: {
+                        "status": "ok",
+                        "files": rel_files(self.read(fmt, d, p).inputFiles(), self.fx, self.engine),
+                    },
+                )
                 self.cell(f"{k}/rt", lambda d=door, p=path: self.roundtrip(self.read(fmt, d, p)))
 
     def trigger_b(self, fmt: str, ansi: str) -> None:
@@ -268,7 +358,13 @@ class Probe:
             def fromjson(p: str = path) -> dict[str, Any]:
                 df = self.read(fmt, "read", p)
                 back = type(df.schema).fromJson(json.loads(df.schema.json()))
-                return {"status": "ok", "equal": back == df.schema, "schema": [[f.name, f.dataType.simpleString(), f.nullable] for f in back.fields]}
+                return {
+                    "status": "ok",
+                    "equal": back == df.schema,
+                    "schema": [
+                        [f.name, f.dataType.simpleString(), f.nullable] for f in back.fields
+                    ],
+                }
 
             def create(p: str = path) -> dict[str, Any]:
                 df = self.read(fmt, "read", p)
@@ -300,8 +396,16 @@ class Probe:
         for name in ("one_level", "date_vals", "str_vals"):
             self.spark.conf.set(INFER_KEY, "false")
             try:
-                self.cell(f"{k}/noinfer/{name}/read", lambda p=paths[name]: self.frame_obs(self.read(fmt, "read", p)))
-                self.cell(f"{k}/noinfer/{name}/where", lambda p=paths[name]: self.frame_obs(self.read(fmt, "read", p).where("p = '2'")))
+                self.cell(
+                    f"{k}/noinfer/{name}/read",
+                    lambda p=paths[name]: self.frame_obs(self.read(fmt, "read", p)),
+                )
+                self.cell(
+                    f"{k}/noinfer/{name}/where",
+                    lambda p=paths[name]: self.frame_obs(
+                        self.read(fmt, "read", p).where("p = '2'")
+                    ),
+                )
             finally:
                 self.spark.conf.set(INFER_KEY, "true")
         schemas = {
@@ -311,24 +415,69 @@ class Probe:
             "without_p": "id BIGINT, s STRING",
         }
         for sname, ddl in schemas.items():
-            self.cell(f"{k}/schema_{sname}/read", lambda d=ddl: self.frame_obs(self.read(fmt, "read", one, schema=d)))
-            self.cell(f"{k}/schema_{sname}/where", lambda d=ddl: self.frame_obs(self.read(fmt, "read", one, schema=d).where("p = 2")))
-        self.cell(f"{k}/schema_with_p/flat", lambda: self.frame_obs(self.read(fmt, "read", paths["flat"], schema="id BIGINT, s STRING")))
-        self.cell(f"{k}/recursive/read", lambda: self.frame_obs(self.read(fmt, "read", one, opts={"recursiveFileLookup": "true"})))
-        self.cell(f"{k}/basepath_leaf/read", lambda: self.frame_obs(self.read(fmt, "read", paths["leaf_p1"], opts={"basePath": one})))
-        self.cell(f"{k}/basepath_root/read", lambda: self.frame_obs(self.read(fmt, "read", one, opts={"basePath": one})))
+            self.cell(
+                f"{k}/schema_{sname}/read",
+                lambda d=ddl: self.frame_obs(self.read(fmt, "read", one, schema=d)),
+            )
+            self.cell(
+                f"{k}/schema_{sname}/where",
+                lambda d=ddl: self.frame_obs(self.read(fmt, "read", one, schema=d).where("p = 2")),
+            )
+        self.cell(
+            f"{k}/schema_with_p/flat",
+            lambda: self.frame_obs(
+                self.read(fmt, "read", paths["flat"], schema="id BIGINT, s STRING")
+            ),
+        )
+        self.cell(
+            f"{k}/recursive/read",
+            lambda: self.frame_obs(
+                self.read(fmt, "read", one, opts={"recursiveFileLookup": "true"})
+            ),
+        )
+        self.cell(
+            f"{k}/basepath_leaf/read",
+            lambda: self.frame_obs(
+                self.read(fmt, "read", paths["leaf_p1"], opts={"basePath": one})
+            ),
+        )
+        self.cell(
+            f"{k}/basepath_root/read",
+            lambda: self.frame_obs(self.read(fmt, "read", one, opts={"basePath": one})),
+        )
         if fmt != "json":
-            self.cell(f"{k}/infer_schema/read", lambda: self.frame_obs(self.read(fmt, "read", one, opts={"inferSchema": "true"})))
-            self.cell(f"{k}/infer_schema/flat", lambda: self.frame_obs(self.read(fmt, "read", paths["flat"], opts={"inferSchema": "true"})))
-            self.cell(f"{k}/nullvalue/read", lambda: self.frame_obs(self.read(fmt, "read", one, opts={"nullValue": "b"})))
+            self.cell(
+                f"{k}/infer_schema/read",
+                lambda: self.frame_obs(self.read(fmt, "read", one, opts={"inferSchema": "true"})),
+            )
+            self.cell(
+                f"{k}/infer_schema/flat",
+                lambda: self.frame_obs(
+                    self.read(fmt, "read", paths["flat"], opts={"inferSchema": "true"})
+                ),
+            )
+            self.cell(
+                f"{k}/nullvalue/read",
+                lambda: self.frame_obs(self.read(fmt, "read", one, opts={"nullValue": "b"})),
+            )
         self.spark.conf.set("spark.sql.caseSensitive", "true")
         try:
-            self.cell(f"{k}/case_sensitive/case_mixed", lambda: self.frame_obs(self.read(fmt, "read", paths["case_mixed"])))
-            self.cell(f"{k}/case_sensitive/one_level", lambda: self.frame_obs(self.read(fmt, "read", one)))
+            self.cell(
+                f"{k}/case_sensitive/case_mixed",
+                lambda: self.frame_obs(self.read(fmt, "read", paths["case_mixed"])),
+            )
+            self.cell(
+                f"{k}/case_sensitive/one_level", lambda: self.frame_obs(self.read(fmt, "read", one))
+            )
         finally:
             self.spark.conf.set("spark.sql.caseSensitive", "false")
-        self.cell(f"{k}/select_p/read", lambda: self.frame_obs(self.read(fmt, "read", one).select("p")))
-        self.cell(f"{k}/groupby_p/read", lambda: self.frame_obs(self.read(fmt, "read", one).groupBy("p").count()))
+        self.cell(
+            f"{k}/select_p/read", lambda: self.frame_obs(self.read(fmt, "read", one).select("p"))
+        )
+        self.cell(
+            f"{k}/groupby_p/read",
+            lambda: self.frame_obs(self.read(fmt, "read", one).groupBy("p").count()),
+        )
 
     def run(self) -> dict[str, Any]:
         for ansi in ("true", "false"):
@@ -362,8 +511,13 @@ def main() -> None:
 
         print("REPARK_NATIVE:", repark._native.__file__)
     res = Probe(a.engine, fx, work).run()
-    Path(a.out).write_text(json.dumps({"run1": res}, indent=1, sort_keys=True, default=str), encoding="utf-8")
-    print(f"DONE engine={a.engine} cells={len(res)} errs={sum(1 for v in res.values() if v.get('status') == 'err')}")
+    Path(a.out).write_text(
+        json.dumps({"run1": res}, indent=1, sort_keys=True, default=str), encoding="utf-8"
+    )
+    print(
+        f"DONE engine={a.engine} cells={len(res)} "
+        f"errs={sum(1 for v in res.values() if v.get('status') == 'err')}"
+    )
 
 
 if __name__ == "__main__":
