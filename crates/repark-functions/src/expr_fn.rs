@@ -675,7 +675,7 @@ pub fn make_interval(args: Vec<Expr>) -> Expr {
 /// Spark `make_dt_interval(...)` — 0..=4 args (days, hours, mins, secs).
 #[must_use]
 pub fn make_dt_interval(args: Vec<Expr>) -> Expr {
-    datafusion_spark::function::datetime::make_dt_interval().call(args)
+    call(crate::temporal_ctor::day_time::make_dt_interval_udf(), args)
 }
 
 /// Spark `unix_micros(ts)` — microseconds since epoch (from `datafusion-spark`).

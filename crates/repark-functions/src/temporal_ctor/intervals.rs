@@ -224,7 +224,7 @@ fn text_secs_to_micros(text: &str) -> Result<Option<i64>> {
     float_secs_to_micros(seconds)
 }
 
-fn interval_overflow() -> DataFusionError {
+pub(super) fn interval_overflow() -> DataFusionError {
     exec_error(
         "[INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION] Integer overflow while operating with \
          intervals. Try devising appropriate values for the interval parameters. SQLSTATE: 22015"

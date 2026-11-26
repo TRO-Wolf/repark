@@ -1845,7 +1845,7 @@ class DataFrame:
                 except Exception:
                     data_type = StringType()
             else:
-                data_type = StringType()
+                data_type = _column_fields._logical_key_type(type_key)
             fields.append(StructField(name, data_type, nullable))
         overlay = self._display_overlay_names()
         if overlay is not None and len(overlay) == len(fields):

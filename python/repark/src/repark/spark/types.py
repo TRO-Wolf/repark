@@ -1010,9 +1010,7 @@ def _parse_atomic_token(token: str) -> DataType | None:
         return StringType(match.group(1))
     if lower == "decimal":
         return DecimalType()
-    if lower.startswith("time"):
-        return TimeType()
-    return None
+    return TimeType() if lower.startswith("time") else None
 
 
 def _split_top_level(text: str, separator: str = ",") -> list[str]:
@@ -1126,12 +1124,14 @@ def _parse_datatype_json_value(
         ):
             return StringType(collations_map[field_path])
         text = str(json_value)
-        spatial = _parse_spatial_json_token(text)
-        if spatial is not None:
+        if (spatial := _parse_spatial_json_token(text)) is not None:
             return spatial
         _refuse_spatial_json_token(text)
-        atomic = _parse_atomic_token(text)
-        if atomic is not None:
+        if text.strip().lower().startswith("interval "):
+            if text != " ".join(text.lower().split()):
+                raise ValueError(f"cannot parse datatype: {text!r}")
+            return _parse_datatype_string(text)
+        if (atomic := _parse_atomic_token(text)) is not None:
             return atomic
         # Fall through to complex simpleString forms.
         return _parse_complex_or_atomic(text)
