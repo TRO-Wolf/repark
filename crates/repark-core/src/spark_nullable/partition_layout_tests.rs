@@ -505,3 +505,116 @@ async fn root_files_beside_partitions_are_listed_but_not_read() {
     assert_eq!(crate::plan_introspect::input_files(&plan).len(), 1);
     assert_eq!(row_count(frame).await, 1);
 }
+
+#[cfg(unix)]
+fn write_unreadable(path: &Path, text: &str) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    write_text(path, text);
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0)).unwrap();
+    File::open(path).is_err()
+}
+
+#[cfg(unix)]
+type RootEntry = (
+    object_store::ObjectMeta,
+    Vec<(String, Option<String>)>,
+    usize,
+    String,
+);
+
+#[cfg(unix)]
+async fn root_entry(dir: &Path, name: &str, text: &str, unreadable: bool) -> (RootEntry, bool) {
+    use object_store::ObjectStoreExt;
+    use std::os::unix::fs::PermissionsExt;
+    let path = dir.join(name);
+    write_text(&path, text);
+    let location = object_store::path::Path::from_filesystem_path(&path).unwrap();
+    let meta = object_store::local::LocalFileSystem::new()
+        .head(&location)
+        .await
+        .unwrap();
+    if unreadable {
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0)).unwrap();
+    }
+    (
+        (meta, Vec::new(), 1, String::new()),
+        File::open(&path).is_err(),
+    )
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn root_file_opens_follow_what_spark_reads_at_inference() {
+    use super::partition::{RootFileOpens, refuse_unreadable_root_files};
+    let dir = tempfile::tempdir().unwrap();
+    let store = object_store::local::LocalFileSystem::new();
+    let (part, _) = root_entry(dir.path(), "part.csv", "id,s\n1,a\n", false).await;
+    let (big_bad, denied) = root_entry(dir.path(), "big-bad.csv", "id,s\n9,z\n8,y\n", true).await;
+    if !denied {
+        return;
+    }
+    let (big_bad2, _) = root_entry(dir.path(), "big-bad2.csv", "id,s\n7,z\n6,y\n", true).await;
+    let (big_ok, _) = root_entry(dir.path(), "big-ok.csv", "id,s\n5,z\n4,y\n", false).await;
+    let (small_bad, _) = root_entry(dir.path(), "small-bad.csv", "id,s\n9\n", true).await;
+    let (empty_bad, _) = root_entry(dir.path(), "empty-bad.csv", "", true).await;
+    let mut huge_bad = big_bad.clone();
+    huge_bad.0.size = 5 * 1024 * 1024;
+    let parts = [part];
+    let refuses = |roots: Vec<RootEntry>, opens| {
+        let store = &store;
+        let parts = &parts;
+        async move {
+            refuse_unreadable_root_files(store, &roots, parts, opens)
+                .await
+                .map_err(|error| error.to_string())
+        }
+    };
+    let refused = refuses(vec![big_bad.clone()], RootFileOpens::Largest).await;
+    assert!(refused.unwrap_err().contains("Unable to open file"));
+    assert!(
+        refuses(vec![small_bad.clone()], RootFileOpens::Largest)
+            .await
+            .is_ok()
+    );
+    assert!(
+        refuses(vec![big_ok, big_bad.clone()], RootFileOpens::Largest)
+            .await
+            .is_ok()
+    );
+    assert!(
+        refuses(vec![big_bad.clone(), big_bad2], RootFileOpens::Largest)
+            .await
+            .is_err()
+    );
+    assert!(
+        refuses(vec![huge_bad], RootFileOpens::Largest)
+            .await
+            .is_ok()
+    );
+    assert!(refuses(vec![small_bad], RootFileOpens::All).await.is_err());
+    assert!(refuses(vec![empty_bad], RootFileOpens::All).await.is_ok());
+    assert!(refuses(vec![big_bad], RootFileOpens::Never).await.is_ok());
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn unreadable_root_files_refuse_json_and_inferred_csv_reads() {
+    let dir = tempfile::tempdir().unwrap();
+    let session = ReparkSession::new().unwrap();
+    write_text(&dir.path().join("csv/p=1/part-0.csv"), "id,s\n1,a\n");
+    write_text(&dir.path().join("json/p=1/part-0.json"), "{\"id\":1}\n");
+    let denied = write_unreadable(&dir.path().join("csv/root.csv"), "id,s\n9\n");
+    if !denied || !write_unreadable(&dir.path().join("json/root.json"), "{}\n") {
+        return;
+    }
+    let csv = dir.path().join("csv").to_str().unwrap().to_string();
+    let json = dir.path().join("json").to_str().unwrap().to_string();
+    let header = text_options(&[("header", "true")]);
+    assert!(session.read_csv(&csv, &header).await.is_err());
+    assert!(session.read_json(&json, &text_options(&[])).await.is_err());
+    let user = text_options(&[("user_schema", "true")]);
+    assert_eq!(
+        row_count(session.read_json(&json, &user).await.unwrap()).await,
+        1
+    );
+}

@@ -531,10 +531,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `repark_common::redaction::column_name_is_secret_shaped`, the pre-widening rule, so the
   widened display key rule changes no column decision; the flag, boolean and single-character
   option refusals echo the value masked.
-  **CSV-JSON-PARTITION-DISCOVERY-1:** `read_csv_path` (given the session, for its zone) and
-  `read_json_with_case_sensitivity` (main's `read_json` body) try `spark_nullable::partition`'s
-  discovery and take main's read on `None`; `positions`, `nullValue` and a CSV file column named like a partition stay
-  on main; no-header fields become `_cN`; the `utf8_columns` re-read drops the partition fields.
+  **CSV-JSON-PARTITION-DISCOVERY-1:** `read_csv_path` (session zone) and `read_json_with_case_sensitivity`
+  try `spark_nullable::partition`'s discovery, else main's read; `positions`, `nullValue` and a CSV file column
+  named like a partition stay on main; no-header fields are `_cN`; the re-read drops partition fields. Root
+  files opened: text scan `Largest`, else `All`; JSON `Never` under `user_schema`.
 - `text_scan.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` scan. **IO-TEXT-1 (2026-09-15, orchestrator):** `text_scan.rs` carries no doc comments (its workers were briefed comment-free); its two public `Result` entry points take `#[allow(clippy::missing_errors_doc)]`.
   A `TableProvider` over sorted local files, plain dirs (hidden `_`/`.` skipped,
   `key=value` dirs descended), and Hadoop globs (see `text_glob.rs`), serving one

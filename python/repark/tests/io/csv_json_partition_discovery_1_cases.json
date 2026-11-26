@@ -3729,6 +3729,218 @@
  },
  {
   "case": {
+   "ansi": "true",
+   "conf": {},
+   "fmt": "csvh",
+   "id": "protected/csvh/read/noperm_big/refusal/ansi=true",
+   "kind": "protected",
+   "path": "noperm_big",
+   "query": "refusal"
+  },
+  "expected": {
+   "refused": true
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "conf": {},
+   "fmt": "csvn",
+   "id": "protected/csvn/read/noperm_big/refusal/ansi=true",
+   "kind": "protected",
+   "path": "noperm_big",
+   "query": "refusal"
+  },
+  "expected": {
+   "refused": true
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "conf": {},
+   "fmt": "json",
+   "id": "protected/json/read/noperm_big/refusal/ansi=true",
+   "kind": "protected",
+   "path": "noperm_big",
+   "query": "refusal"
+  },
+  "expected": {
+   "refused": true
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "conf": {},
+   "fmt": "json",
+   "id": "protected/json/read/noperm_small/refusal/ansi=true",
+   "kind": "protected",
+   "path": "noperm_small",
+   "query": "refusal"
+  },
+  "expected": {
+   "refused": true
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "conf": {},
+   "fmt": "json",
+   "id": "target/json/read/noperm_dot/refusal/ansi=true",
+   "kind": "target",
+   "path": "noperm_dot",
+   "query": "refusal"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "conf": {
+    "options": {
+     "inferSchema": "true"
+    }
+   },
+   "fmt": "csvh",
+   "id": "protected/csvh/read/noperm_big/refusal/ansi=true/inferSchema=true",
+   "kind": "protected",
+   "path": "noperm_big",
+   "query": "refusal"
+  },
+  "expected": {
+   "refused": true
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "conf": {
+    "schema": "id BIGINT, s STRING"
+   },
+   "fmt": "json",
+   "id": "target/json/read/noperm_big/refusal/ansi=true/schema=id_BIGINT,_s_STRING",
+   "kind": "target",
+   "path": "noperm_big",
+   "query": "refusal"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "conf": {
+    "schema": "id BIGINT, s STRING, p INT"
+   },
+   "fmt": "json",
+   "id": "target/json/read/noperm_big/refusal/ansi=true/schema=id_BIGINT,_s_STRING,_p_INT",
+   "kind": "target",
+   "path": "noperm_big",
+   "query": "refusal"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "conf": {
+    "options": {
+     "inferSchema": "true"
+    }
+   },
+   "fmt": "csvh",
+   "id": "protected/csvh/read/noperm_small/refusal/ansi=true/inferSchema=true",
+   "kind": "protected",
+   "path": "noperm_small",
+   "query": "refusal"
+  },
+  "expected": {
+   "refused": true
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "conf": {
+    "schema": "id BIGINT, s STRING"
+   },
+   "fmt": "json",
+   "id": "target/json/read/noperm_small/refusal/ansi=true/schema=id_BIGINT,_s_STRING",
+   "kind": "target",
+   "path": "noperm_small",
+   "query": "refusal"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "conf": {
+    "schema": "id BIGINT, s STRING, p INT"
+   },
+   "fmt": "json",
+   "id": "target/json/read/noperm_small/refusal/ansi=true/schema=id_BIGINT,_s_STRING,_p_INT",
+   "kind": "target",
+   "path": "noperm_small",
+   "query": "refusal"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "conf": {},
+   "fmt": "csvh",
+   "id": "protected/csvh/read/noperm_hidden/refusal/ansi=true",
+   "kind": "protected",
+   "path": "noperm_hidden",
+   "query": "refusal"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "conf": {},
+   "fmt": "csvn",
+   "id": "protected/csvn/read/noperm_hidden/refusal/ansi=true",
+   "kind": "protected",
+   "path": "noperm_hidden",
+   "query": "refusal"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "conf": {},
+   "fmt": "json",
+   "id": "protected/json/read/noperm_hidden/refusal/ansi=true",
+   "kind": "protected",
+   "path": "noperm_hidden",
+   "query": "refusal"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
    "ansi": "false",
    "fmt": "csvh",
    "id": "target/csvh/read/one_level/read/ansi=false",
@@ -7453,6 +7665,218 @@
     "_c0=1/part-00000.json",
     "under_eq/part-root.json"
    ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {},
+   "fmt": "csvh",
+   "id": "protected/csvh/read/noperm_big/refusal/ansi=false",
+   "kind": "protected",
+   "path": "noperm_big",
+   "query": "refusal"
+  },
+  "expected": {
+   "refused": true
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {},
+   "fmt": "csvn",
+   "id": "protected/csvn/read/noperm_big/refusal/ansi=false",
+   "kind": "protected",
+   "path": "noperm_big",
+   "query": "refusal"
+  },
+  "expected": {
+   "refused": true
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {},
+   "fmt": "json",
+   "id": "protected/json/read/noperm_big/refusal/ansi=false",
+   "kind": "protected",
+   "path": "noperm_big",
+   "query": "refusal"
+  },
+  "expected": {
+   "refused": true
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {},
+   "fmt": "json",
+   "id": "protected/json/read/noperm_small/refusal/ansi=false",
+   "kind": "protected",
+   "path": "noperm_small",
+   "query": "refusal"
+  },
+  "expected": {
+   "refused": true
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {},
+   "fmt": "json",
+   "id": "target/json/read/noperm_dot/refusal/ansi=false",
+   "kind": "target",
+   "path": "noperm_dot",
+   "query": "refusal"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {
+    "options": {
+     "inferSchema": "true"
+    }
+   },
+   "fmt": "csvh",
+   "id": "protected/csvh/read/noperm_big/refusal/ansi=false/inferSchema=true",
+   "kind": "protected",
+   "path": "noperm_big",
+   "query": "refusal"
+  },
+  "expected": {
+   "refused": true
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {
+    "schema": "id BIGINT, s STRING"
+   },
+   "fmt": "json",
+   "id": "target/json/read/noperm_big/refusal/ansi=false/schema=id_BIGINT,_s_STRING",
+   "kind": "target",
+   "path": "noperm_big",
+   "query": "refusal"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {
+    "schema": "id BIGINT, s STRING, p INT"
+   },
+   "fmt": "json",
+   "id": "target/json/read/noperm_big/refusal/ansi=false/schema=id_BIGINT,_s_STRING,_p_INT",
+   "kind": "target",
+   "path": "noperm_big",
+   "query": "refusal"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {
+    "options": {
+     "inferSchema": "true"
+    }
+   },
+   "fmt": "csvh",
+   "id": "protected/csvh/read/noperm_small/refusal/ansi=false/inferSchema=true",
+   "kind": "protected",
+   "path": "noperm_small",
+   "query": "refusal"
+  },
+  "expected": {
+   "refused": true
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {
+    "schema": "id BIGINT, s STRING"
+   },
+   "fmt": "json",
+   "id": "target/json/read/noperm_small/refusal/ansi=false/schema=id_BIGINT,_s_STRING",
+   "kind": "target",
+   "path": "noperm_small",
+   "query": "refusal"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {
+    "schema": "id BIGINT, s STRING, p INT"
+   },
+   "fmt": "json",
+   "id": "target/json/read/noperm_small/refusal/ansi=false/schema=id_BIGINT,_s_STRING,_p_INT",
+   "kind": "target",
+   "path": "noperm_small",
+   "query": "refusal"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {},
+   "fmt": "csvh",
+   "id": "protected/csvh/read/noperm_hidden/refusal/ansi=false",
+   "kind": "protected",
+   "path": "noperm_hidden",
+   "query": "refusal"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {},
+   "fmt": "csvn",
+   "id": "protected/csvn/read/noperm_hidden/refusal/ansi=false",
+   "kind": "protected",
+   "path": "noperm_hidden",
+   "query": "refusal"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {},
+   "fmt": "json",
+   "id": "protected/json/read/noperm_hidden/refusal/ansi=false",
+   "kind": "protected",
+   "path": "noperm_hidden",
+   "query": "refusal"
+  },
+  "expected": {
+   "count": 4
   }
  },
  {

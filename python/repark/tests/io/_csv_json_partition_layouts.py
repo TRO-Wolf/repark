@@ -17,6 +17,9 @@ TWO_LEVEL = {
 }
 INFER_KEY = "spark.sql.sources.partitionColumnTypeInference.enabled"
 WHERE_PATHS = ("one_level", "hive_default", "hidden")
+BIG = [(9000, "X"), (9001, "Y"), (9002, "Z")]
+UNREADABLE = {"noperm_big": BIG, "noperm_small": [(9, "X")], "noperm_hidden/_tmp": BIG}
+UNREADABLE["noperm_dot/.x=1"] = BIG
 
 
 def _body(fmt: str, rows: list[tuple[int, str]]) -> str:
@@ -66,6 +69,10 @@ def build(base: Path) -> None:
         _place(root / "flat" / f"part-00000{ext}", _body(fmt, ROWS["p=1"]))
         _place(root / "flat" / f"part-00001{ext}", _body(fmt, ROWS["p=2"]))
         _place(root / "eq_root" / "tag=foo" / f"part-00000{ext}", _body(fmt, ROWS["p=1"]))
+        for rel, rows in UNREADABLE.items():
+            _table(root / rel.split("/")[0], fmt, ROWS)
+            _place(root / rel / f"root{ext}", _body(fmt, rows))
+            (root / rel / f"root{ext}").chmod(0)
 
 
 def _reader(spark: Any, fmt: str, conf: dict[str, str]) -> Any:
@@ -74,6 +81,8 @@ def _reader(spark: Any, fmt: str, conf: dict[str, str]) -> Any:
         reader = reader.option("header", "true" if fmt == "csvh" else "false")
     if "schema" in conf:
         reader = reader.schema(conf["schema"])
+    for key, value in conf.get("options", {}).items():
+        reader = reader.option(key, value)
     return reader
 
 
@@ -108,7 +117,7 @@ def run(spark: Any, base: Path, work: Path, case: dict[str, Any]) -> dict[str, A
         query = case["query"]
         if query == "where":
             return observe(frame.where("p = 2"))
-        if query == "count":
+        if query in ("count", "refusal"):
             return {"count": frame.count()}
         if query == "files":
             names = [Path(unquote(name)) for name in frame.inputFiles()]
@@ -119,6 +128,8 @@ def run(spark: Any, base: Path, work: Path, case: dict[str, Any]) -> dict[str, A
             return observe(spark.read.parquet(str(out)))
         return observe(frame)
     except Exception as error:
+        if case["query"] == "refusal":
+            return {"refused": True}
         getter: Callable[[], Any] | None = getattr(error, "getCondition", None)
         return {"error": getter() if getter is not None else type(error).__name__}
     finally:
@@ -242,6 +253,29 @@ def cases() -> list[dict[str, Any]]:
                     "kind": "protected",
                 }
             )
+        unreadable = [
+            ("csvh", {}, "noperm_big", "protected"),
+            ("csvn", {}, "noperm_big", "protected"),
+            ("json", {}, "noperm_big", "protected"),
+            ("json", {}, "noperm_small", "protected"),
+            ("json", {}, "noperm_dot", "target"),
+        ]
+        for path in ("noperm_big", "noperm_small"):
+            unreadable.append(("csvh", {"options": {"inferSchema": "true"}}, path, "protected"))
+            for schema in ("id BIGINT, s STRING", "id BIGINT, s STRING, p INT"):
+                unreadable.append(("json", {"schema": schema}, path, "target"))
+        unreadable.extend((fmt, {}, "noperm_hidden", "protected") for fmt in FORMATS)
+        for fmt, conf, path, kind in unreadable:
+            out.append(
+                {
+                    "fmt": fmt,
+                    "path": path,
+                    "query": "refusal",
+                    "ansi": ansi,
+                    "kind": kind,
+                    "conf": conf,
+                }
+            )
     date_schema = {"schema": "id BIGINT, s STRING, p DATE"}
     out.append(
         {
@@ -265,6 +299,7 @@ def cases() -> list[dict[str, Any]]:
         conf = case.get("conf", {})
         if "schema" in conf:
             parts.append("schema=" + conf["schema"].replace(" ", "_"))
+        parts.extend(f"{key}={value}" for key, value in conf.get("options", {}).items())
         parts.extend(
             f"{key.rsplit('.', 1)[-1]}={value}" for key, value in conf.get("session", {}).items()
         )

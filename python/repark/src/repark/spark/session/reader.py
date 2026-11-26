@@ -544,6 +544,7 @@ class DataFrameReader:
         self._reject_csv_json_parse_options(is_csv=False)
         path_str = _reader_path_to_str(path)
         native_options = self._native_options_for(_JSON_NATIVE_OPTION_KEYS)
+        native_options.update({} if self._schema is None else {"user_schema": "true"})
         frame = self._session.read_json(path_str, native_options)
         # multiLine=true maps to DF newline_delimited=false, which accepts a **JSON array** only.
         # A pretty single object or NDJSON under multiLine yields an empty schema — silent wrong

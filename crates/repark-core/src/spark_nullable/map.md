@@ -144,12 +144,12 @@ leaving text and ORC discovery untouched. Rules pinned to live Spark 4.1.2:
   an explicit setting.
 
 - `partition.rs` — `PARTITION_COLUMN_TYPE_INFERENCE_KEY`, `PartitionColumnTypeInferenceConfig`,
-  `PartitionPruningAnsiConfig`, `PartitionedParquetProvider`, `read_parquet_with_case_sensitivity`, and
+  `PartitionPruningAnsiConfig`, `PartitionedParquetProvider`, `read_parquet_with_case_sensitivity`,
   `set_partition_column_type_inference`, `partition_column_names`. **CSV-JSON-PARTITION-DISCOVERY-1:**
-  `read_discovered` over a `DiscoveryFormat`; `None` is the caller's read; footer rules, schema relax,
-  all-suffix listing are Parquet's; a CSV file column named like a partition goes to main; CSV/JSON root files beside
-  partitions stay in `inputFiles` via a never-run `ListedOnlyExec`.
-- `partition_layout_tests.rs` — three CSV/JSON pins (CSV-JSON-PARTITION-DISCOVERY-1).
+  `read_discovered` over a `DiscoveryFormat`; footer, relax and all-suffix rules are Parquet's; a CSV
+  column named like a partition goes to main; root files stay in `inputFiles` via a never-run `ListedOnlyExec`;
+  `refuse_unreadable_root_files` byte-probes the ones Spark opens.
+- `partition_layout_tests.rs` — CSV/JSON pins (CSV-JSON-PARTITION-DISCOVERY-1, unreadable roots).
   Delta 2 Rust pins: the base-path rule (two sub-bases, root beside `sub/`, a `sub/`
   file or 0-byte file, `a=1/sub/b=2` beside `a=2/sub/b=3`, directory conflict before names; root, hidden and
   base-directory files answer; same mid base and case-only base differences answer), footer order (root, `Z` before

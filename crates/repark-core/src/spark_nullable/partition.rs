@@ -27,8 +27,8 @@ use datafusion::physical_plan::{
     DisplayAs, DisplayFormatType, ExecutionPlan, PlanProperties, SendableRecordBatchStream,
 };
 use datafusion::prelude::{DataFrame, ParquetReadOptions, SessionConfig, SessionContext};
-use futures::TryStreamExt;
-use object_store::ObjectMeta;
+use futures::{StreamExt, TryStreamExt};
+use object_store::{ObjectMeta, ObjectStore, ObjectStoreExt};
 use repark_common::java_case::{string_lower_equal, string_lowered};
 use repark_common::{Error, Result};
 use url::Url;
@@ -283,12 +283,22 @@ pub(crate) enum DiscoveredKind {
     Json,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum RootFileOpens {
+    Never,
+    Largest,
+    All,
+}
+
+const SPARK_OPEN_COST_BYTES: u64 = 4 * 1024 * 1024;
+
 pub(crate) struct DiscoveryFormat {
     kind: DiscoveredKind,
     format: Arc<dyn FileFormat>,
     file_schema: Option<SchemaRef>,
     suffix: Option<String>,
     target_partitions: usize,
+    opens: RootFileOpens,
 }
 
 impl DiscoveryFormat {
@@ -296,6 +306,7 @@ impl DiscoveryFormat {
         kind: DiscoveredKind,
         listing: ListingOptions,
         file_schema: Option<SchemaRef>,
+        opens: RootFileOpens,
     ) -> Self {
         let (format, suffix): (Arc<dyn FileFormat>, Option<String>) = match kind {
             DiscoveredKind::Parquet => (
@@ -312,6 +323,7 @@ impl DiscoveryFormat {
             file_schema,
             suffix,
             target_partitions: listing.target_partitions,
+            opens,
         }
     }
 }
@@ -631,7 +643,7 @@ pub(crate) async fn read_parquet_discovered(
         normalize_file_dir_url(object_store_s3::resolve_s3_prefix_for_read(context, path).await?);
     let listing = ParquetReadOptions::default()
         .to_listing_options(&context.copied_config(), context.copied_table_options());
-    let spec = DiscoveryFormat::new(DiscoveredKind::Parquet, listing, None);
+    let spec = DiscoveryFormat::new(DiscoveredKind::Parquet, listing, None, RootFileOpens::Never);
     match read_discovered(
         context,
         &resolved,
@@ -644,6 +656,42 @@ pub(crate) async fn read_parquet_discovered(
     {
         Some(frame) => Ok(frame),
         None => read_parquet_listing_fallback(context, &resolved).await,
+    }
+}
+
+pub(super) async fn refuse_unreadable_root_files(
+    store: &dyn ObjectStore,
+    roots: &[DiscoveredEntry],
+    scanned: &[DiscoveredEntry],
+    opens: RootFileOpens,
+) -> Result<()> {
+    let sized: Vec<&ObjectMeta> = roots
+        .iter()
+        .map(|(meta, _, _, _)| meta)
+        .filter(|meta| meta.size > 0)
+        .collect();
+    let largest_part = scanned
+        .iter()
+        .map(|(meta, _, _, _)| meta.size)
+        .max()
+        .unwrap_or(0);
+    let top = sized.iter().map(|meta| meta.size).max().unwrap_or(0);
+    let opened: Vec<&ObjectMeta> = match opens {
+        RootFileOpens::All => sized,
+        RootFileOpens::Largest if top >= largest_part && top <= SPARK_OPEN_COST_BYTES => {
+            sized.into_iter().filter(|meta| meta.size == top).collect()
+        }
+        RootFileOpens::Largest | RootFileOpens::Never => Vec::new(),
+    };
+    let checks: Vec<object_store::Result<bytes::Bytes>> = futures::stream::iter(&opened)
+        .map(|meta| store.get_range(&meta.location, 0..1))
+        .buffered(32)
+        .collect()
+        .await;
+    let readable = checks.iter().any(std::result::Result::is_ok);
+    match checks.into_iter().find_map(std::result::Result::err) {
+        Some(error) if opens == RootFileOpens::All || !readable => Err(engine_err(error.into())),
+        _ => Ok(()),
     }
 }
 
@@ -777,6 +825,7 @@ async fn read_discovered(
     if kept_metas.is_empty() {
         kept_metas.extend(footer);
     }
+    refuse_unreadable_root_files(store.as_ref(), &unscanned, &scanned, spec.opens).await?;
     let sparked_file_schema: SchemaRef = if let Some(schema) = spec.file_schema {
         schema
     } else {

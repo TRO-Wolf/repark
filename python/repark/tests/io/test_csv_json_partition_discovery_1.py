@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,9 @@ def tables(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
 
 def _check(spark: ReparkSession, tables: Path, tmp_path: Path, entry: dict[str, Any]) -> None:
+    root_file = tables / "json" / "noperm_big" / "root.json"
+    if entry["case"]["query"] == "refusal" and os.access(root_file, os.R_OK):
+        pytest.skip("a mode-0 fixture file stays readable for this user")
     observed = layouts.run(spark, tables, tmp_path, entry["case"])
     assert observed == entry["expected"]
 
