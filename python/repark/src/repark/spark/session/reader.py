@@ -704,8 +704,9 @@ class DataFrameReader:
         schema = self._schema
         columns = list(frame.columns)
         null_token = self._option_str("nullvalue")
+        parts = list(self._session._ensure_alive().partition_columns(frame._inner))
         if path is not None and (schema is not None or not infer_schema):
-            return _reader_support._csv_text_frame(frame, schema, header, null_token)
+            return _reader_support._csv_text_frame(frame, schema, header or bool(parts), null_token)
 
         # Apply nullValue on the string form of every column before casts (Spark parse nulls).
         # Engine may already have Utf8-forced the scan when nullValue is set (R1-C1-001).
@@ -721,6 +722,13 @@ class DataFrameReader:
 
         if schema is not None:
             fields = _schema_fields(schema)
+            typed = {field["name"].casefold(): field["dataType"] for field in fields}
+            folded = {name.casefold(): name for name in parts}
+            fields = [field for field in fields if field["name"].casefold() not in folded]
+            fields += [
+                {"name": name, "dataType": typed.get(key, frame.schema[name].dataType)}
+                for key, name in folded.items()
+            ]
             if not fields:
                 return frame
             column_by_case = {name.casefold(): name for name in columns}

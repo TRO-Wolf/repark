@@ -29,8 +29,8 @@ use crate::session_time_zone::{SessionTimeZone, resolve_session_time_zone};
 use crate::temp_view::{TempViewHome, build_temp_view_home};
 use crate::time_travel::{self, TimeTravelOpts, metadata_at};
 use crate::{
-    OverwriteIntent, engine_err, iceberg_err, json_read_options_from_map, object_store_s3,
-    parse_table_identifier_segments, resolve_s3_region_override,
+    OverwriteIntent, engine_err, iceberg_err, object_store_s3, parse_table_identifier_segments,
+    resolve_s3_region_override,
 };
 
 mod cache_budget;
@@ -783,7 +783,7 @@ impl ReparkSession {
         if let Some((_scheme, bucket)) = object_store_s3::parse_s3_bucket(path) {
             self.ensure_s3_bucket_registered(&bucket)?;
         }
-        crate::read_options::read_csv_path(self.context(), path, options).await
+        crate::read_options::read_csv_path(self, path, options).await
     }
 
     /// Read a JSON file or directory using Spark multiline semantics.
@@ -794,19 +794,8 @@ impl ReparkSession {
         path: &str,
         options: &HashMap<String, String>,
     ) -> Result<DataFrame> {
-        if let Some((_scheme, bucket)) = object_store_s3::parse_s3_bucket(path) {
-            self.ensure_s3_bucket_registered(&bucket)?;
-        }
-        let flag = crate::read_options::secret_column_flag(options)?;
-        let json_options = json_read_options_from_map(options)?;
-        let resolved = object_store_s3::resolve_s3_prefix_for_read(self.context(), path).await?;
-        let frame = self
-            .context()
-            .read_json(&resolved, json_options)
+        self.read_json_with_case_sensitivity(path, options, false)
             .await
-            .map_err(engine_err)?;
-        crate::read_options::apply_secret_column_flag(flag, frame.schema().as_ref())?;
-        Ok(frame)
     }
 
     /// Read an Iceberg catalog table, optionally pinned to a snapshot / ref / timestamp.

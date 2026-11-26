@@ -536,6 +536,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `repark_common::redaction::column_name_is_secret_shaped`, the pre-widening rule, so the
   widened display key rule changes no column decision; the flag, boolean and single-character
   option refusals echo the value masked.
+  **CSV-JSON-PARTITION-DISCOVERY-1 (2026-11-26):** `read_csv_path` takes the session (for its zone) and reads
+  through `read_csv_frame`, which first asks `spark_nullable::partition`'s shared discovery and takes main's
+  `read_csv` when that answers `None`. `text_scan=positions` (a user schema) does not discover; `header` /
+  `header_case_sensitive` carry the case rule, and no `text_scan` reads case-insensitively. Without a header the
+  discovered file fields are renamed `_cN` so the facade can keep the partition names. The `utf8_columns` re-read
+  rebuilds its schema from the frame less its partition fields. `ReparkSession::read_json_with_case_sensitivity`
+  holds main's `read_json` body with the same discovery; `session.rs::read_json` calls it case-insensitively.
 - `text_scan.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` scan. **IO-TEXT-1 (2026-09-15, orchestrator):** `text_scan.rs` carries no doc comments (its workers were briefed comment-free); its two public `Result` entry points take `#[allow(clippy::missing_errors_doc)]`.
   A `TableProvider` over sorted local files, plain dirs (hidden `_`/`.` skipped,
   `key=value` dirs descended), and Hadoop globs (see `text_glob.rs`), serving one

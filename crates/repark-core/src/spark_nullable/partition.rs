@@ -9,15 +9,17 @@ use arrow::datatypes::{Field, FieldRef, Schema, SchemaRef};
 use async_trait::async_trait;
 use datafusion::catalog::Session;
 use datafusion::common::config::{ConfigEntry, ConfigExtension, ConfigOptions, ExtensionOptions};
+use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::common::{Column, ScalarValue};
+use datafusion::datasource::default_table_source::source_as_provider;
 use datafusion::datasource::file_format::FileFormat;
 use datafusion::datasource::file_format::options::ReadOptions;
-use datafusion::datasource::listing::{ListingTableUrl, PartitionedFile};
+use datafusion::datasource::listing::{ListingOptions, ListingTableUrl, PartitionedFile};
 use datafusion::datasource::physical_plan::{FileGroup, FileScanConfigBuilder};
 use datafusion::datasource::table_schema::TableSchema;
 use datafusion::datasource::{TableProvider, TableType};
 use datafusion::error::{DataFusionError, Result as DataFusionResult};
-use datafusion::logical_expr::{Expr, TableProviderFilterPushDown};
+use datafusion::logical_expr::{Expr, LogicalPlan, TableProviderFilterPushDown};
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::physical_plan::empty::EmptyExec;
 use datafusion::prelude::{DataFrame, ParquetReadOptions, SessionConfig, SessionContext};
@@ -248,6 +250,86 @@ impl ReparkSession {
         )
         .await
     }
+
+    pub(crate) async fn read_partitioned(
+        &self,
+        resolved: &str,
+        spec: DiscoveryFormat,
+        case_sensitive: bool,
+    ) -> Result<Option<DataFrame>> {
+        let session_zone = self.session_time_zone();
+        let canonical = crate::canonical_session_zone_id(session_zone.id());
+        let type_inference = partition_column_type_inference_from_ctx(self.context());
+        read_discovered(
+            self.context(),
+            resolved,
+            canonical.as_str(),
+            case_sensitive,
+            type_inference,
+            spec,
+        )
+        .await
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DiscoveredKind {
+    Parquet,
+    Csv,
+    Json,
+}
+
+pub(crate) struct DiscoveryFormat {
+    kind: DiscoveredKind,
+    format: Arc<dyn FileFormat>,
+    file_schema: Option<SchemaRef>,
+    suffix: Option<String>,
+    target_partitions: usize,
+}
+
+impl DiscoveryFormat {
+    pub(crate) fn new(
+        kind: DiscoveredKind,
+        listing: ListingOptions,
+        file_schema: Option<SchemaRef>,
+    ) -> Self {
+        let (format, suffix): (Arc<dyn FileFormat>, Option<String>) = match kind {
+            DiscoveredKind::Parquet => (
+                Arc::new(FloatBoundsInexactFormat::new(listing.format)),
+                None,
+            ),
+            DiscoveredKind::Csv | DiscoveredKind::Json => {
+                (listing.format, Some(listing.file_extension))
+            }
+        };
+        Self {
+            kind,
+            format,
+            file_schema,
+            suffix,
+            target_partitions: listing.target_partitions,
+        }
+    }
+}
+
+#[must_use]
+pub fn partition_column_names(frame: &DataFrame) -> Vec<String> {
+    let mut names = Vec::new();
+    let _ = frame.logical_plan().apply(|node| {
+        if let LogicalPlan::TableScan(scan) = node
+            && let Ok(provider) = source_as_provider(&scan.source)
+            && let Some(table) = provider.downcast_ref::<PartitionedParquetProvider>()
+        {
+            names.extend(
+                table
+                    .partition_fields
+                    .iter()
+                    .map(|field| field.name().clone()),
+            );
+        }
+        Ok(TreeNodeRecursion::Continue)
+    });
+    names
 }
 
 fn names_match(left: &str, right: &str, case_sensitive: bool) -> bool {
@@ -461,7 +543,6 @@ fn normalize_file_dir_url(path: String) -> String {
     path
 }
 
-#[allow(clippy::too_many_lines)]
 pub(crate) async fn read_parquet_discovered(
     context: &SessionContext,
     path: &str,
@@ -471,17 +552,52 @@ pub(crate) async fn read_parquet_discovered(
 ) -> Result<DataFrame> {
     let resolved =
         normalize_file_dir_url(object_store_s3::resolve_s3_prefix_for_read(context, path).await?);
-    let table_url = ListingTableUrl::parse(&resolved).map_err(engine_err)?;
+    let listing = ParquetReadOptions::default()
+        .to_listing_options(&context.copied_config(), context.copied_table_options());
+    let spec = DiscoveryFormat::new(DiscoveredKind::Parquet, listing, None);
+    match read_discovered(
+        context,
+        &resolved,
+        session_zone,
+        case_sensitive,
+        type_inference,
+        spec,
+    )
+    .await?
+    {
+        Some(frame) => Ok(frame),
+        None => read_parquet_listing_fallback(context, &resolved).await,
+    }
+}
+
+#[allow(clippy::too_many_lines)]
+async fn read_discovered(
+    context: &SessionContext,
+    resolved: &str,
+    session_zone: &str,
+    case_sensitive: bool,
+    type_inference: bool,
+    spec: DiscoveryFormat,
+) -> Result<Option<DataFrame>> {
+    let parquet = spec.kind == DiscoveredKind::Parquet;
+    let table_url = match ListingTableUrl::parse(normalize_file_dir_url(resolved.to_string())) {
+        Ok(table_url) => table_url,
+        Err(error) if parquet => return Err(engine_err(error)),
+        Err(_) => return Ok(None),
+    };
     if !table_url.is_collection() || table_url.get_glob().is_some() {
-        return read_parquet_listing_fallback(context, &resolved).await;
+        return Ok(None);
     }
     let Ok(store) = context.runtime_env().object_store(&table_url) else {
-        return read_parquet_listing_fallback(context, &resolved).await;
+        return Ok(None);
     };
     let prefix = (!table_url.prefix().as_ref().is_empty()).then(|| table_url.prefix().clone());
     let Ok(mut listed) = store.list(prefix.as_ref()).try_collect::<Vec<_>>().await else {
-        return read_parquet_listing_fallback(context, &resolved).await;
+        return Ok(None);
     };
+    if let Some(suffix) = spec.suffix.as_deref() {
+        listed.retain(|meta| meta.location.as_ref().ends_with(suffix));
+    }
     listed.sort_by(|left, right| {
         left.location
             .as_ref()
@@ -503,15 +619,17 @@ pub(crate) async fn read_parquet_discovered(
         visible.push((meta, specs, depth, base));
     }
     if visible.is_empty() {
-        return read_parquet_listing_fallback(context, &resolved).await;
+        return Ok(None);
     }
     if !visible.iter().any(|(_, specs, _, _)| !specs.is_empty()) {
-        let root_only: Vec<DiscoveredEntry> = visible
-            .into_iter()
-            .filter(|(_, _, depth, _)| *depth == 1)
-            .collect();
-        refuse_zero_byte_footer(footer_file(&root_only))?;
-        return read_parquet_listing_fallback(context, &resolved).await;
+        if parquet {
+            let root_only: Vec<DiscoveredEntry> = visible
+                .into_iter()
+                .filter(|(_, _, depth, _)| *depth == 1)
+                .collect();
+            refuse_zero_byte_footer(footer_file(&root_only))?;
+        }
+        return Ok(None);
     }
     refuse_conflicting_directory_structures(&table_url, &visible)?;
     let footer = footer_file(&visible).cloned();
@@ -552,7 +670,9 @@ pub(crate) async fn read_parquet_discovered(
             &dir_by_list,
         )));
     }
-    refuse_zero_byte_footer(footer.as_ref())?;
+    if parquet {
+        refuse_zero_byte_footer(footer.as_ref())?;
+    }
     let canonical_names: Vec<String> = seen_norm
         .first()
         .and_then(|norm| display_by_norm.get(norm))
@@ -581,16 +701,22 @@ pub(crate) async fn read_parquet_discovered(
     if kept_metas.is_empty() {
         kept_metas.extend(footer);
     }
-    let listing_options = ParquetReadOptions::default()
-        .to_listing_options(&context.copied_config(), context.copied_table_options());
-    let format: Arc<dyn FileFormat> =
-        Arc::new(FloatBoundsInexactFormat::new(listing_options.format));
-    let inferred_file_schema = format
-        .infer_schema(&context.state(), &store, &kept_metas)
-        .await
-        .map_err(engine_err)?;
-    let relaxed_file_schema = relax_schema_to_nullable(inferred_file_schema.as_ref());
-    let sparked_file_schema = promote_parquet_null_types(&relaxed_file_schema);
+    let sparked_file_schema: SchemaRef = match spec.file_schema {
+        Some(schema) => schema,
+        None => {
+            let inferred = spec
+                .format
+                .infer_schema(&context.state(), &store, &kept_metas)
+                .await
+                .map_err(engine_err)?;
+            if parquet {
+                let relaxed = relax_schema_to_nullable(inferred.as_ref());
+                Arc::new(promote_parquet_null_types(&relaxed))
+            } else {
+                inferred
+            }
+        }
+    };
     let mut scan_file_fields: Vec<Field> = Vec::new();
     let mut final_order: Vec<String> = Vec::new();
     let mut placed_parts: Vec<bool> = vec![false; partition_fields.len()];
@@ -600,6 +726,9 @@ pub(crate) async fn read_parquet_discovered(
             .enumerate()
             .find(|(_, part)| names_match(field.name(), part.name(), case_sensitive))
         {
+            if spec.kind == DiscoveredKind::Csv {
+                return Ok(None);
+            }
             if !placed_parts[part_index] {
                 final_order.push(part_field.name().clone());
                 placed_parts[part_index] = true;
@@ -651,16 +780,16 @@ pub(crate) async fn read_parquet_discovered(
         partition_fields,
         table_schema: provider_schema,
         files: partitioned_files,
-        format,
-        target_partitions: listing_options.target_partitions,
+        format: spec.format,
+        target_partitions: spec.target_partitions,
     });
     let frame = context.read_table(provider).map_err(engine_err)?;
     if final_order == provider_names {
-        return Ok(frame);
+        return Ok(Some(frame));
     }
     let projection: Vec<Expr> = final_order
         .into_iter()
         .map(|name| Expr::Column(Column::new_unqualified(name)))
         .collect();
-    frame.select(projection).map_err(engine_err)
+    frame.select(projection).map(Some).map_err(engine_err)
 }
