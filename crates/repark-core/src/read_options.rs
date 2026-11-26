@@ -9,9 +9,8 @@ use repark_common::{Error, Result};
 
 use crate::engine_err;
 use crate::session::ReparkSession;
-use crate::spark_nullable::partition::{
-    DiscoveredKind, DiscoveryFormat, RootFileOpens, partition_column_names,
-};
+use crate::spark_nullable::partition::RootFileOpens as Opens;
+use crate::spark_nullable::partition::{DiscoveredKind, DiscoveryFormat, partition_column_names};
 
 /// Build [`CsvReadOptions`] from a lowercased Spark option map.
 /// # Errors
@@ -232,10 +231,8 @@ pub(crate) async fn read_csv_path(
     let discover = match text_scan {
         _ if options.contains_key("nullvalue") => None,
         Some(CsvTextScan::Positions) => None,
-        Some(CsvTextScan::Header { case_sensitive }) => {
-            Some((case_sensitive, RootFileOpens::Largest))
-        }
-        None => Some((false, RootFileOpens::All)),
+        Some(CsvTextScan::Header { case_sensitive }) => Some((case_sensitive, Opens::Largest)),
+        None => Some((false, Opens::All)),
     };
     let utf8_schema = if let Some(scan) = text_scan {
         let null_value = options.get("nullvalue").map(String::as_str);
@@ -248,13 +245,12 @@ pub(crate) async fn read_csv_path(
     if let Some(ref schema) = utf8_schema {
         csv_options = csv_options.schema(schema);
     }
-    let spark_names = text_scan.is_some() && !csv_options.has_header;
     let frame = read_csv_frame(
         session,
         &resolved,
         csv_options.clone(),
         discover,
-        spark_names,
+        text_scan.is_some() && !csv_options.has_header,
     )
     .await?;
     let frame = if utf8_schema.is_some() {
@@ -284,7 +280,7 @@ async fn read_csv_frame(
     session: &ReparkSession,
     resolved: &str,
     csv_options: CsvReadOptions<'_>,
-    discover: Option<(bool, RootFileOpens)>,
+    discover: Option<(bool, Opens)>,
     spark_names: bool,
 ) -> Result<DataFrame> {
     let context = session.context();
@@ -341,11 +337,8 @@ impl ReparkSession {
         let resolved = crate::object_store_s3::resolve_s3_prefix_for_read(context, path).await?;
         let listing = json_options
             .to_listing_options(&context.copied_config(), context.copied_table_options());
-        let opens = if options.contains_key(JSON_USER_SCHEMA_OPTION) {
-            RootFileOpens::Never
-        } else {
-            RootFileOpens::All
-        };
+        let user = options.contains_key("user_schema");
+        let opens = if user { Opens::Never } else { Opens::All };
         let spec = DiscoveryFormat::new(DiscoveredKind::Json, listing, None, opens);
         let frame = match self
             .read_partitioned(&resolved, spec, case_sensitive)
@@ -363,7 +356,6 @@ impl ReparkSession {
 }
 
 pub(crate) const CSV_TEXT_SCAN_OPTION: &str = "text_scan";
-pub(crate) const JSON_USER_SCHEMA_OPTION: &str = "user_schema";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum CsvTextScan {
