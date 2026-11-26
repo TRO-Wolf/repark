@@ -1,0 +1,7658 @@
+[
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/one_level/read/ansi=true",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     1
+    ],
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/one_level/where/ansi=true",
+   "kind": "target",
+   "path": "one_level",
+   "query": "where"
+  },
+  "expected": {
+   "rows": [
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/one_level/roundtrip/ansi=true",
+   "kind": "target",
+   "path": "one_level",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     1
+    ],
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/two_level/read/ansi=true",
+   "kind": "target",
+   "path": "two_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     2024,
+     1
+    ],
+    [
+     "2",
+     "b",
+     2024,
+     2
+    ],
+    [
+     "3",
+     "c",
+     2025,
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "year",
+     "int"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/two_level/where/ansi=true",
+   "kind": "target",
+   "path": "two_level",
+   "query": "where"
+  },
+  "expected": {
+   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/two_level/roundtrip/ansi=true",
+   "kind": "target",
+   "path": "two_level",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     2024,
+     1
+    ],
+    [
+     "2",
+     "b",
+     2024,
+     2
+    ],
+    [
+     "3",
+     "c",
+     2025,
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "year",
+     "int"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/hive_default/read/ansi=true",
+   "kind": "target",
+   "path": "hive_default",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     null
+    ],
+    [
+     "2",
+     "b",
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/hive_default/where/ansi=true",
+   "kind": "target",
+   "path": "hive_default",
+   "query": "where"
+  },
+  "expected": {
+   "rows": [],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/hive_default/roundtrip/ansi=true",
+   "kind": "target",
+   "path": "hive_default",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     null
+    ],
+    [
+     "2",
+     "b",
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/dates/read/ansi=true",
+   "kind": "target",
+   "path": "dates",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     "2024-01-02"
+    ],
+    [
+     "2",
+     "b",
+     "2024-07-15"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "date"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/dates/where/ansi=true",
+   "kind": "target",
+   "path": "dates",
+   "query": "where"
+  },
+  "expected": {
+   "error": "DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES"
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/dates/roundtrip/ansi=true",
+   "kind": "target",
+   "path": "dates",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     "2024-01-02"
+    ],
+    [
+     "2",
+     "b",
+     "2024-07-15"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "date"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/strings/read/ansi=true",
+   "kind": "target",
+   "path": "strings",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     "alpha"
+    ],
+    [
+     "2",
+     "b",
+     "beta"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/strings/where/ansi=true",
+   "kind": "target",
+   "path": "strings",
+   "query": "where"
+  },
+  "expected": {
+   "error": "CAST_INVALID_INPUT"
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/strings/roundtrip/ansi=true",
+   "kind": "target",
+   "path": "strings",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     "alpha"
+    ],
+    [
+     "2",
+     "b",
+     "beta"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/hidden/read/ansi=true",
+   "kind": "target",
+   "path": "hidden",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     1
+    ],
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/hidden/where/ansi=true",
+   "kind": "target",
+   "path": "hidden",
+   "query": "where"
+  },
+  "expected": {
+   "rows": [
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/hidden/roundtrip/ansi=true",
+   "kind": "target",
+   "path": "hidden",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     1
+    ],
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/two_level/year=2024/read/ansi=true",
+   "kind": "target",
+   "path": "two_level/year=2024",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/two_level/year=2024/where/ansi=true",
+   "kind": "target",
+   "path": "two_level/year=2024",
+   "query": "where"
+  },
+  "expected": {
+   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/two_level/year=2024/roundtrip/ansi=true",
+   "kind": "target",
+   "path": "two_level/year=2024",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "door": "load",
+   "fmt": "csvh",
+   "id": "target/csvh/load/one_level/read/ansi=true",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     1
+    ],
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/conflict/read/ansi=true",
+   "kind": "target",
+   "path": "conflict",
+   "query": "read"
+  },
+  "expected": {
+   "error": "CONFLICTING_PARTITION_COLUMN_NAMES"
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/zero/files/ansi=true",
+   "kind": "target",
+   "path": "zero",
+   "query": "files"
+  },
+  "expected": {
+   "files": [
+    "p=1/part-00000.csv",
+    "p=2/part-00001.csv",
+    "p=3/empty.csv"
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "target/csvh/read/hidden/files/ansi=true",
+   "kind": "target",
+   "path": "hidden",
+   "query": "files"
+  },
+  "expected": {
+   "files": [
+    "p=1/part-00000.csv",
+    "p=2/part-00001.csv"
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "conf": {
+    "session": {
+     "spark.sql.sources.partitionColumnTypeInference.enabled": "false"
+    }
+   },
+   "fmt": "csvh",
+   "id": "target/csvh/read/one_level/read/ansi=true/enabled=false",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     "1"
+    ],
+    [
+     "2",
+     "b",
+     "1"
+    ],
+    [
+     "3",
+     "c",
+     "2"
+    ],
+    [
+     "4",
+     "d",
+     "2"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "conf": {
+    "session": {
+     "spark.sql.caseSensitive": "true"
+    }
+   },
+   "fmt": "csvh",
+   "id": "target/csvh/read/mixed_case/read/ansi=true/caseSensitive=true",
+   "kind": "target",
+   "path": "mixed_case",
+   "query": "read"
+  },
+  "expected": {
+   "error": "CONFLICTING_PARTITION_COLUMN_NAMES"
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/flat/read/ansi=true",
+   "kind": "protected",
+   "path": "flat",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ],
+    [
+     "3",
+     "c"
+    ],
+    [
+     "4",
+     "d"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/flat/count/ansi=true",
+   "kind": "protected",
+   "path": "flat",
+   "query": "count"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/flat/roundtrip/ansi=true",
+   "kind": "protected",
+   "path": "flat",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ],
+    [
+     "3",
+     "c"
+    ],
+    [
+     "4",
+     "d"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/one_level/p=1/read/ansi=true",
+   "kind": "protected",
+   "path": "one_level/p=1",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/one_level/p=1/count/ansi=true",
+   "kind": "protected",
+   "path": "one_level/p=1",
+   "query": "count"
+  },
+  "expected": {
+   "count": 2
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/one_level/p=1/roundtrip/ansi=true",
+   "kind": "protected",
+   "path": "one_level/p=1",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/eq_root/tag=foo/read/ansi=true",
+   "kind": "protected",
+   "path": "eq_root/tag=foo",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/eq_root/tag=foo/count/ansi=true",
+   "kind": "protected",
+   "path": "eq_root/tag=foo",
+   "query": "count"
+  },
+  "expected": {
+   "count": 2
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/eq_root/tag=foo/roundtrip/ansi=true",
+   "kind": "protected",
+   "path": "eq_root/tag=foo",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "door": "load",
+   "fmt": "csvh",
+   "id": "protected/csvh/load/flat/read/ansi=true",
+   "kind": "protected",
+   "path": "flat",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ],
+    [
+     "3",
+     "c"
+    ],
+    [
+     "4",
+     "d"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/one_level/count/ansi=true",
+   "kind": "protected",
+   "path": "one_level",
+   "query": "count"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/one_level/read/ansi=true",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     1
+    ],
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/one_level/where/ansi=true",
+   "kind": "target",
+   "path": "one_level",
+   "query": "where"
+  },
+  "expected": {
+   "rows": [
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/one_level/roundtrip/ansi=true",
+   "kind": "target",
+   "path": "one_level",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     1
+    ],
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/two_level/read/ansi=true",
+   "kind": "target",
+   "path": "two_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     2024,
+     1
+    ],
+    [
+     "2",
+     "b",
+     2024,
+     2
+    ],
+    [
+     "3",
+     "c",
+     2025,
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "year",
+     "int"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/two_level/where/ansi=true",
+   "kind": "target",
+   "path": "two_level",
+   "query": "where"
+  },
+  "expected": {
+   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/two_level/roundtrip/ansi=true",
+   "kind": "target",
+   "path": "two_level",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     2024,
+     1
+    ],
+    [
+     "2",
+     "b",
+     2024,
+     2
+    ],
+    [
+     "3",
+     "c",
+     2025,
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "year",
+     "int"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/hive_default/read/ansi=true",
+   "kind": "target",
+   "path": "hive_default",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     null
+    ],
+    [
+     "2",
+     "b",
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/hive_default/where/ansi=true",
+   "kind": "target",
+   "path": "hive_default",
+   "query": "where"
+  },
+  "expected": {
+   "rows": [],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/hive_default/roundtrip/ansi=true",
+   "kind": "target",
+   "path": "hive_default",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     null
+    ],
+    [
+     "2",
+     "b",
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/dates/read/ansi=true",
+   "kind": "target",
+   "path": "dates",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     "2024-01-02"
+    ],
+    [
+     "2",
+     "b",
+     "2024-07-15"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "date"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/dates/where/ansi=true",
+   "kind": "target",
+   "path": "dates",
+   "query": "where"
+  },
+  "expected": {
+   "error": "DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES"
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/dates/roundtrip/ansi=true",
+   "kind": "target",
+   "path": "dates",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     "2024-01-02"
+    ],
+    [
+     "2",
+     "b",
+     "2024-07-15"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "date"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/strings/read/ansi=true",
+   "kind": "target",
+   "path": "strings",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     "alpha"
+    ],
+    [
+     "2",
+     "b",
+     "beta"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/strings/where/ansi=true",
+   "kind": "target",
+   "path": "strings",
+   "query": "where"
+  },
+  "expected": {
+   "error": "CAST_INVALID_INPUT"
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/strings/roundtrip/ansi=true",
+   "kind": "target",
+   "path": "strings",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     "alpha"
+    ],
+    [
+     "2",
+     "b",
+     "beta"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/hidden/read/ansi=true",
+   "kind": "target",
+   "path": "hidden",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     1
+    ],
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/hidden/where/ansi=true",
+   "kind": "target",
+   "path": "hidden",
+   "query": "where"
+  },
+  "expected": {
+   "rows": [
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/hidden/roundtrip/ansi=true",
+   "kind": "target",
+   "path": "hidden",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     1
+    ],
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/two_level/year=2024/read/ansi=true",
+   "kind": "target",
+   "path": "two_level/year=2024",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/two_level/year=2024/where/ansi=true",
+   "kind": "target",
+   "path": "two_level/year=2024",
+   "query": "where"
+  },
+  "expected": {
+   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/two_level/year=2024/roundtrip/ansi=true",
+   "kind": "target",
+   "path": "two_level/year=2024",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "door": "load",
+   "fmt": "csvn",
+   "id": "target/csvn/load/one_level/read/ansi=true",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     1
+    ],
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/conflict/read/ansi=true",
+   "kind": "target",
+   "path": "conflict",
+   "query": "read"
+  },
+  "expected": {
+   "error": "CONFLICTING_PARTITION_COLUMN_NAMES"
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/zero/files/ansi=true",
+   "kind": "target",
+   "path": "zero",
+   "query": "files"
+  },
+  "expected": {
+   "files": [
+    "p=1/part-00000.csv",
+    "p=2/part-00001.csv",
+    "p=3/empty.csv"
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "target/csvn/read/hidden/files/ansi=true",
+   "kind": "target",
+   "path": "hidden",
+   "query": "files"
+  },
+  "expected": {
+   "files": [
+    "p=1/part-00000.csv",
+    "p=2/part-00001.csv"
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "conf": {
+    "session": {
+     "spark.sql.sources.partitionColumnTypeInference.enabled": "false"
+    }
+   },
+   "fmt": "csvn",
+   "id": "target/csvn/read/one_level/read/ansi=true/enabled=false",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     "1"
+    ],
+    [
+     "2",
+     "b",
+     "1"
+    ],
+    [
+     "3",
+     "c",
+     "2"
+    ],
+    [
+     "4",
+     "d",
+     "2"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "conf": {
+    "session": {
+     "spark.sql.caseSensitive": "true"
+    }
+   },
+   "fmt": "csvn",
+   "id": "target/csvn/read/mixed_case/read/ansi=true/caseSensitive=true",
+   "kind": "target",
+   "path": "mixed_case",
+   "query": "read"
+  },
+  "expected": {
+   "error": "CONFLICTING_PARTITION_COLUMN_NAMES"
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "protected/csvn/read/flat/read/ansi=true",
+   "kind": "protected",
+   "path": "flat",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ],
+    [
+     "3",
+     "c"
+    ],
+    [
+     "4",
+     "d"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "protected/csvn/read/flat/count/ansi=true",
+   "kind": "protected",
+   "path": "flat",
+   "query": "count"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "protected/csvn/read/flat/roundtrip/ansi=true",
+   "kind": "protected",
+   "path": "flat",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ],
+    [
+     "3",
+     "c"
+    ],
+    [
+     "4",
+     "d"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "protected/csvn/read/one_level/p=1/read/ansi=true",
+   "kind": "protected",
+   "path": "one_level/p=1",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "protected/csvn/read/one_level/p=1/count/ansi=true",
+   "kind": "protected",
+   "path": "one_level/p=1",
+   "query": "count"
+  },
+  "expected": {
+   "count": 2
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "protected/csvn/read/one_level/p=1/roundtrip/ansi=true",
+   "kind": "protected",
+   "path": "one_level/p=1",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "protected/csvn/read/eq_root/tag=foo/read/ansi=true",
+   "kind": "protected",
+   "path": "eq_root/tag=foo",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "protected/csvn/read/eq_root/tag=foo/count/ansi=true",
+   "kind": "protected",
+   "path": "eq_root/tag=foo",
+   "query": "count"
+  },
+  "expected": {
+   "count": 2
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "protected/csvn/read/eq_root/tag=foo/roundtrip/ansi=true",
+   "kind": "protected",
+   "path": "eq_root/tag=foo",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "door": "load",
+   "fmt": "csvn",
+   "id": "protected/csvn/load/flat/read/ansi=true",
+   "kind": "protected",
+   "path": "flat",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ],
+    [
+     "3",
+     "c"
+    ],
+    [
+     "4",
+     "d"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "csvn",
+   "id": "protected/csvn/read/one_level/count/ansi=true",
+   "kind": "protected",
+   "path": "one_level",
+   "query": "count"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/one_level/read/ansi=true",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     1
+    ],
+    [
+     2,
+     "b",
+     1
+    ],
+    [
+     3,
+     "c",
+     2
+    ],
+    [
+     4,
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/one_level/where/ansi=true",
+   "kind": "target",
+   "path": "one_level",
+   "query": "where"
+  },
+  "expected": {
+   "rows": [
+    [
+     3,
+     "c",
+     2
+    ],
+    [
+     4,
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/one_level/roundtrip/ansi=true",
+   "kind": "target",
+   "path": "one_level",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     1
+    ],
+    [
+     2,
+     "b",
+     1
+    ],
+    [
+     3,
+     "c",
+     2
+    ],
+    [
+     4,
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/two_level/read/ansi=true",
+   "kind": "target",
+   "path": "two_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     2024,
+     1
+    ],
+    [
+     2,
+     "b",
+     2024,
+     2
+    ],
+    [
+     3,
+     "c",
+     2025,
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "year",
+     "int"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/two_level/where/ansi=true",
+   "kind": "target",
+   "path": "two_level",
+   "query": "where"
+  },
+  "expected": {
+   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/two_level/roundtrip/ansi=true",
+   "kind": "target",
+   "path": "two_level",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     2024,
+     1
+    ],
+    [
+     2,
+     "b",
+     2024,
+     2
+    ],
+    [
+     3,
+     "c",
+     2025,
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "year",
+     "int"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/hive_default/read/ansi=true",
+   "kind": "target",
+   "path": "hive_default",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     null
+    ],
+    [
+     2,
+     "b",
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/hive_default/where/ansi=true",
+   "kind": "target",
+   "path": "hive_default",
+   "query": "where"
+  },
+  "expected": {
+   "rows": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/hive_default/roundtrip/ansi=true",
+   "kind": "target",
+   "path": "hive_default",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     null
+    ],
+    [
+     2,
+     "b",
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/dates/read/ansi=true",
+   "kind": "target",
+   "path": "dates",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     "2024-01-02"
+    ],
+    [
+     2,
+     "b",
+     "2024-07-15"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "date"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/dates/where/ansi=true",
+   "kind": "target",
+   "path": "dates",
+   "query": "where"
+  },
+  "expected": {
+   "error": "DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES"
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/dates/roundtrip/ansi=true",
+   "kind": "target",
+   "path": "dates",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     "2024-01-02"
+    ],
+    [
+     2,
+     "b",
+     "2024-07-15"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "date"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/strings/read/ansi=true",
+   "kind": "target",
+   "path": "strings",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     "alpha"
+    ],
+    [
+     2,
+     "b",
+     "beta"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/strings/where/ansi=true",
+   "kind": "target",
+   "path": "strings",
+   "query": "where"
+  },
+  "expected": {
+   "error": "CAST_INVALID_INPUT"
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/strings/roundtrip/ansi=true",
+   "kind": "target",
+   "path": "strings",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     "alpha"
+    ],
+    [
+     2,
+     "b",
+     "beta"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/hidden/read/ansi=true",
+   "kind": "target",
+   "path": "hidden",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     1
+    ],
+    [
+     2,
+     "b",
+     1
+    ],
+    [
+     3,
+     "c",
+     2
+    ],
+    [
+     4,
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/hidden/where/ansi=true",
+   "kind": "target",
+   "path": "hidden",
+   "query": "where"
+  },
+  "expected": {
+   "rows": [
+    [
+     3,
+     "c",
+     2
+    ],
+    [
+     4,
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/hidden/roundtrip/ansi=true",
+   "kind": "target",
+   "path": "hidden",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     1
+    ],
+    [
+     2,
+     "b",
+     1
+    ],
+    [
+     3,
+     "c",
+     2
+    ],
+    [
+     4,
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/two_level/year=2024/read/ansi=true",
+   "kind": "target",
+   "path": "two_level/year=2024",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     1
+    ],
+    [
+     2,
+     "b",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/two_level/year=2024/where/ansi=true",
+   "kind": "target",
+   "path": "two_level/year=2024",
+   "query": "where"
+  },
+  "expected": {
+   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/two_level/year=2024/roundtrip/ansi=true",
+   "kind": "target",
+   "path": "two_level/year=2024",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     1
+    ],
+    [
+     2,
+     "b",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "door": "load",
+   "fmt": "json",
+   "id": "target/json/load/one_level/read/ansi=true",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     1
+    ],
+    [
+     2,
+     "b",
+     1
+    ],
+    [
+     3,
+     "c",
+     2
+    ],
+    [
+     4,
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/conflict/read/ansi=true",
+   "kind": "target",
+   "path": "conflict",
+   "query": "read"
+  },
+  "expected": {
+   "error": "CONFLICTING_PARTITION_COLUMN_NAMES"
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/zero/files/ansi=true",
+   "kind": "target",
+   "path": "zero",
+   "query": "files"
+  },
+  "expected": {
+   "files": [
+    "p=1/part-00000.json",
+    "p=2/part-00001.json",
+    "p=3/empty.json"
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "target/json/read/hidden/files/ansi=true",
+   "kind": "target",
+   "path": "hidden",
+   "query": "files"
+  },
+  "expected": {
+   "files": [
+    "p=1/part-00000.json",
+    "p=2/part-00001.json"
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "conf": {
+    "session": {
+     "spark.sql.sources.partitionColumnTypeInference.enabled": "false"
+    }
+   },
+   "fmt": "json",
+   "id": "target/json/read/one_level/read/ansi=true/enabled=false",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     "1"
+    ],
+    [
+     2,
+     "b",
+     "1"
+    ],
+    [
+     3,
+     "c",
+     "2"
+    ],
+    [
+     4,
+     "d",
+     "2"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "conf": {
+    "session": {
+     "spark.sql.caseSensitive": "true"
+    }
+   },
+   "fmt": "json",
+   "id": "target/json/read/mixed_case/read/ansi=true/caseSensitive=true",
+   "kind": "target",
+   "path": "mixed_case",
+   "query": "read"
+  },
+  "expected": {
+   "error": "CONFLICTING_PARTITION_COLUMN_NAMES"
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "protected/json/read/flat/read/ansi=true",
+   "kind": "protected",
+   "path": "flat",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     4,
+     "d"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "protected/json/read/flat/count/ansi=true",
+   "kind": "protected",
+   "path": "flat",
+   "query": "count"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "protected/json/read/flat/roundtrip/ansi=true",
+   "kind": "protected",
+   "path": "flat",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     4,
+     "d"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "protected/json/read/one_level/p=1/read/ansi=true",
+   "kind": "protected",
+   "path": "one_level/p=1",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "protected/json/read/one_level/p=1/count/ansi=true",
+   "kind": "protected",
+   "path": "one_level/p=1",
+   "query": "count"
+  },
+  "expected": {
+   "count": 2
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "protected/json/read/one_level/p=1/roundtrip/ansi=true",
+   "kind": "protected",
+   "path": "one_level/p=1",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "protected/json/read/eq_root/tag=foo/read/ansi=true",
+   "kind": "protected",
+   "path": "eq_root/tag=foo",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "protected/json/read/eq_root/tag=foo/count/ansi=true",
+   "kind": "protected",
+   "path": "eq_root/tag=foo",
+   "query": "count"
+  },
+  "expected": {
+   "count": 2
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "protected/json/read/eq_root/tag=foo/roundtrip/ansi=true",
+   "kind": "protected",
+   "path": "eq_root/tag=foo",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "door": "load",
+   "fmt": "json",
+   "id": "protected/json/load/flat/read/ansi=true",
+   "kind": "protected",
+   "path": "flat",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     4,
+     "d"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "fmt": "json",
+   "id": "protected/json/read/one_level/count/ansi=true",
+   "kind": "protected",
+   "path": "one_level",
+   "query": "count"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "conf": {
+    "schema": "p INT, id BIGINT, s STRING"
+   },
+   "fmt": "json",
+   "id": "target/json/read/one_level/read/ansi=true/schema=p_INT,_id_BIGINT,_s_STRING",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     1
+    ],
+    [
+     2,
+     "b",
+     1
+    ],
+    [
+     3,
+     "c",
+     2
+    ],
+    [
+     4,
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "conf": {
+    "schema": "id BIGINT, s STRING"
+   },
+   "fmt": "json",
+   "id": "target/json/read/one_level/read/ansi=true/schema=id_BIGINT,_s_STRING",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     1
+    ],
+    [
+     2,
+     "b",
+     1
+    ],
+    [
+     3,
+     "c",
+     2
+    ],
+    [
+     4,
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "true",
+   "conf": {
+    "schema": "id BIGINT, s STRING, p STRING"
+   },
+   "fmt": "json",
+   "id": "target/json/read/one_level/read/ansi=true/schema=id_BIGINT,_s_STRING,_p_STRING",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     "1"
+    ],
+    [
+     2,
+     "b",
+     "1"
+    ],
+    [
+     3,
+     "c",
+     "2"
+    ],
+    [
+     4,
+     "d",
+     "2"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/one_level/read/ansi=false",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     1
+    ],
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/one_level/where/ansi=false",
+   "kind": "target",
+   "path": "one_level",
+   "query": "where"
+  },
+  "expected": {
+   "rows": [
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/one_level/roundtrip/ansi=false",
+   "kind": "target",
+   "path": "one_level",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     1
+    ],
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/two_level/read/ansi=false",
+   "kind": "target",
+   "path": "two_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     2024,
+     1
+    ],
+    [
+     "2",
+     "b",
+     2024,
+     2
+    ],
+    [
+     "3",
+     "c",
+     2025,
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "year",
+     "int"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/two_level/where/ansi=false",
+   "kind": "target",
+   "path": "two_level",
+   "query": "where"
+  },
+  "expected": {
+   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/two_level/roundtrip/ansi=false",
+   "kind": "target",
+   "path": "two_level",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     2024,
+     1
+    ],
+    [
+     "2",
+     "b",
+     2024,
+     2
+    ],
+    [
+     "3",
+     "c",
+     2025,
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "year",
+     "int"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/hive_default/read/ansi=false",
+   "kind": "target",
+   "path": "hive_default",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     null
+    ],
+    [
+     "2",
+     "b",
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/hive_default/where/ansi=false",
+   "kind": "target",
+   "path": "hive_default",
+   "query": "where"
+  },
+  "expected": {
+   "rows": [],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/hive_default/roundtrip/ansi=false",
+   "kind": "target",
+   "path": "hive_default",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     null
+    ],
+    [
+     "2",
+     "b",
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/dates/read/ansi=false",
+   "kind": "target",
+   "path": "dates",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     "2024-01-02"
+    ],
+    [
+     "2",
+     "b",
+     "2024-07-15"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "date"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/dates/where/ansi=false",
+   "kind": "target",
+   "path": "dates",
+   "query": "where"
+  },
+  "expected": {
+   "error": "DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES"
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/dates/roundtrip/ansi=false",
+   "kind": "target",
+   "path": "dates",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     "2024-01-02"
+    ],
+    [
+     "2",
+     "b",
+     "2024-07-15"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "date"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/strings/read/ansi=false",
+   "kind": "target",
+   "path": "strings",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     "alpha"
+    ],
+    [
+     "2",
+     "b",
+     "beta"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/strings/where/ansi=false",
+   "kind": "target",
+   "path": "strings",
+   "query": "where"
+  },
+  "expected": {
+   "rows": [],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/strings/roundtrip/ansi=false",
+   "kind": "target",
+   "path": "strings",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     "alpha"
+    ],
+    [
+     "2",
+     "b",
+     "beta"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/hidden/read/ansi=false",
+   "kind": "target",
+   "path": "hidden",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     1
+    ],
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/hidden/where/ansi=false",
+   "kind": "target",
+   "path": "hidden",
+   "query": "where"
+  },
+  "expected": {
+   "rows": [
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/hidden/roundtrip/ansi=false",
+   "kind": "target",
+   "path": "hidden",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     1
+    ],
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/two_level/year=2024/read/ansi=false",
+   "kind": "target",
+   "path": "two_level/year=2024",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/two_level/year=2024/where/ansi=false",
+   "kind": "target",
+   "path": "two_level/year=2024",
+   "query": "where"
+  },
+  "expected": {
+   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/two_level/year=2024/roundtrip/ansi=false",
+   "kind": "target",
+   "path": "two_level/year=2024",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "door": "load",
+   "fmt": "csvh",
+   "id": "target/csvh/load/one_level/read/ansi=false",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     1
+    ],
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/conflict/read/ansi=false",
+   "kind": "target",
+   "path": "conflict",
+   "query": "read"
+  },
+  "expected": {
+   "error": "CONFLICTING_PARTITION_COLUMN_NAMES"
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/zero/files/ansi=false",
+   "kind": "target",
+   "path": "zero",
+   "query": "files"
+  },
+  "expected": {
+   "files": [
+    "p=1/part-00000.csv",
+    "p=2/part-00001.csv",
+    "p=3/empty.csv"
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "target/csvh/read/hidden/files/ansi=false",
+   "kind": "target",
+   "path": "hidden",
+   "query": "files"
+  },
+  "expected": {
+   "files": [
+    "p=1/part-00000.csv",
+    "p=2/part-00001.csv"
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {
+    "session": {
+     "spark.sql.sources.partitionColumnTypeInference.enabled": "false"
+    }
+   },
+   "fmt": "csvh",
+   "id": "target/csvh/read/one_level/read/ansi=false/enabled=false",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     "1"
+    ],
+    [
+     "2",
+     "b",
+     "1"
+    ],
+    [
+     "3",
+     "c",
+     "2"
+    ],
+    [
+     "4",
+     "d",
+     "2"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {
+    "session": {
+     "spark.sql.caseSensitive": "true"
+    }
+   },
+   "fmt": "csvh",
+   "id": "target/csvh/read/mixed_case/read/ansi=false/caseSensitive=true",
+   "kind": "target",
+   "path": "mixed_case",
+   "query": "read"
+  },
+  "expected": {
+   "error": "CONFLICTING_PARTITION_COLUMN_NAMES"
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/flat/read/ansi=false",
+   "kind": "protected",
+   "path": "flat",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ],
+    [
+     "3",
+     "c"
+    ],
+    [
+     "4",
+     "d"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/flat/count/ansi=false",
+   "kind": "protected",
+   "path": "flat",
+   "query": "count"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/flat/roundtrip/ansi=false",
+   "kind": "protected",
+   "path": "flat",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ],
+    [
+     "3",
+     "c"
+    ],
+    [
+     "4",
+     "d"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/one_level/p=1/read/ansi=false",
+   "kind": "protected",
+   "path": "one_level/p=1",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/one_level/p=1/count/ansi=false",
+   "kind": "protected",
+   "path": "one_level/p=1",
+   "query": "count"
+  },
+  "expected": {
+   "count": 2
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/one_level/p=1/roundtrip/ansi=false",
+   "kind": "protected",
+   "path": "one_level/p=1",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/eq_root/tag=foo/read/ansi=false",
+   "kind": "protected",
+   "path": "eq_root/tag=foo",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/eq_root/tag=foo/count/ansi=false",
+   "kind": "protected",
+   "path": "eq_root/tag=foo",
+   "query": "count"
+  },
+  "expected": {
+   "count": 2
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/eq_root/tag=foo/roundtrip/ansi=false",
+   "kind": "protected",
+   "path": "eq_root/tag=foo",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "door": "load",
+   "fmt": "csvh",
+   "id": "protected/csvh/load/flat/read/ansi=false",
+   "kind": "protected",
+   "path": "flat",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ],
+    [
+     "3",
+     "c"
+    ],
+    [
+     "4",
+     "d"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "string"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvh",
+   "id": "protected/csvh/read/one_level/count/ansi=false",
+   "kind": "protected",
+   "path": "one_level",
+   "query": "count"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/one_level/read/ansi=false",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     1
+    ],
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/one_level/where/ansi=false",
+   "kind": "target",
+   "path": "one_level",
+   "query": "where"
+  },
+  "expected": {
+   "rows": [
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/one_level/roundtrip/ansi=false",
+   "kind": "target",
+   "path": "one_level",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     1
+    ],
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/two_level/read/ansi=false",
+   "kind": "target",
+   "path": "two_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     2024,
+     1
+    ],
+    [
+     "2",
+     "b",
+     2024,
+     2
+    ],
+    [
+     "3",
+     "c",
+     2025,
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "year",
+     "int"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/two_level/where/ansi=false",
+   "kind": "target",
+   "path": "two_level",
+   "query": "where"
+  },
+  "expected": {
+   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/two_level/roundtrip/ansi=false",
+   "kind": "target",
+   "path": "two_level",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     2024,
+     1
+    ],
+    [
+     "2",
+     "b",
+     2024,
+     2
+    ],
+    [
+     "3",
+     "c",
+     2025,
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "year",
+     "int"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/hive_default/read/ansi=false",
+   "kind": "target",
+   "path": "hive_default",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     null
+    ],
+    [
+     "2",
+     "b",
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/hive_default/where/ansi=false",
+   "kind": "target",
+   "path": "hive_default",
+   "query": "where"
+  },
+  "expected": {
+   "rows": [],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/hive_default/roundtrip/ansi=false",
+   "kind": "target",
+   "path": "hive_default",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     null
+    ],
+    [
+     "2",
+     "b",
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/dates/read/ansi=false",
+   "kind": "target",
+   "path": "dates",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     "2024-01-02"
+    ],
+    [
+     "2",
+     "b",
+     "2024-07-15"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "date"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/dates/where/ansi=false",
+   "kind": "target",
+   "path": "dates",
+   "query": "where"
+  },
+  "expected": {
+   "error": "DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES"
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/dates/roundtrip/ansi=false",
+   "kind": "target",
+   "path": "dates",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     "2024-01-02"
+    ],
+    [
+     "2",
+     "b",
+     "2024-07-15"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "date"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/strings/read/ansi=false",
+   "kind": "target",
+   "path": "strings",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     "alpha"
+    ],
+    [
+     "2",
+     "b",
+     "beta"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/strings/where/ansi=false",
+   "kind": "target",
+   "path": "strings",
+   "query": "where"
+  },
+  "expected": {
+   "rows": [],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/strings/roundtrip/ansi=false",
+   "kind": "target",
+   "path": "strings",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     "alpha"
+    ],
+    [
+     "2",
+     "b",
+     "beta"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/hidden/read/ansi=false",
+   "kind": "target",
+   "path": "hidden",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     1
+    ],
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/hidden/where/ansi=false",
+   "kind": "target",
+   "path": "hidden",
+   "query": "where"
+  },
+  "expected": {
+   "rows": [
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/hidden/roundtrip/ansi=false",
+   "kind": "target",
+   "path": "hidden",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     1
+    ],
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/two_level/year=2024/read/ansi=false",
+   "kind": "target",
+   "path": "two_level/year=2024",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/two_level/year=2024/where/ansi=false",
+   "kind": "target",
+   "path": "two_level/year=2024",
+   "query": "where"
+  },
+  "expected": {
+   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/two_level/year=2024/roundtrip/ansi=false",
+   "kind": "target",
+   "path": "two_level/year=2024",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "door": "load",
+   "fmt": "csvn",
+   "id": "target/csvn/load/one_level/read/ansi=false",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     1
+    ],
+    [
+     "2",
+     "b",
+     1
+    ],
+    [
+     "3",
+     "c",
+     2
+    ],
+    [
+     "4",
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/conflict/read/ansi=false",
+   "kind": "target",
+   "path": "conflict",
+   "query": "read"
+  },
+  "expected": {
+   "error": "CONFLICTING_PARTITION_COLUMN_NAMES"
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/zero/files/ansi=false",
+   "kind": "target",
+   "path": "zero",
+   "query": "files"
+  },
+  "expected": {
+   "files": [
+    "p=1/part-00000.csv",
+    "p=2/part-00001.csv",
+    "p=3/empty.csv"
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "target/csvn/read/hidden/files/ansi=false",
+   "kind": "target",
+   "path": "hidden",
+   "query": "files"
+  },
+  "expected": {
+   "files": [
+    "p=1/part-00000.csv",
+    "p=2/part-00001.csv"
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {
+    "session": {
+     "spark.sql.sources.partitionColumnTypeInference.enabled": "false"
+    }
+   },
+   "fmt": "csvn",
+   "id": "target/csvn/read/one_level/read/ansi=false/enabled=false",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a",
+     "1"
+    ],
+    [
+     "2",
+     "b",
+     "1"
+    ],
+    [
+     "3",
+     "c",
+     "2"
+    ],
+    [
+     "4",
+     "d",
+     "2"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ],
+    [
+     "p",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {
+    "session": {
+     "spark.sql.caseSensitive": "true"
+    }
+   },
+   "fmt": "csvn",
+   "id": "target/csvn/read/mixed_case/read/ansi=false/caseSensitive=true",
+   "kind": "target",
+   "path": "mixed_case",
+   "query": "read"
+  },
+  "expected": {
+   "error": "CONFLICTING_PARTITION_COLUMN_NAMES"
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "protected/csvn/read/flat/read/ansi=false",
+   "kind": "protected",
+   "path": "flat",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ],
+    [
+     "3",
+     "c"
+    ],
+    [
+     "4",
+     "d"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "protected/csvn/read/flat/count/ansi=false",
+   "kind": "protected",
+   "path": "flat",
+   "query": "count"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "protected/csvn/read/flat/roundtrip/ansi=false",
+   "kind": "protected",
+   "path": "flat",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ],
+    [
+     "3",
+     "c"
+    ],
+    [
+     "4",
+     "d"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "protected/csvn/read/one_level/p=1/read/ansi=false",
+   "kind": "protected",
+   "path": "one_level/p=1",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "protected/csvn/read/one_level/p=1/count/ansi=false",
+   "kind": "protected",
+   "path": "one_level/p=1",
+   "query": "count"
+  },
+  "expected": {
+   "count": 2
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "protected/csvn/read/one_level/p=1/roundtrip/ansi=false",
+   "kind": "protected",
+   "path": "one_level/p=1",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "protected/csvn/read/eq_root/tag=foo/read/ansi=false",
+   "kind": "protected",
+   "path": "eq_root/tag=foo",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "protected/csvn/read/eq_root/tag=foo/count/ansi=false",
+   "kind": "protected",
+   "path": "eq_root/tag=foo",
+   "query": "count"
+  },
+  "expected": {
+   "count": 2
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "protected/csvn/read/eq_root/tag=foo/roundtrip/ansi=false",
+   "kind": "protected",
+   "path": "eq_root/tag=foo",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "door": "load",
+   "fmt": "csvn",
+   "id": "protected/csvn/load/flat/read/ansi=false",
+   "kind": "protected",
+   "path": "flat",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     "1",
+     "a"
+    ],
+    [
+     "2",
+     "b"
+    ],
+    [
+     "3",
+     "c"
+    ],
+    [
+     "4",
+     "d"
+    ]
+   ],
+   "schema": [
+    [
+     "_c0",
+     "string"
+    ],
+    [
+     "_c1",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "csvn",
+   "id": "protected/csvn/read/one_level/count/ansi=false",
+   "kind": "protected",
+   "path": "one_level",
+   "query": "count"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/one_level/read/ansi=false",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     1
+    ],
+    [
+     2,
+     "b",
+     1
+    ],
+    [
+     3,
+     "c",
+     2
+    ],
+    [
+     4,
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/one_level/where/ansi=false",
+   "kind": "target",
+   "path": "one_level",
+   "query": "where"
+  },
+  "expected": {
+   "rows": [
+    [
+     3,
+     "c",
+     2
+    ],
+    [
+     4,
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/one_level/roundtrip/ansi=false",
+   "kind": "target",
+   "path": "one_level",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     1
+    ],
+    [
+     2,
+     "b",
+     1
+    ],
+    [
+     3,
+     "c",
+     2
+    ],
+    [
+     4,
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/two_level/read/ansi=false",
+   "kind": "target",
+   "path": "two_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     2024,
+     1
+    ],
+    [
+     2,
+     "b",
+     2024,
+     2
+    ],
+    [
+     3,
+     "c",
+     2025,
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "year",
+     "int"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/two_level/where/ansi=false",
+   "kind": "target",
+   "path": "two_level",
+   "query": "where"
+  },
+  "expected": {
+   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/two_level/roundtrip/ansi=false",
+   "kind": "target",
+   "path": "two_level",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     2024,
+     1
+    ],
+    [
+     2,
+     "b",
+     2024,
+     2
+    ],
+    [
+     3,
+     "c",
+     2025,
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "year",
+     "int"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/hive_default/read/ansi=false",
+   "kind": "target",
+   "path": "hive_default",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     null
+    ],
+    [
+     2,
+     "b",
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/hive_default/where/ansi=false",
+   "kind": "target",
+   "path": "hive_default",
+   "query": "where"
+  },
+  "expected": {
+   "rows": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/hive_default/roundtrip/ansi=false",
+   "kind": "target",
+   "path": "hive_default",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     null
+    ],
+    [
+     2,
+     "b",
+     1
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/dates/read/ansi=false",
+   "kind": "target",
+   "path": "dates",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     "2024-01-02"
+    ],
+    [
+     2,
+     "b",
+     "2024-07-15"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "date"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/dates/where/ansi=false",
+   "kind": "target",
+   "path": "dates",
+   "query": "where"
+  },
+  "expected": {
+   "error": "DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES"
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/dates/roundtrip/ansi=false",
+   "kind": "target",
+   "path": "dates",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     "2024-01-02"
+    ],
+    [
+     2,
+     "b",
+     "2024-07-15"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "date"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/strings/read/ansi=false",
+   "kind": "target",
+   "path": "strings",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     "alpha"
+    ],
+    [
+     2,
+     "b",
+     "beta"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/strings/where/ansi=false",
+   "kind": "target",
+   "path": "strings",
+   "query": "where"
+  },
+  "expected": {
+   "rows": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/strings/roundtrip/ansi=false",
+   "kind": "target",
+   "path": "strings",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     "alpha"
+    ],
+    [
+     2,
+     "b",
+     "beta"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/hidden/read/ansi=false",
+   "kind": "target",
+   "path": "hidden",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     1
+    ],
+    [
+     2,
+     "b",
+     1
+    ],
+    [
+     3,
+     "c",
+     2
+    ],
+    [
+     4,
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/hidden/where/ansi=false",
+   "kind": "target",
+   "path": "hidden",
+   "query": "where"
+  },
+  "expected": {
+   "rows": [
+    [
+     3,
+     "c",
+     2
+    ],
+    [
+     4,
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/hidden/roundtrip/ansi=false",
+   "kind": "target",
+   "path": "hidden",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     1
+    ],
+    [
+     2,
+     "b",
+     1
+    ],
+    [
+     3,
+     "c",
+     2
+    ],
+    [
+     4,
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/two_level/year=2024/read/ansi=false",
+   "kind": "target",
+   "path": "two_level/year=2024",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     1
+    ],
+    [
+     2,
+     "b",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/two_level/year=2024/where/ansi=false",
+   "kind": "target",
+   "path": "two_level/year=2024",
+   "query": "where"
+  },
+  "expected": {
+   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/two_level/year=2024/roundtrip/ansi=false",
+   "kind": "target",
+   "path": "two_level/year=2024",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     1
+    ],
+    [
+     2,
+     "b",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "month",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "door": "load",
+   "fmt": "json",
+   "id": "target/json/load/one_level/read/ansi=false",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     1
+    ],
+    [
+     2,
+     "b",
+     1
+    ],
+    [
+     3,
+     "c",
+     2
+    ],
+    [
+     4,
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/conflict/read/ansi=false",
+   "kind": "target",
+   "path": "conflict",
+   "query": "read"
+  },
+  "expected": {
+   "error": "CONFLICTING_PARTITION_COLUMN_NAMES"
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/zero/files/ansi=false",
+   "kind": "target",
+   "path": "zero",
+   "query": "files"
+  },
+  "expected": {
+   "files": [
+    "p=1/part-00000.json",
+    "p=2/part-00001.json",
+    "p=3/empty.json"
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "target/json/read/hidden/files/ansi=false",
+   "kind": "target",
+   "path": "hidden",
+   "query": "files"
+  },
+  "expected": {
+   "files": [
+    "p=1/part-00000.json",
+    "p=2/part-00001.json"
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {
+    "session": {
+     "spark.sql.sources.partitionColumnTypeInference.enabled": "false"
+    }
+   },
+   "fmt": "json",
+   "id": "target/json/read/one_level/read/ansi=false/enabled=false",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     "1"
+    ],
+    [
+     2,
+     "b",
+     "1"
+    ],
+    [
+     3,
+     "c",
+     "2"
+    ],
+    [
+     4,
+     "d",
+     "2"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {
+    "session": {
+     "spark.sql.caseSensitive": "true"
+    }
+   },
+   "fmt": "json",
+   "id": "target/json/read/mixed_case/read/ansi=false/caseSensitive=true",
+   "kind": "target",
+   "path": "mixed_case",
+   "query": "read"
+  },
+  "expected": {
+   "error": "CONFLICTING_PARTITION_COLUMN_NAMES"
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "protected/json/read/flat/read/ansi=false",
+   "kind": "protected",
+   "path": "flat",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     4,
+     "d"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "protected/json/read/flat/count/ansi=false",
+   "kind": "protected",
+   "path": "flat",
+   "query": "count"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "protected/json/read/flat/roundtrip/ansi=false",
+   "kind": "protected",
+   "path": "flat",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     4,
+     "d"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "protected/json/read/one_level/p=1/read/ansi=false",
+   "kind": "protected",
+   "path": "one_level/p=1",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "protected/json/read/one_level/p=1/count/ansi=false",
+   "kind": "protected",
+   "path": "one_level/p=1",
+   "query": "count"
+  },
+  "expected": {
+   "count": 2
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "protected/json/read/one_level/p=1/roundtrip/ansi=false",
+   "kind": "protected",
+   "path": "one_level/p=1",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "protected/json/read/eq_root/tag=foo/read/ansi=false",
+   "kind": "protected",
+   "path": "eq_root/tag=foo",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "protected/json/read/eq_root/tag=foo/count/ansi=false",
+   "kind": "protected",
+   "path": "eq_root/tag=foo",
+   "query": "count"
+  },
+  "expected": {
+   "count": 2
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "protected/json/read/eq_root/tag=foo/roundtrip/ansi=false",
+   "kind": "protected",
+   "path": "eq_root/tag=foo",
+   "query": "roundtrip"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "door": "load",
+   "fmt": "json",
+   "id": "protected/json/load/flat/read/ansi=false",
+   "kind": "protected",
+   "path": "flat",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     4,
+     "d"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "fmt": "json",
+   "id": "protected/json/read/one_level/count/ansi=false",
+   "kind": "protected",
+   "path": "one_level",
+   "query": "count"
+  },
+  "expected": {
+   "count": 4
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {
+    "schema": "p INT, id BIGINT, s STRING"
+   },
+   "fmt": "json",
+   "id": "target/json/read/one_level/read/ansi=false/schema=p_INT,_id_BIGINT,_s_STRING",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     1
+    ],
+    [
+     2,
+     "b",
+     1
+    ],
+    [
+     3,
+     "c",
+     2
+    ],
+    [
+     4,
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {
+    "schema": "id BIGINT, s STRING"
+   },
+   "fmt": "json",
+   "id": "target/json/read/one_level/read/ansi=false/schema=id_BIGINT,_s_STRING",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     1
+    ],
+    [
+     2,
+     "b",
+     1
+    ],
+    [
+     3,
+     "c",
+     2
+    ],
+    [
+     4,
+     "d",
+     2
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "int"
+    ]
+   ]
+  }
+ },
+ {
+  "case": {
+   "ansi": "false",
+   "conf": {
+    "schema": "id BIGINT, s STRING, p STRING"
+   },
+   "fmt": "json",
+   "id": "target/json/read/one_level/read/ansi=false/schema=id_BIGINT,_s_STRING,_p_STRING",
+   "kind": "target",
+   "path": "one_level",
+   "query": "read"
+  },
+  "expected": {
+   "rows": [
+    [
+     1,
+     "a",
+     "1"
+    ],
+    [
+     2,
+     "b",
+     "1"
+    ],
+    [
+     3,
+     "c",
+     "2"
+    ],
+    [
+     4,
+     "d",
+     "2"
+    ]
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "p",
+     "string"
+    ]
+   ]
+  }
+ }
+]

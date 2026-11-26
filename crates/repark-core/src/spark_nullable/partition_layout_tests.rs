@@ -295,3 +295,179 @@ async fn constant_propagation_prunes_before_raising() {
         .and(col("id").eq(lit(1i64)));
     assert!(filtered(&session, root, "s1x", data_bound).await.is_err());
 }
+
+fn write_text(path: &Path, text: &str) {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).unwrap();
+    }
+    std::fs::write(path, text).unwrap();
+}
+
+fn text_options(pairs: &[(&str, &str)]) -> std::collections::HashMap<String, String> {
+    pairs
+        .iter()
+        .map(|(key, value)| ((*key).to_string(), (*value).to_string()))
+        .collect()
+}
+
+fn field_names(frame: &DataFrame) -> Vec<String> {
+    frame
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect()
+}
+
+fn write_text_table(root: &Path, extension: &str, header: &str, rows: [&str; 2]) {
+    for (index, row) in rows.iter().enumerate() {
+        let body = format!("{header}{row}\n");
+        write_text(
+            &root.join(format!("p={}/part-{index}{extension}", index + 1)),
+            &body,
+        );
+    }
+}
+
+#[tokio::test]
+async fn csv_and_json_partitioned_reads_share_discovery() {
+    let dir = tempfile::tempdir().unwrap();
+    let session = ReparkSession::new().unwrap();
+    let csv = dir.path().join("csv");
+    write_text_table(&csv, ".csv", "id,s\n", ["1,a", "2,b"]);
+    write_text(&csv.join("p=1/README"), "id,s\n9,z\n");
+    write_text(&csv.join("p=1/_hidden.csv"), "id,s\n8,y\n");
+    write_text(&csv.join("_temporary/0/part.csv"), "id,s\n7,x\n");
+    write_zero(&csv.join("p=3/empty.csv"));
+    let header = text_options(&[("header", "true"), ("text_scan", "header")]);
+    let frame = session
+        .read_csv(csv.to_str().unwrap(), &header)
+        .await
+        .unwrap();
+    assert_eq!(field_names(&frame), ["id", "s", "p"]);
+    assert_eq!(
+        frame.schema().field(2).data_type(),
+        &DataType::Int32,
+        "p infers int"
+    );
+    assert_eq!(super::partition::partition_column_names(&frame), ["p"]);
+    assert_eq!(row_count(frame.clone()).await, 2);
+    let pruned = frame
+        .filter(binary_expr(col("p"), Operator::Eq, lit(2)))
+        .unwrap();
+    assert_eq!(row_count(pruned).await, 1);
+    let no_header = text_options(&[("header", "false"), ("text_scan", "header")]);
+    let bare = dir.path().join("bare");
+    write_text_table(&bare, ".csv", "", ["1,a", "2,b"]);
+    let frame = session
+        .read_csv(bare.to_str().unwrap(), &no_header)
+        .await
+        .unwrap();
+    assert_eq!(field_names(&frame), ["_c0", "_c1", "p"]);
+    let json = dir.path().join("json");
+    write_text_table(
+        &json,
+        ".json",
+        "",
+        [r#"{"id":1,"s":"a"}"#, r#"{"id":2,"s":"b"}"#],
+    );
+    let frame = session
+        .read_json(json.to_str().unwrap(), &text_options(&[]))
+        .await
+        .unwrap();
+    assert_eq!(field_names(&frame), ["id", "s", "p"]);
+    assert_eq!(row_count(frame).await, 2);
+}
+
+#[tokio::test]
+async fn csv_and_json_unpartitioned_reads_keep_the_listing_read() {
+    let dir = tempfile::tempdir().unwrap();
+    let session = ReparkSession::new().unwrap();
+    let flat = dir.path().join("flat");
+    write_text(&flat.join("part-0.csv"), "id,s\n1,a\n");
+    write_text(&flat.join("part-1.csv"), "id,s\n2,b\n");
+    let header = text_options(&[("header", "true"), ("text_scan", "header")]);
+    let frame = session
+        .read_csv(flat.to_str().unwrap(), &header)
+        .await
+        .unwrap();
+    assert_eq!(field_names(&frame), ["id", "s"]);
+    assert!(super::partition::partition_column_names(&frame).is_empty());
+    assert_eq!(row_count(frame).await, 2);
+    let json = dir.path().join("json");
+    write_text(&json.join("part-0.json"), "{\"id\":1,\"s\":\"a\"}\n");
+    write_text(&json.join("part-1.json"), "{\"id\":2,\"s\":\"b\"}\n");
+    let frame = session
+        .read_json(json.to_str().unwrap(), &text_options(&[]))
+        .await
+        .unwrap();
+    assert_eq!(row_count(frame).await, 2);
+    let overlap = dir.path().join("overlap");
+    write_text(&overlap.join("p=10/part-0.csv"), "id,p,s\n1,99,x\n");
+    let frame = session
+        .read_csv(overlap.to_str().unwrap(), &header)
+        .await
+        .unwrap();
+    assert_eq!(field_names(&frame), ["id", "p", "s"]);
+    assert!(super::partition::partition_column_names(&frame).is_empty());
+    let table = dir.path().join("table");
+    write_text_table(&table, ".csv", "id,s\n", ["1,a", "2,b"]);
+    let positions = text_options(&[("header", "true"), ("text_scan", "positions")]);
+    let frame = session
+        .read_csv(table.to_str().unwrap(), &positions)
+        .await
+        .unwrap();
+    assert_eq!(field_names(&frame), ["_c0", "_c1"]);
+    let null_value = text_options(&[
+        ("header", "true"),
+        ("text_scan", "header"),
+        ("nullvalue", "b"),
+    ]);
+    let frame = session
+        .read_csv(table.to_str().unwrap(), &null_value)
+        .await
+        .unwrap();
+    assert_eq!(field_names(&frame), ["id", "s"]);
+    let reread = text_options(&[("header", "true"), ("utf8_columns", "id")]);
+    let frame = session
+        .read_csv(table.to_str().unwrap(), &reread)
+        .await
+        .unwrap();
+    assert_eq!(field_names(&frame), ["id", "s", "p"]);
+    assert_eq!(frame.schema().field(0).data_type(), &DataType::Utf8);
+    assert_eq!(super::partition::partition_column_names(&frame), ["p"]);
+    assert_eq!(row_count(frame).await, 2);
+}
+
+#[tokio::test]
+async fn json_overlap_takes_the_directory_value_and_case_rule() {
+    let dir = tempfile::tempdir().unwrap();
+    let session = ReparkSession::new().unwrap();
+    let overlap = dir.path().join("overlap");
+    write_text(
+        &overlap.join("p=10/part-0.json"),
+        "{\"id\":1,\"p\":99,\"s\":\"x\"}\n",
+    );
+    let frame = session
+        .read_json(overlap.to_str().unwrap(), &text_options(&[]))
+        .await
+        .unwrap();
+    assert_eq!(field_names(&frame), ["id", "p", "s"]);
+    assert_eq!(frame.schema().field(1).data_type(), &DataType::Int32);
+    let mixed = dir.path().join("mixed");
+    write_text(&mixed.join("p=1/part-0.json"), "{\"id\":1}\n");
+    write_text(&mixed.join("P=2/part-1.json"), "{\"id\":2}\n");
+    let path = mixed.to_str().unwrap();
+    let options = text_options(&[]);
+    let folded = session
+        .read_json_with_case_sensitivity(path, &options, false)
+        .await
+        .unwrap();
+    assert_eq!(field_names(&folded), ["id", "p"]);
+    let refused = session
+        .read_json_with_case_sensitivity(path, &options, true)
+        .await
+        .unwrap_err()
+        .to_string();
+    assert!(refused.contains("[CONFLICTING_PARTITION_COLUMN_NAMES]"));
+}

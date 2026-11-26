@@ -694,7 +694,7 @@ async fn read_discovered(
     }
     let scanned: Vec<DiscoveredEntry> = kept
         .into_iter()
-        .filter(|(meta, _, _, _)| meta.size > 0)
+        .filter(|(meta, _, _, _)| !parquet || meta.size > 0)
         .collect();
     let mut kept_metas: Vec<ObjectMeta> =
         scanned.iter().map(|(meta, _, _, _)| meta.clone()).collect();

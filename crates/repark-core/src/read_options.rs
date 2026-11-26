@@ -228,6 +228,7 @@ pub(crate) async fn read_csv_path(
         .is_some_and(|raw| parse_bool_option("multiLine", raw).ok() == Some(true));
     let text_scan = csv_text_scan(options)?;
     let discover = match text_scan {
+        _ if options.contains_key("nullvalue") => None,
         Some(CsvTextScan::Positions) => None,
         Some(CsvTextScan::Header { case_sensitive }) => Some(case_sensitive),
         None => Some(false),

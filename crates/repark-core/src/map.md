@@ -538,7 +538,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   option refusals echo the value masked.
   **CSV-JSON-PARTITION-DISCOVERY-1 (2026-11-26):** `read_csv_path` takes the session (for its zone) and reads
   through `read_csv_frame`, which first asks `spark_nullable::partition`'s shared discovery and takes main's
-  `read_csv` when that answers `None`. `text_scan=positions` (a user schema) does not discover; `header` /
+  `read_csv` when that answers `None`. `text_scan=positions` (a user schema) and `nullValue` (the facade would compare the token with a typed partition column) do not discover; `header` /
   `header_case_sensitive` carry the case rule, and no `text_scan` reads case-insensitively. Without a header the
   discovered file fields are renamed `_cN` so the facade can keep the partition names. The `utf8_columns` re-read
   rebuilds its schema from the frame less its partition fields. `ReparkSession::read_json_with_case_sensitivity`
