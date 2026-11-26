@@ -510,7 +510,7 @@ async fn root_files_beside_partitions_are_listed_but_not_read() {
 fn write_unreadable(path: &Path, text: &str) -> bool {
     use std::os::unix::fs::PermissionsExt;
     write_text(path, text);
-    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0)).unwrap();
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o000)).unwrap();
     File::open(path).is_err()
 }
 
@@ -534,7 +534,7 @@ async fn root_entry(dir: &Path, name: &str, text: &str, unreadable: bool) -> (Ro
         .await
         .unwrap();
     if unreadable {
-        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0)).unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o000)).unwrap();
     }
     (
         (meta, Vec::new(), 1, String::new()),
@@ -569,8 +569,8 @@ async fn root_file_opens_follow_what_spark_reads_at_inference() {
                 .map_err(|error| error.to_string())
         }
     };
-    let refused = refuses(vec![big_bad.clone()], RootFileOpens::Largest).await;
-    assert!(refused.unwrap_err().contains("Unable to open file"));
+    let largest = refuses(vec![big_bad.clone()], RootFileOpens::Largest).await;
+    assert!(largest.unwrap_err().contains("Unable to open file"));
     assert!(
         refuses(vec![small_bad.clone()], RootFileOpens::Largest)
             .await

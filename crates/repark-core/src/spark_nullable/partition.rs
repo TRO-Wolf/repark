@@ -683,16 +683,26 @@ pub(super) async fn refuse_unreadable_root_files(
         }
         RootFileOpens::Largest | RootFileOpens::Never => Vec::new(),
     };
-    let checks: Vec<object_store::Result<bytes::Bytes>> = futures::stream::iter(&opened)
+    let in_flight = if opens == RootFileOpens::Largest {
+        1
+    } else {
+        64
+    };
+    let mut checks = futures::stream::iter(&opened)
         .map(|meta| store.get_range(&meta.location, 0..1))
-        .buffered(32)
-        .collect()
-        .await;
-    let readable = checks.iter().any(std::result::Result::is_ok);
-    match checks.into_iter().find_map(std::result::Result::err) {
-        Some(error) if opens == RootFileOpens::All || !readable => Err(engine_err(error.into())),
-        _ => Ok(()),
+        .buffered(in_flight);
+    let mut refusal = None;
+    while let Some(check) = checks.next().await {
+        match check {
+            Ok(_) if opens == RootFileOpens::Largest => return Ok(()),
+            Ok(_) => {}
+            Err(error) if opens == RootFileOpens::All => return Err(engine_err(error.into())),
+            Err(error) => {
+                refusal.get_or_insert(error);
+            }
+        }
     }
+    refusal.map_or(Ok(()), |error| Err(engine_err(error.into())))
 }
 
 #[allow(clippy::too_many_lines)]
