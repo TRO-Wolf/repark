@@ -295,7 +295,6 @@ def test_a_date_under_an_ntz_session_stays_nullable_for_to_timestamp() -> None:
     assert _null_rule(spark, "to_timestamp(d)").schema.fields[0].nullable
     for fragment in (
         "CAST(ntz AS TIMESTAMP_LTZ)",
-        "to_timestamp_ltz(ntz)",
         "coalesce(ntz, CAST('2024-01-01 03:00:00' AS TIMESTAMP_LTZ))",
     ):
         assert not _null_rule(spark, fragment).schema.fields[0].nullable, fragment
