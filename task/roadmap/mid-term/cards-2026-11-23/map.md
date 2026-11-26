@@ -39,7 +39,8 @@ awaits the owner's rating. Each card row records its own status.
   `named_struct(…).a` with a bad sibling, `* EXCLUDE` and `DELETE` without `FROM` answer where Spark refuses.
   **Fixed on branch** for four seats (2026-11-24, PR #1434); the struct seat stays as on main (delta 1).
 - [CSV-JSON-PARTITION-DISCOVERY-1](csv-json-partition-discovery-1-card-2026-11-24.md) (S1) — **card:** CSV and JSON
-  reads of a `key=value/` directory drop the partition columns.
+  reads of a `key=value/` directory drop the partition columns. Fixed on its branch (2026-11-26), with the list of
+  what is still unlike Spark.
 - [MAKE-DT-INTERVAL-OVERFLOW-1](make-dt-interval-overflow-1-card-2026-11-25.md) (S1) — **card:** `make_dt_interval`
   answers NULL on overflow, where Spark raises or answers, and types its result as a string.
 - [FILE-EXTENSION-FILTER-1](file-extension-filter-1-card-2026-11-25.md) (S1) — **built** on

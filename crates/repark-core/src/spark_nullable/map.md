@@ -156,7 +156,7 @@ leaving text and ORC discovery untouched. Rules pinned to live Spark 4.1.2:
   column would shift every later value); JSON overlaps as Parquet does. `ReparkSession::read_partitioned` supplies the
   session zone and `partitionColumnTypeInference.enabled`; `partition_column_names` lists a frame's discovered
   partition fields for the facade. The provider keeps its Parquet name because `../plan_introspect.rs` names it. A 0-byte CSV or JSON file stays in the scan (no rows), so `inputFiles` lists it as Spark does; Parquet still skips it.
-- `partition_layout_tests.rs` — **CSV-JSON-PARTITION-DISCOVERY-1:** three CSV/JSON pins (discovery with hidden, stray and 0-byte files, `_cN` names, pruning; the flat, overlap, `positions`, `nullValue` and `utf8_columns` reads; JSON overlap and the case rule). Delta 2 Rust pins: the base-path rule (two sub-bases, root beside `sub/`, a `sub/`
+- `partition_layout_tests.rs` — **CSV-JSON-PARTITION-DISCOVERY-1:** three CSV/JSON pins (discovery with hidden, stray and 0-byte files, the 0-byte file kept in the plan's input files, `_cN` names, pruning; the flat, overlap, `positions`, `nullValue` and `utf8_columns` reads; JSON overlap and the case rule). Delta 2 Rust pins: the base-path rule (two sub-bases, root beside `sub/`, a `sub/`
   file or 0-byte file, `a=1/sub/b=2` beside `a=2/sub/b=3`, directory conflict before names; root, hidden and
   base-directory files answer; same mid base and case-only base differences answer), footer order (root, `Z` before
   `a`, unpartitioned first refuse; later 0-byte files skip; a 0-byte leaf types `p` as string; a root file's schema

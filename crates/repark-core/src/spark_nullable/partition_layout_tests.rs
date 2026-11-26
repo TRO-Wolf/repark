@@ -351,6 +351,10 @@ async fn csv_and_json_partitioned_reads_share_discovery() {
         "p infers int"
     );
     assert_eq!(super::partition::partition_column_names(&frame), ["p"]);
+    let plan = frame.clone().create_physical_plan().await.unwrap();
+    let listed = crate::plan_introspect::input_files(&plan);
+    assert!(listed.iter().any(|name| name.ends_with("p=3/empty.csv")));
+    assert_eq!(listed.len(), 3);
     assert_eq!(row_count(frame.clone()).await, 2);
     let pruned = frame
         .filter(binary_expr(col("p"), Operator::Eq, lit(2)))
