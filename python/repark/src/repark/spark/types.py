@@ -1010,8 +1010,6 @@ def _parse_atomic_token(token: str) -> DataType | None:
         return StringType(match.group(1))
     if lower == "decimal":
         return DecimalType()
-    if lower.startswith("interval "):
-        return _parse_datatype_string(lower)
     return TimeType() if lower.startswith("time") else None
 
 
@@ -1129,8 +1127,10 @@ def _parse_datatype_json_value(
         if (spatial := _parse_spatial_json_token(text)) is not None:
             return spatial
         _refuse_spatial_json_token(text)
-        if text.strip().lower().startswith("interval ") and text != " ".join(text.lower().split()):
-            raise ValueError(f"cannot parse datatype: {text!r}")
+        if text.strip().lower().startswith("interval "):
+            if text != " ".join(text.lower().split()):
+                raise ValueError(f"cannot parse datatype: {text!r}")
+            return _parse_datatype_string(text)
         if (atomic := _parse_atomic_token(text)) is not None:
             return atomic
         # Fall through to complex simpleString forms.

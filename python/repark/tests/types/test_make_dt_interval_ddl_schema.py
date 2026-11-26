@@ -133,6 +133,35 @@ def test_interval_json_spelling_answers_spark(spelling: str, nested: bool) -> No
     assert StructType.fromJson(document).simpleString() == f"struct<c:{inner}>"
 
 
+NESTED_JSON_TYPE_STRINGS = (
+    "array<interval day to second>",
+    "array<INTERVAL DAY TO SECOND>",
+    "map<string,interval day>",
+    "struct<a:interval hour to minute>",
+    "struct<`a`:array<interval year>>",
+)
+
+
+@pytest.mark.parametrize("type_string", NESTED_JSON_TYPE_STRINGS)
+def test_nested_interval_in_a_json_type_string_refuses_as_on_main(type_string: str) -> None:
+    document = {
+        "type": "struct",
+        "fields": [{"name": "c", "type": type_string, "nullable": True, "metadata": {}}],
+    }
+    with pytest.raises(ValueError, match="cannot parse datatype"):
+        StructType.fromJson(document)
+
+
+def test_interval_named_field_in_a_json_type_string_keeps_main_answer() -> None:
+    document = {
+        "type": "struct",
+        "fields": [
+            {"name": "c", "type": "struct<`interval day`:int>", "nullable": True, "metadata": {}}
+        ],
+    }
+    assert StructType.fromJson(document).simpleString() == "struct<c:struct<interval day:int>>"
+
+
 @pytest.mark.parametrize("schema", CDF_SCHEMAS)
 @pytest.mark.parametrize("rows", sorted(ROWS))
 def test_ddl_string_schema_with_an_ansi_interval_refuses_as_on_main(

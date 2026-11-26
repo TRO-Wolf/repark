@@ -736,8 +736,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   estimators and feature/evaluation surfaces live in [ml/map.md](ml/map.md).
 - `types.py` — Spark SQL data types, DDL/JSON conversion, schema inspection, interval
   support, metadata, and Python-value verification.
-  **MAKE-DT-INTERVAL-OVERFLOW-1 (2026-11-25):** `_parse_atomic_token` hands `interval …` spellings to the
-  native DDL parser, so `fromJson` and `fromDDL` read `interval day to second` back.
+  **MAKE-DT-INTERVAL-OVERFLOW-1 (2026-11-25, delta 3 2026-11-26):** `_parse_datatype_json_value` hands a JSON-door
+  string that is exactly a canonical `interval …` name (lower case, single spaces) to the native DDL parser, so
+  `fromJson` reads `interval day to second` back as Spark does. Any other spelling, and an interval nested inside a
+  complex type string, raises main's `ValueError`: `_parse_atomic_token` takes no interval, as on main.
   **FACADE-4 step 1 (2026-09-14):** the conversion surfaces (`fromDDL`/`_parse_datatype_string`,
   `StructType.toDDL`, `_arrow_type_to_repark`, `struct_type_from_arrow`, `repark_type_to_arrow`)
   thin to descriptor build + one `_native` call over `repark_spark::type_table`; the public classes

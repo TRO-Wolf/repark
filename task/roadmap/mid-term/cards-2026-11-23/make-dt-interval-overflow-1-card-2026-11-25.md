@@ -85,7 +85,7 @@ The widening made `DataFrame.schema` hand out `DayTimeIntervalType`, which RePar
   exact path (about 2.8e8 s or more, or on a `.5` boundary at 6 places) cost about 8× main: 0.33 s against 0.039 s.
 
 Consumers measured in [consumers.md](../../../wo/make-dt-interval-overflow-1/evidence/consumers.md): 116 cells, 34
-fixed, 16 equal on both, 0 moved off Spark. The verifier's 191 widening cells and 211 edge cells move off Spark nowhere.
+fixed, 16 equal on both, 0 moved off Spark (four JSON type strings outside it did move; see delta 3). The verifier's 191 widening cells and 211 edge cells move off Spark nowhere.
 Still unlike Spark there:
 - **`createDataFrame(rows, schema)`** with a `DayTimeIntervalType` field given as a `StructType` (or `fromJson`)
   stores the `timedelta` as text typed `string`, as on main. Given as a DDL string, main refuses the schema
@@ -109,8 +109,9 @@ Still unlike Spark there:
 
 - `createDataFrame(rows, "id int, x interval day to second")` (any ANSI interval field, nested too) refuses again with
   main's `PySparkTypeError` (`python/repark/src/repark/spark/session/create_dataframe_schema.py::_parse_schema_ddl`);
-  `applyInPandas` and `mapInPandas` DDL return schemas take the same path. A `StructType` schema, including one built
-  by `fromDDL` or `fromJson`, still stores the text as `string`, as on main.
+  `applyInPandas` and `mapInPandas` DDL return schemas take the same path. A flat `StructType` field, including one
+  built by `fromDDL` or `fromJson`, still stores the text as `string`, as on main. A nested one (an array, map or
+  struct holding `DayTimeIntervalType`) stores Spark's typed values, where main refused.
 - `interval X to X` and reversed ranges raise as Spark's `PARSE_SYNTAX_ERROR` does
   (`crates/repark-spark/src/type_table/parse.rs::ansi_interval_type`), on `fromDDL`, `_parse_datatype_string`,
   `read.schema` and `createDataFrame`.
@@ -124,5 +125,18 @@ Still unlike Spark there:
   interval field refuses on CSV, JSON and Parquet.
 - Pins: `python/repark/tests/types/test_make_dt_interval_ddl_schema.py` (124 tests; 19 red on main; the 12 JSON-door
   tests, 6 red before the guard) and five more refusals in `crates/repark-spark/src/type_table/tests.rs`.
+
+## Delta 3 (2026-11-26): an interval nested in a JSON type string
+
+- `StructType.fromJson` with a field type *string* holding a nested interval (`array<interval day to second>`,
+  `array<INTERVAL DAY TO SECOND>`, `map<string,interval day>`, `struct<a:interval hour to minute>`) refuses again with
+  main's `ValueError`; Spark refuses with `CANNOT_PARSE_DATATYPE`. Delta 1 let `_parse_atomic_token` take interval
+  names, and the complex-string parser reached it, so these 4 strings answered in both ANSI modes: the "0 moved" lines
+  above missed them. Only a JSON-door string that is exactly a canonical interval name parses now
+  (`python/repark/src/repark/spark/types.py::_parse_datatype_json_value`). The check is on the parsed position, not
+  the text, so a field named `` `interval day` `` still parses, as on main.
+- Still unlike Spark, as on main: the JSON door parses a complex type string with no interval (`array<int>`,
+  `` struct<`interval day`:int> ``), which Spark refuses.
+- Pins: six more tests in `python/repark/tests/types/test_make_dt_interval_ddl_schema.py`.
 
 Up: [map.md](map.md).
