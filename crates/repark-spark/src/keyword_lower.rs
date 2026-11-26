@@ -485,7 +485,9 @@ mod tests {
         .to_string();
         assert!(!text.contains("TIMESTAMP_LTZ"), "{text}");
         assert!(
-            text.contains("__repark_cast_timestamp_ltz__('2024-01-02 03:04:05')"),
+            text.contains(
+                "__repark_cast_timestamp_ltz__(__repark_decimal_cast_nullable__('2024-01-02 03:04:05'))"
+            ),
             "{text}"
         );
         assert!(

@@ -26,7 +26,9 @@ lowering it calls first.
   `repark_functions::register_all`, keeping `CAST(... AS TIMESTAMP_LTZ)` -> `TIMESTAMP` and
   zoned `TIMESTAMP '...'` untouched), and `lower_fragment_timestamp_ltz_cast` (delegates to
   `lower_explicit_timestamp_ltz_cast` and nullable-wraps bare-`TIMESTAMP` string-literal casts
-  via `DECIMAL_CAST_NULLABLE_NAME`).
+  via `DECIMAL_CAST_NULLABLE_NAME`). **Delta 2 (2026-11-26):** `lower_explicit_timestamp_ltz_cast`
+  wraps the string literal of a non-`TRY` `CAST` / `::` to `TIMESTAMP_LTZ` the same way, on every
+  door, so it is nullable as in Spark; typed literals stay non-null.
 - `ltz_values_cast.rs` — **WO NTZ-STORE-DOORS-1 second re-verify fold (2026-09-29,
   RD3-1):** `mark_values_timestamp_casts` wraps each `VALUES` cell that is a written
   `CAST` / `::` to `TIMESTAMP` (explicit `TIMESTAMP_LTZ` casts now lower directly to

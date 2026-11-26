@@ -2,7 +2,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::{Arc, LazyLock};
 
 use arrow::array::timezone::Tz;
-use chrono::{DateTime, Utc};
+use chrono::DateTime;
 use datafusion::arrow::array::{Array, AsArray, TimestampMicrosecondArray};
 use datafusion::arrow::datatypes::{DataType, Date32Type, Field, FieldRef, Int64Type, TimeUnit};
 use datafusion::common::tree_node::{Transformed, TreeNode};
@@ -203,7 +203,7 @@ fn is_ntz_cast_call(expr: &Expr) -> bool {
 
 #[must_use]
 pub fn parse_timestamp_ntz_wall(text: &str) -> Option<i64> {
-    crate::spark_string_timestamp::string_to_ntz_wall_micros(text, Utc::now())
+    crate::spark_string_timestamp::string_to_ntz_wall_micros(text)
 }
 
 fn ntz_timestamp_type() -> DataType {
@@ -215,17 +215,6 @@ fn is_string_source(data_type: &DataType) -> bool {
         data_type,
         DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
     )
-}
-
-fn string_literal_parses_ntz(scalar: Option<&ScalarValue>) -> bool {
-    match scalar {
-        Some(
-            ScalarValue::Utf8(Some(text))
-            | ScalarValue::LargeUtf8(Some(text))
-            | ScalarValue::Utf8View(Some(text)),
-        ) => parse_timestamp_ntz_wall(text).is_some(),
-        _ => false,
-    }
 }
 
 fn is_cast_source(data_type: &DataType) -> bool {
@@ -315,14 +304,12 @@ impl ScalarUDFImpl for SparkTimestampNtzCast {
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
         let nullable = match args.arg_fields.first() {
             Some(field) => {
-                let scalar = args.scalar_arguments.first().copied().flatten();
                 if !is_cast_source(field.data_type()) {
+                    let scalar = args.scalar_arguments.first().copied().flatten();
                     let arg = scalar.map_or_else(|| field.name().to_owned(), ToString::to_string);
                     return Err(cast_refusal(self.try_cast, &arg, field.data_type(), scalar));
                 }
-                let may_null_string =
-                    is_string_source(field.data_type()) && !string_literal_parses_ntz(scalar);
-                field.is_nullable() || self.try_cast || may_null_string
+                field.is_nullable() || self.try_cast || is_string_source(field.data_type())
             }
             None => true,
         };

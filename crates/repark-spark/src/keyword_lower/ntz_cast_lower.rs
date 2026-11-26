@@ -58,8 +58,13 @@ pub(super) fn lower_explicit_timestamp_ltz_cast(node: &mut Expr) -> bool {
             CastKind::Cast | CastKind::DoubleColon => TIMESTAMP_LTZ_CAST_NAME,
             CastKind::TryCast | CastKind::SafeCast => TRY_TIMESTAMP_LTZ_CAST_NAME,
         };
-        let value = std::mem::replace(expr, Box::new(null_expr()));
-        *node = function_call(name, vec![*value]);
+        let value = *std::mem::replace(expr, Box::new(null_expr()));
+        let operand = if name == TIMESTAMP_LTZ_CAST_NAME && is_string_literal(&value) {
+            function_call(DECIMAL_CAST_NULLABLE_NAME, vec![value])
+        } else {
+            value
+        };
+        *node = function_call(name, vec![operand]);
         return true;
     }
     if let Some(text) = typed_string_ltz_text(node) {
@@ -138,19 +143,23 @@ pub(super) fn lower_fragment_timestamp_ltz_cast(node: &mut Expr) -> bool {
         format: None,
     } = node
         && matches!(data_type, DataType::Timestamp(None, TimezoneInfo::None))
-        && matches!(
-            expr.as_ref(),
-            Expr::Value(ValueWithSpan {
-                value: Value::SingleQuotedString(_) | Value::DoubleQuotedString(_),
-                ..
-            })
-        )
+        && is_string_literal(expr)
     {
         let value = std::mem::replace(expr, Box::new(null_expr()));
         **expr = function_call(DECIMAL_CAST_NULLABLE_NAME, vec![*value]);
         return true;
     }
     false
+}
+
+fn is_string_literal(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::Value(ValueWithSpan {
+            value: Value::SingleQuotedString(_) | Value::DoubleQuotedString(_),
+            ..
+        })
+    )
 }
 
 fn typed_string_text(value: &Value) -> Option<String> {
@@ -248,6 +257,52 @@ mod tests {
                 "CAST(__repark_decimal_cast_nullable__('2024-01-01 02:00:00Z') AS TIMESTAMP) AS g"
             ),
             "{text}"
+        );
+    }
+
+    #[test]
+    fn explicit_ltz_string_casts_are_nullable_wrapped_and_typed_literals_are_not() {
+        let text = lowered(
+            "SELECT CAST('2024-01-01 02:00:00' AS TIMESTAMP_LTZ) AS a, \
+             '02:00:00'::timestamp_ltz AS b, \
+             TRY_CAST('x' AS TIMESTAMP_LTZ) AS c, \
+             CAST(s AS TIMESTAMP_LTZ) AS d, \
+             TIMESTAMP '2024-01-01 02:00:00Z' AS e",
+        )
+        .to_string();
+        for wrapped in ["'2024-01-01 02:00:00'", "'02:00:00'"] {
+            let call = format!(
+                "__repark_cast_timestamp_ltz__(__repark_decimal_cast_nullable__({wrapped}))"
+            );
+            assert!(text.contains(&call), "{text}");
+        }
+        assert!(
+            text.contains("__repark_try_cast_timestamp_ltz__('x') AS c"),
+            "{text}"
+        );
+        assert!(text.contains("__repark_cast_timestamp_ltz__(s) AS d"), "{text}");
+        assert!(
+            text.contains("__repark_cast_timestamp_ltz__('2024-01-01 02:00:00Z') AS e"),
+            "{text}"
+        );
+        let typed = crate::keyword_lower::rewrite_fragment_timestamp_ltz_literals(
+            "SELECT TIMESTAMP_LTZ '2024-01-01 02:00:00' AS t, \
+             CAST('2024-01-01 02:00:00' AS TIMESTAMP_LTZ) AS u",
+        );
+        let mut fragment = Parser::parse_sql(&DatabricksDialect {}, &typed)
+            .unwrap()
+            .remove(0);
+        crate::keyword_lower::lower_fragment_timestamp_casts(&mut fragment);
+        let fragment = fragment.to_string();
+        assert!(
+            fragment.contains("__repark_cast_timestamp_ltz__('2024-01-01 02:00:00') AS t"),
+            "{fragment}"
+        );
+        assert!(
+            fragment.contains(
+                "__repark_cast_timestamp_ltz__(__repark_decimal_cast_nullable__('2024-01-01 02:00:00')) AS u"
+            ),
+            "{fragment}"
         );
     }
 }

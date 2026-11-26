@@ -29,6 +29,9 @@ Only tests; `mod.rs` is the module manifest.
   short ids and regions, DST gap and overlap, the chrono-tz table end and the far-future
   proxy, local mean time, the i64 microsecond edges, and both failure modes (NULL, and
   `CAST_INVALID_INPUT` with Spark's `'…'` quoting).
+  **FEXPR-TIMESTAMP-NTZ-1 delta 2 (2026-11-26):**
+  `the_ntz_wall_parse_refuses_time_only_and_bracketed_strings` holds the NTZ parse beside the
+  LTZ today pin.
   **C-2d fold 1 (2026-10-07):** the horizon pins import `LAST_TABULATED_YEAR` and `proxy_year`
   from `repark_common::zone_horizon`, their new home; every assertion is unchanged.
 - `spark_string_timestamp_sql.rs` — the same kernel through the analyzer: literal and column

@@ -40,20 +40,12 @@ fn spark_sql_string_value(text: &str) -> String {
 }
 
 #[must_use]
-pub(crate) fn string_to_ntz_wall_micros(text: &str, now: DateTime<Utc>) -> Option<i64> {
-    let trimmed = text.trim();
-    let candidate = if trimmed.ends_with(']')
-        && let Some(bracket) = trimmed.find('[')
-    {
-        trimmed[..bracket].trim_end()
-    } else {
-        text
-    };
-    let parsed = grammar::parse_timestamp_string(candidate)?;
+pub(crate) fn string_to_ntz_wall_micros(text: &str) -> Option<i64> {
+    let parsed = grammar::parse_timestamp_string(text)?;
     if let Some(zone_id) = parsed.zone {
         zone::spark_zone_id(zone_id)?;
     }
-    instant::wall_only_micros(&parsed, now)
+    instant::wall_only_micros(&parsed)
 }
 
 #[must_use]
@@ -74,7 +66,6 @@ pub(crate) fn cast_strings_to_ntz(
 ) -> Result<ArrayRef> {
     let texts = cast(strings.as_ref(), &DataType::Utf8)?;
     let texts = texts.as_string::<i32>();
-    let now = Utc::now();
     let mut builder = TimestampMicrosecondArray::builder(texts.len());
     for row in 0..texts.len() {
         if texts.is_null(row) {
@@ -82,7 +73,7 @@ pub(crate) fn cast_strings_to_ntz(
             continue;
         }
         let text = texts.value(row);
-        match string_to_ntz_wall_micros(text, now) {
+        match string_to_ntz_wall_micros(text) {
             Some(micros) => builder.append_value(micros),
             None if failure == StringCastFailure::Raise => {
                 return Err(cast_invalid_input_timestamp_ntz(text));

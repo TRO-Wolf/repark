@@ -44,6 +44,10 @@ Tests: [`../tests/spark_string_timestamp.rs`](../tests/map.md).
   `"TIMESTAMP_NTZ"`). `instant_ts::string_carries_timezone` reuses `grammar::parse_timestamp_string`
   + `zone::spark_zone_id`. `rewrite_string_try_cast` folds only when session zone is deferred
   (`zone.is_none()`), keeping non-deferred `TRY_CAST` nullable via `try_to_timestamp`.
+- **FEXPR-TIMESTAMP-NTZ-1 delta 2 (2026-11-26):** `wall_only_micros` refuses a time-only parse,
+  as Spark's `stringToTimestampWithoutTimeZone` does; the LTZ `instant_micros` keeps today's
+  date. `string_to_ntz_wall_micros` no longer strips a `[...]` suffix, so `[UTC]` fails
+  `spark_zone_id` as in Spark. Neither takes a clock.
 
 ## Pointers
 

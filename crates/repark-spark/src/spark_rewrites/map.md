@@ -47,8 +47,9 @@ path stay in `spark_literals.rs`.
   literal. `mod.rs` `plan_keyword_regions` runs it after the DROP TEMPORARY planner. A cast
   target, a quoted name and a bare identifier stay untouched (unit pins in the file).
   **FEXPR-TIMESTAMP-NTZ-1 (2026-11-24):** adds `rewrite_fragment_timestamp_ltz_literals` so
-  `F.expr` and Spark-door `filter(str)` preserve `TIMESTAMP_LTZ '...'` as
-  `CAST('...' AS TIMESTAMP_LTZ)` before canonicalization.
+  `F.expr` and Spark-door `filter(str)` preserve `TIMESTAMP_LTZ '...'` as the LTZ marker
+  `__repark_cast_timestamp_ltz__('...')` before canonicalization (delta 2: not a `CAST`, so
+  the explicit-cast nullable wrap leaves the typed literal non-null).
 - `timestamp_ntz_literal.rs` — **WO NTZ-1 slice 1 (2026-09-26):**
   `plan_timestamp_ntz_literal_regions` rewrites an unquoted `TIMESTAMP_NTZ` word that a
   single- or double-quoted string follows (whitespace allowed) into one region spanning

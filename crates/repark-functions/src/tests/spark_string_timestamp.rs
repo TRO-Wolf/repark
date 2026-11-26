@@ -9,7 +9,7 @@ use crate::datetime::micros_from_local_datetime;
 use crate::spark_string_timestamp::grammar::parse_timestamp_string;
 use crate::spark_string_timestamp::zone::{SparkZone, spark_zone_id};
 use crate::spark_string_timestamp::{
-    StringCastFailure, cast_strings_to_ltz, string_to_timestamp_micros,
+    StringCastFailure, cast_strings_to_ltz, string_to_ntz_wall_micros, string_to_timestamp_micros,
 };
 use repark_common::zone_horizon::{LAST_TABULATED_YEAR, proxy_year};
 
@@ -95,6 +95,51 @@ fn time_only_forms_resolve_against_today_in_the_zone() {
         micros_in("T10:00:00+01:00", NEW_YORK),
         Some(1_789_808_400_000_000)
     );
+}
+
+#[test]
+fn the_ntz_wall_parse_refuses_time_only_and_bracketed_strings() {
+    for text in [
+        "02:00:00",
+        "T02:00:00",
+        "02:00:00.123456",
+        "T02:00:00+02:00",
+        "02:00:00Z",
+        "T10:00",
+        "10:00",
+        "T10",
+        "\t02:00:00\n",
+    ] {
+        assert_eq!(string_to_ntz_wall_micros(text), None, "{text}");
+        assert!(micros_in(text, NEW_YORK).is_some(), "{text}");
+    }
+    for text in [
+        "2024-01-01 02:00:00[UTC]",
+        "2024-01-01 02:00:00[INVALID_ZONE]",
+        "2024-01-01 02:00:00[America/New_York]",
+        "2024-01-01 02:00:00[not a zone!]",
+        "2024-01-01T02:00:00Z[UTC]",
+        "2024-01-01T02:00:00-05:00[America/New_York]",
+        "2024-01-01 02:00:00 [UTC]",
+        "2024-01-01 02:00:00[]",
+        "2024-01-01[UTC]",
+        "[UTC]",
+    ] {
+        assert_eq!(string_to_ntz_wall_micros(text), None, "{text}");
+    }
+    for text in [
+        "2024-01-01 02:00:00",
+        "2024-01-01T02:00:00Z",
+        "2024-01-01T02:00:00-05:00",
+        "2024-01-01 02:00:00 America/New_York",
+        "  2024-01-01 02:00:00  ",
+    ] {
+        assert_eq!(
+            string_to_ntz_wall_micros(text),
+            Some(1_704_074_400_000_000),
+            "{text}"
+        );
+    }
 }
 
 #[test]

@@ -2,6 +2,7 @@ use std::borrow::Cow;
 
 use datafusion::sql::sqlparser::dialect::GenericDialect;
 use datafusion::sql::sqlparser::tokenizer::{Token, TokenWithSpan, Tokenizer};
+use repark_functions::instant_ts::TIMESTAMP_LTZ_CAST_NAME;
 
 use super::{byte_offset, line_starts, skip_whitespace};
 use crate::spark_literals::{LiteralRegion, SparkLexDialect};
@@ -82,9 +83,10 @@ pub(crate) fn rewrite_fragment_timestamp_ltz_literals(sql: &str) -> Cow<'_, str>
             continue;
         }
         out.push_str(&sql[cursor..start]);
-        out.push_str("CAST(");
+        out.push_str(TIMESTAMP_LTZ_CAST_NAME);
+        out.push('(');
         out.push_str(&sql[lit_start..lit_end]);
-        out.push_str(" AS TIMESTAMP_LTZ)");
+        out.push(')');
         cursor = lit_end;
     }
     out.push_str(&sql[cursor..]);
@@ -140,11 +142,11 @@ mod tests {
     fn fragment_ltz_literal_rewrite_preserves_explicit_ltz() {
         assert_eq!(
             rewrite_fragment_timestamp_ltz_literals("TIMESTAMP_LTZ '2024-01-01 02:00:00'"),
-            "CAST('2024-01-01 02:00:00' AS TIMESTAMP_LTZ)"
+            "__repark_cast_timestamp_ltz__('2024-01-01 02:00:00')"
         );
         assert_eq!(
             rewrite_fragment_timestamp_ltz_literals("timestamp_ltz\"2024-01-01 02:00:00\""),
-            "CAST(\"2024-01-01 02:00:00\" AS TIMESTAMP_LTZ)"
+            "__repark_cast_timestamp_ltz__(\"2024-01-01 02:00:00\")"
         );
         assert_eq!(
             rewrite_fragment_timestamp_ltz_literals("CAST('2024-01-01' AS TIMESTAMP_LTZ)"),
