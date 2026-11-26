@@ -4,7 +4,7 @@
 PARQUET-PARTITION-DISCOVERY-1 (PR #1430), which measured these readers as out of its seat. **Severity:** S1 (owner,
 2026-11-25). It is the same shape as PARQUET-PARTITION-DISCOVERY-1: a read-then-write copy stores the table without its
 partition columns, silently. **Status:** fixed on `fix/csv-json-partition-discovery-1` (2026-11-26), awaiting gates and
-review. It follows #1430, whose Parquet seat these readers now share.
+review (delta 2 for N3). It follows #1430, whose Parquet seat these readers now share.
 
 ## Measured
 
@@ -67,6 +67,30 @@ Measured on live Spark 4.1.2 and on main `514281bd4`. #1430 does not change thes
 - **Root files beside partitions on Parquet:** `inputFiles` leaves out a file at the root of a partitioned Parquet
   directory (`part-0.parquet` beside `p=1/`), where Spark lists it. CSV and JSON list it since delta 1; Parquet is
   unchanged.
+- **Root files beside partitions, schema (CSV-JSON-ROOT-FILE-SCHEMA-1, the follow-up card).** Spark samples the root
+  files for the schema; head infers from the partition files, and a CSV header comes from the first file in the local
+  listing. Fixtures: the verifier's `hd`, `xf`, `tc` beside `p=1/`, `p=2/`.
+  - **N1, CSV header from a root file** (`aaa-root.csv` with header `X,Y`): Spark `id, s, p`; main `X, Y` plus the root
+    row; head `X, Y, p`.
+  - **N2, JSON fields and types from root files:** a root `{"id":9,"zzz":1}`: Spark `id, s, zzz, p`; main `id, zzz, s`
+    plus the root row; head `id, s, p`. A root `{"id":"x"}`: Spark `id string`; main refuses (schema merge); head
+    `id bigint`. A malformed root file: Spark adds `_corrupt_record`; main refuses; head `id, s, p`.
+  - **The header scan opens a file Spark never reads:** an unreadable `.x=1/root.csv` (hidden in Spark), or an
+    unreadable root file smaller than the partition files that the local listing returns first. Spark answers; main
+    and head refuse. Which file comes first is the directory's order.
+  - **`inferSchema` CSV over a 0-byte unreadable root file:** Spark answers (no split, never opened); main and head
+    refuse in the UTF-8 schema pass.
+- **Unreadable root files Spark opens, beyond delta 2's rule** (N3's waiver, owner 2026-11-26):
+  - **Files above 4 MB, CSV without `inferSchema`:** Spark opens the first split of its packing, ordered by
+    `min(size, maxSplitBytes)` with `maxSplitBytes = max(4 MB, totalBytes / defaultParallelism)`, so the answer
+    depends on the cluster's cores. A 5 MB unreadable root beside a 6 MB partition file: Spark answers at `local[2]`,
+    refuses at `local[16]`; main refuses; head answers. A 6 MB root beside a 5 MB file: Spark refuses at both; main
+    refuses; head answers. Cells: `D2B/cores=16/csvh/r5_p6`, `D2B/cores={2,16}/csvh/r6_p5`.
+  - **Two equal largest root files, one unreadable, CSV without `inferSchema`:** Spark opens the one its file-system
+    listing returns first (`root-b` before `root-a` on ext4, whatever the creation order), so it refuses or answers by
+    directory order; main refuses; head answers. Cells:
+    `D2T/cores={2,16}/ansi={true,false}/{csvh,csvn}/t_c{f,s}_nl/{read,count,collect}` (Spark refuses) beside the
+    `t_c{f,s}_nf` cells (Spark answers, as head).
 - **Refused as on the Parquet seat:** `basePath` and `recursiveFileLookup`. **Main's unpartitioned path:** several
   paths in one `load()`, and globs.
 
@@ -81,5 +105,18 @@ LIST walks (not measured). Not fixed: hand the listing to the fallback, or stop 
 - **Root files beside partitions:** CSV and JSON `inputFiles` list a visible file beside the partition directories
   (`part-0.csv` beside `p=1/`, `_c0=1/` or `_x=1/`) as Spark does, and still drop its rows.
 - **JSON user schema naming a partition column:** main's answer, above.
+
+## Delta 2 (2026-11-26)
+
+- **N3, an unreadable root file:** Spark raises `FAILED_READ_FILE` for a root file it opens at schema inference.
+  Discovery now reads one byte of each such file and refuses with main's object-store error:
+  - JSON without a user schema, and CSV with `inferSchema`: every non-empty root file;
+  - CSV without `inferSchema`: the largest non-empty file, when every file is at most 4 MB and it is a root file; at a
+    tie between root files only when each tied file is unreadable;
+  - a user schema: none. The facade flags a JSON user schema (`user_schema`); a CSV user schema stays on main's read.
+- **Measured:** step 0 delta 2 (`D2`, `D2B`, `D2T`), 1164 cells: TARGET 212 of 215 equal Spark (the 3 left are the waived `D2B` cells), PROTECTED 643 of 643, regressed 0; step 0 of rounds 1 and delta 1: TARGET 490 of 490, PROTECTED 348 of 348; the verifier suites, `lo.py` and #1430's corpora regressed 0; Parquet `EXPLAIN` identical to main on 78 of 78 plans.
+- **Cost:** JSON read with no user schema over 200 non-empty root files (`lo_many`): about +1.2 ms per read (delta 1 head 4.9 ms → 6.2 ms, pooled over six rounds on two builds; 1.19× to 1.32×), recorded as an absolute line by the owner on 2026-11-26; CSV 1.09×; `count()` equal.
+- **C5 (listed, not changed):** `EXPLAIN` over root files shows a `ListedOnlyExec` with a `RoundRobinBatch` repartition
+  over an empty node and lists every root file. Correct, if noisy.
 
 Up: [map.md](map.md).

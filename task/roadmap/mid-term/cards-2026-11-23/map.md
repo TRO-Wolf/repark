@@ -40,7 +40,8 @@ awaits the owner's rating. Each card row records its own status.
   **Fixed on branch** for four seats (2026-11-24, PR #1434); the struct seat stays as on main (delta 1).
 - [CSV-JSON-PARTITION-DISCOVERY-1](csv-json-partition-discovery-1-card-2026-11-24.md) (S1) — **card:** CSV and JSON
   reads of a `key=value/` directory drop the partition columns. Fixed on its branch (2026-11-26), with the list of
-  what is still unlike Spark.
+  what is still unlike Spark; delta 2 refuses an unreadable root file where Spark opens it (N3) and names the
+  follow-up CSV-JSON-ROOT-FILE-SCHEMA-1.
 - [MAKE-DT-INTERVAL-OVERFLOW-1](make-dt-interval-overflow-1-card-2026-11-25.md) (S1) — **card:** `make_dt_interval`
   answers NULL on overflow, where Spark raises or answers, and types its result as a string. Built on
   `fix/make-dt-interval-overflow-1` through delta 3, not merged.
