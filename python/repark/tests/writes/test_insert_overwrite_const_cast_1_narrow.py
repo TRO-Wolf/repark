@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 import json
 from collections.abc import Iterator
 from pathlib import Path
@@ -26,6 +27,7 @@ def spark(tmp_path: Path) -> Iterator[Any]:
         .config("spark.sql.session.timeZone", "UTC")
         .getOrCreate()
     )
+    gc.collect()
     session.catalog.clearCache()
     setup(session, NAMESPACE)
     yield session

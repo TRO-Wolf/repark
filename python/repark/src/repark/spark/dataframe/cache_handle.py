@@ -17,6 +17,7 @@ from repark.spark.dataframe.eager import _resolve_cache_budgets
 _LOGGER = logging.getLogger(__name__)
 _TABLE_LEVEL_KEY = "cache_table_level_frames"
 _COLLECTED: deque[None] = deque()
+_LIVE: weakref.WeakSet[Any] = weakref.WeakSet()
 
 
 def _drop_cache_view_registration(
@@ -58,6 +59,7 @@ class CacheViewHandle:
         self._view_name = view_name
         self._released = False
         _native.note_cache_view(True)
+        _LIVE.add(self)
         self._finalizer = weakref.finalize(
             self, _drop_cache_view_registration, session, alive_token, view_name
         )
@@ -91,6 +93,9 @@ class CacheViewHandle:
 
 
 def _release_collected() -> None:
+    for handle in list(_LIVE):
+        if not handle._alive_token.get("alive", True):
+            handle.release()
     while _COLLECTED:
         try:
             _COLLECTED.pop()
