@@ -57,10 +57,29 @@ Measured on live Spark 4.1.2 and on main `514281bd4`. #1430 does not change thes
 - **`where("p = 2")` on a string or date partition:** the pruning cast raises an Arrow cast error in both ANSI modes,
   where Spark raises `CAST_INVALID_INPUT` (ANSI on), answers no rows (ANSI off), or raises
   `DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES` (date). Shared with the Parquet seat.
-- **A JSON user schema that types a partition column** casts the inferred value, not the directory text, so `p=01`
-  read as `p STRING` would give `1` where Spark gives `01` (not measured).
+- **A JSON user schema that names a partition column** (`spark.read.schema("id BIGINT, s STRING, p STRING").json(dir)`):
+  main's answer, that column NULL and the other partition columns absent. Spark casts the directory text to the user's
+  type (`p=01` as `STRING` is `01`) and raises `INVALID_PARTITION_VALUE` where the cast fails (a timestamp directory
+  as `INT`, `abc` as `DOUBLE`). Delta 1 took main's answer: the first round cast the inferred value (`01` became `1`,
+  `2` became `2.0`) and refused a `DATE` schema over non-date directories with ANSI off, where Spark and main answer
+  NULL. Spark's rule needs the user schema on the discovery seat.
 - **CSV `inferSchema=true` in a case-sensitive session:** partition names compare case-insensitively.
+- **Root files beside partitions on Parquet:** `inputFiles` leaves out a file at the root of a partitioned Parquet
+  directory (`part-0.parquet` beside `p=1/`), where Spark lists it. CSV and JSON list it since delta 1; Parquet is
+  unchanged.
 - **Refused as on the Parquet seat:** `basePath` and `recursiveFileLookup`. **Main's unpartitioned path:** several
   paths in one `load()`, and globs.
+
+## Cost note
+
+An unpartitioned CSV or JSON read lists its prefix twice: the discovery lists it, answers `None`, and main's read lists
+it again. The verifier measured +19 to 37 % on a 5000-file flat local directory (under 1.5x); an S3 prefix pays two
+LIST walks (not measured). Not fixed: hand the listing to the fallback, or stop the walk early when no entry has `=`.
+
+## Delta 1 (2026-11-26)
+
+- **Root files beside partitions:** CSV and JSON `inputFiles` list a visible file beside the partition directories
+  (`part-0.csv` beside `p=1/`, `_c0=1/` or `_x=1/`) as Spark does, and still drop its rows.
+- **JSON user schema naming a partition column:** main's answer, above.
 
 Up: [map.md](map.md).

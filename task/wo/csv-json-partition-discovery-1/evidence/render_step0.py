@@ -48,6 +48,8 @@ def klass(key: str, spark: dict, main_equal: bool) -> str:
         return "KNOWN_DIVERGENCE"
     if key.startswith(("C/csvh/", "C/csvn/")) and "/schema_" in key:
         return "KNOWN_DIVERGENCE"
+    if key.startswith("C/json/") and "/schema_" in key and "/schema_without_p/" not in key:
+        return "KNOWN_DIVERGENCE"
     if spark.get("status") == "err" and str(spark.get("condition") or "").startswith(
         "UNRESOLVED_COLUMN"
     ):
