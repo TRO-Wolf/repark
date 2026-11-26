@@ -672,6 +672,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `_active_verbatim_flag` reads the active session's build-time
   `escapedStringLiterals` setting for `F.expr` (absent session or key reads
   false, matching the engine default).
+  **FEXPR-TIMESTAMP-NTZ-1 narrow (2026-11-26):** `_fragment_native_sql` hands `F.expr` text to
+  `_native.fragment_timestamp_ntz_sql` when the active session's `spark.sql.timestampType` (runtime value
+  included) is `TIMESTAMP_NTZ`, so a bare `TIMESTAMP` in the fragment resolves as Spark resolves it then.
 - `functions_udf.py` — Python UDF and pandas UDF markers, validation, and return-type
   contracts. Execution uses the DataFrame Arrow bridge. DFCORE-2 (2026-09-07): the
   `pandas_udf` docstring cross-reference follows the scalar rewrite to its new home,

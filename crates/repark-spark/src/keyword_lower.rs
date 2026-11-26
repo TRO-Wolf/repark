@@ -176,6 +176,30 @@ impl VisitorMut for TimestampNsCastLower {
     }
 }
 
+struct FragmentNtzCastLower {
+    nullable: String,
+}
+
+impl VisitorMut for FragmentNtzCastLower {
+    type Break = Infallible;
+
+    fn post_visit_expr(&mut self, expr: &mut Expr) -> ControlFlow<Self::Break> {
+        ntz_cast_lower::lower_fragment_timestamp_ntz_cast(expr, &self.nullable);
+        ControlFlow::Continue(())
+    }
+}
+
+pub(crate) fn lower_fragment_timestamp_ntz_casts<T: VisitMut>(node: &mut T) {
+    let nullable = repark_functions::decimal_cast::spark_decimal_cast_nullable_udf();
+    let _ = node.visit(&mut FragmentNtzCastLower {
+        nullable: nullable.name().to_owned(),
+    });
+}
+
+pub(crate) fn fragment_timestamp_types_as_ntz(sql: &str) -> Option<String> {
+    ntz_cast_lower::bare_timestamp_types_as_ntz(sql)
+}
+
 pub(crate) fn lower_timestamp_ns_casts<T: VisitMut>(node: &mut T) {
     let _ = node.visit(&mut TimestampNsCastLower { empty_maps: false });
 }

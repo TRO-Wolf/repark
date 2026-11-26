@@ -39,6 +39,14 @@ def _active_verbatim_flag() -> bool:
     return str(raw or "").strip().lower() in ("true", "1", "yes")
 
 
+def _fragment_native_sql(sql: str) -> str:
+    from repark.spark.session.timestamp_type import is_default_timestamp_ntz
+
+    if not is_default_timestamp_ntz():
+        return sql
+    return _native.fragment_timestamp_ntz_sql(sql) or sql
+
+
 def _current_catalog_name() -> str:
     """Session current catalog, or the facade default when none is active."""
     session = _active_session()

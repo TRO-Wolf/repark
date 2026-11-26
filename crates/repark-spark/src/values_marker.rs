@@ -144,10 +144,22 @@ pub async fn plan_marked_fragment(
     let state = ctx.state();
     let dialect = state.config().options().sql_parser.dialect;
     let mut statement = state.sql_to_statement(sql, &dialect)?;
+    if let DfStatement::Statement(inner) = &mut statement {
+        crate::keyword_lower::lower_fragment_timestamp_ntz_casts(inner.as_mut());
+    }
     if session_marks_values(&state) && mark_fragment_statement(&mut statement) {
         return Ok(None);
     }
     state.statement_to_plan(statement).await.map(Some)
+}
+
+pub fn lower_fragment_timestamp_ntz_casts(expr: &mut Expr) {
+    crate::keyword_lower::lower_fragment_timestamp_ntz_casts(expr);
+}
+
+#[must_use]
+pub fn fragment_timestamp_types_as_ntz(sql: &str) -> Option<String> {
+    crate::keyword_lower::fragment_timestamp_types_as_ntz(sql)
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]

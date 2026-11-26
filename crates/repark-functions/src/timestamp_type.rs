@@ -150,6 +150,13 @@ pub fn spark_timestamp_type_from_options(options: &ConfigOptions) -> SparkTimest
         })
 }
 
+#[must_use]
+pub fn typed_literal_resolves_ntz(text: &str) -> bool {
+    crate::spark_string_timestamp::grammar::parse_timestamp_string(text)
+        .is_some_and(|parsed| parsed.zone.is_none() && !parsed.just_time)
+        && crate::timestamp_ntz_cast::parse_timestamp_ntz_wall(text).is_some()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -222,4 +229,24 @@ mod tests {
             SparkTimestampType::Ntz
         );
     }
+
+    #[test]
+    fn typed_literal_is_ntz_only_for_a_zoneless_date_time() {
+        for ntz in ["2024-01-01 02:00:00", "2024-03-10 02:30:00.5", "2024-01-01", " 2024-01-01T02:00 "] {
+            assert!(typed_literal_resolves_ntz(ntz), "{ntz}");
+        }
+        for ltz_or_invalid in [
+            "2024-01-01 02:00:00Z",
+            "2024-01-01T02:00:00+05:30",
+            "2024-01-01 02:00:00 America/New_York",
+            "2024-01-01 02:00:00 UTC",
+            "02:00:00",
+            "T02:00:00",
+            "bad",
+            "",
+        ] {
+            assert!(!typed_literal_resolves_ntz(ltz_or_invalid), "{ltz_or_invalid}");
+        }
+    }
 }
+

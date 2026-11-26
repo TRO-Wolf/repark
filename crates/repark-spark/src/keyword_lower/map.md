@@ -17,6 +17,13 @@ lowering it calls first.
   token layer into the cast of its text. Nested targets (`ARRAY`, `STRUCT`, `MAP`) stay
   untouched for the R4 refusal. Reached from `lower_expression`,
   `TimestampNsCastLower::post_visit_expr` and `TimestampNsCastProbe`.
+  **FEXPR-TIMESTAMP-NTZ-1 narrow (2026-11-26), fragment door only:** `lower_fragment_timestamp_ntz_cast`
+  lowers the same casts for `F.expr` and wraps a non-`TRY` string-literal operand in
+  `__repark_decimal_cast_nullable__`, so the cast stays nullable as Spark's does; `bare_timestamp_types_as_ntz`
+  respells a bare `TIMESTAMP` as `TIMESTAMP_NTZ` where it names a type (a `CAST` / `TRY_CAST` target, a `::`
+  target, or a typed literal whose text parses with no zone and is not time-only), for a fragment built under
+  `spark.sql.timestampType=TIMESTAMP_NTZ`. A zoned literal stays an instant, as Spark's parser keeps it. The
+  SQL door never calls either.
 - `ltz_values_cast.rs` — **WO NTZ-STORE-DOORS-1 second re-verify fold (2026-09-29,
   RD3-1):** `mark_values_timestamp_casts` wraps each `VALUES` cell that is a written
   `CAST` / `::` to `TIMESTAMP` (or `TIMESTAMP_LTZ`), through parentheses, in one more

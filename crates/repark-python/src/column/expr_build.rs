@@ -110,6 +110,7 @@ fn fragment_logical_expr(
     let state = context.state();
     let dialect = state.config().options().sql_parser.dialect;
     let mut parsed = state.sql_to_expr_with_alias(sql, &dialect)?;
+    repark_spark::values_marker::lower_fragment_timestamp_ntz_casts(&mut parsed.expr);
     repark_spark::values_marker::mark_fragment_cells(&mut parsed.expr);
     state.create_logical_expr_from_sql_expr(parsed, schema)
 }
@@ -362,6 +363,11 @@ pub(super) fn build_expr_context() -> datafusion::error::Result<SessionContext> 
     context.register_udf(repark_spark::spark_as_udf().as_ref().clone());
     context.register_udf(repark_spark::suffix_literal_udf().as_ref().clone());
     context.register_udf(
+        repark_functions::decimal_cast::spark_decimal_cast_nullable_udf()
+            .as_ref()
+            .clone(),
+    );
+    context.register_udf(
         repark_spark::values_marker::values_cell_udf()
             .as_ref()
             .clone(),
@@ -581,7 +587,13 @@ impl PyColumn {
 }
 
 pub(crate) fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
-    module.add_function(wrap_pyfunction!(grouping_id_column, module)?)
+    module.add_function(wrap_pyfunction!(grouping_id_column, module)?)?;
+    module.add_function(wrap_pyfunction!(fragment_timestamp_ntz_sql, module)?)
+}
+
+#[pyfunction]
+pub(crate) fn fragment_timestamp_ntz_sql(sql: &str) -> Option<String> {
+    repark_spark::values_marker::fragment_timestamp_types_as_ntz(sql)
 }
 
 #[pyfunction]
