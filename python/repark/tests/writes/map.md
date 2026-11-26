@@ -10,8 +10,8 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 ## Contents
 
 - [test_a13_ctas_fallback.py](test_a13_ctas_fallback.py) — Location-less CTAS under ``register_memory_catalog`` writes under the catalog warehouse.
-- `test_cast_overflow_insert_1.py` — **WRITE-SPINE-1 step 2 fix round 1 (2026-10-25):** `test_vo4_1_insert_into_overwrite_reports_arity_first` pins the arity-first order on INSERT OVERWRITE (WS2-29).
-- [test_cast_overflow_insert_1.py](test_cast_overflow_insert_1.py) — CAST-OVERFLOW-INSERT-1: storing an overflowing value replays the recorded Spark cells on the SQL and DataFrame doors.
+- [test_insert_overwrite_const_cast_1_narrow.py](test_insert_overwrite_const_cast_1_narrow.py) — INSERT-OVERWRITE-CONST-CAST-1 narrow: 417 recorded overwrite cells, both doors.
+- [test_cast_overflow_insert_1.py](test_cast_overflow_insert_1.py) — CAST-OVERFLOW-INSERT-1: overflowing stores replay Spark cells; `test_vo4_1_insert_into_overwrite_reports_arity_first`: arity first (WS2-29).
 - [test_ctas_division_writeback.py](test_ctas_division_writeback.py) — Facade write-path pins for CTAS integer-division type derivation.
 - [test_ctas_view_typed.py](test_ctas_view_typed.py) — Unpartitioned CTAS from a parquet-read temp view (Utf8View batches).
 - [test_dml_b_partition_overwrite.py](test_dml_b_partition_overwrite.py) — Facade SQL INSERT OVERWRITE PARTITION pins (DML-B).

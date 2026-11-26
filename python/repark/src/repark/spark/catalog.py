@@ -263,6 +263,9 @@ class Catalog:
         for view_name in self._session.list_temp_view_names():
             if view_name.startswith(_CACHE_VIEW_PREFIX):
                 self.drop_temp_view(view_name)
+        from repark.spark.dataframe.cache_handle import _release_collected
+
+        _release_collected()
 
     clearCache = clear_cache  # noqa: N815
 

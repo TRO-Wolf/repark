@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import warnings
 import weakref
+from collections import deque
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -15,6 +16,8 @@ from repark.spark.dataframe.eager import _resolve_cache_budgets
 
 _LOGGER = logging.getLogger(__name__)
 _TABLE_LEVEL_KEY = "cache_table_level_frames"
+_COLLECTED: deque[None] = deque()
+_LIVE: weakref.WeakSet[Any] = weakref.WeakSet()
 
 
 def _drop_cache_view_registration(
@@ -23,6 +26,7 @@ def _drop_cache_view_registration(
     view_name: str,
 ) -> None:
     """Finalizer callback: drop the registration unless the session already stopped."""
+    _COLLECTED.append(None)
     if not alive_token.get("alive", True):
         return
     try:
@@ -54,6 +58,8 @@ class CacheViewHandle:
         self._alive_token = alive_token
         self._view_name = view_name
         self._released = False
+        _native.note_cache_view(True)
+        _LIVE.add(self)
         self._finalizer = weakref.finalize(
             self, _drop_cache_view_registration, session, alive_token, view_name
         )
@@ -83,6 +89,19 @@ class CacheViewHandle:
             self._session.release_lazy_cache(self._view_name)
             self._session.drop_temp_view(self._view_name)
         self._released = True
+        _native.note_cache_view(False)
+
+
+def _release_collected() -> None:
+    for handle in list(_LIVE):
+        if not handle._alive_token.get("alive", True):
+            handle.release()
+    while _COLLECTED:
+        try:
+            _COLLECTED.pop()
+        except IndexError:
+            return
+        _native.note_cache_view(False)
 
 
 def union_handles(own: tuple[Any, ...], other: tuple[Any, ...]) -> tuple[Any, ...]:

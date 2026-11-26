@@ -26,6 +26,23 @@ conformance it calls before staging.
   `__repark_string_to_*__` (`string_integral_cast_parts`) and `__repark_narrow_to_*__` (`narrow_cast_parts`) as the
   `CAST(x AS T)` they replaced, so a laundered empty overwrite still refuses.
 
+- `const_cast.rs` — **INSERT-OVERWRITE-CONST-CAST-1, narrow fix (2026-11-25):** `refuse_constant_cast`, run once by the
+  overwrite doors before they wipe, replace or commit (the empty whole-table arm after the W03 check, the partition path,
+  `replace_where.rs` for `writeTo().overwrite(...)` and `ctas.rs` for a `saveAsTable` overwrite). Under ANSI, when the
+  source reads no named relation (CTEs and the door's own `_repark_writer_` view aside) and plans to projections, filters
+  and aliases over a `FROM`-less `SELECT`, each output column that is a cast of a string literal is judged by the decision
+  table (`spark_cast_raises`: ASCII-letter strings to the integral and microsecond timestamp types, and to `FLOAT` /
+  `DOUBLE` minus `nan`, `inf`, `infinity` and their `d` / `f` forms, measured on Spark 4.1.2). A listed value runs through
+  RePark's own cast on one row, and the guard refuses only with that cast's `[CAST_INVALID_INPUT]` error. A cast's
+  operand may sit in the session's `__repark_decimal_cast_nullable__` identity marker. It stands down while the session
+  holds a cached frame (`session_holds_cache`, read by the router into `StatementWriteOptions::cached_frames`). Delta 2
+  (2026-11-26) makes that process-wide: `LIVE_CACHE_VIEWS` counts the caches of every session (a collected one stays counted until `clearCache()`, as in Spark),
+  moved by `note_cache_view` (re-exported from `lib.rs`; `cache_handle.py` calls it through `_native.note_cache_view`).
+  `stands_down` still stands down when a catalog replaced the session's temp-view home, as the delta-1 listing did. The
+  count's unit tests use a local counter, so no test moves the process count. Its unit tests pin the table,
+  the scope test and the relation check; `tests/insert_overwrite_const_cast.rs` plans through a full session. Card:
+  [insert-overwrite-const-cast-1](../../../../task/roadmap/mid-term/cards-2026-11-23/insert-overwrite-const-cast-1-card-2026-11-24.md).
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

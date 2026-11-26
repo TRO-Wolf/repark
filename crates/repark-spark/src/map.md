@@ -10,7 +10,7 @@ links its files. The pre-condensation record is
 
 | area | files | charter |
 |---|---|---|
-| manifest | [lib.rs](lib.rs), [matrix.rs](matrix.rs) | crate manifest; the shipped-vs-absent surface matrix |
+| manifest | [lib.rs](lib.rs), [matrix.rs](matrix.rs) | crate manifest; the shipped-vs-absent surface matrix; `lib.rs` re-exports `note_cache_view`, the const-cast guard's process-wide cache count, for `repark-python` (INSERT-OVERWRITE-CONST-CAST-1 delta 2) |
 | router | [router/map.md](router/map.md), [router.rs](router.rs), [spark_ast.rs](spark_ast.rs), [view_dispatch.rs](view_dispatch.rs), [write_door.rs](write_door.rs) | statement routing (runs `minus_all_as_except_all` post-normalizers), AST execution, write-door tags |
 | normalize | [normalize/map.md](normalize/map.md), [normalize.rs](normalize.rs) | parse normalization, DML valves |
 | dialect | [dialect/map.md](dialect/map.md), [dialect.rs](dialect.rs) | session and executing-parse dialects |
