@@ -91,6 +91,14 @@ def dataframe_dtypes(frame: Any) -> list[tuple[str, str]]:
     return [(field.name, field.dataType.simpleString()) for field in frame.schema.fields]
 
 
+def _logical_key_type(type_key: str) -> Any:
+    from repark.spark import types
+
+    return (
+        types.DayTimeIntervalType() if type_key == "interval day to second" else types.StringType()
+    )
+
+
 def dataframe_str(frame: Any) -> str:
     """``DataFrame[name: type, …]`` (PySpark ``DataFrame.__str__``)."""
     frame._ensure_alive()

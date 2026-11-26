@@ -1,0 +1,11288 @@
+{
+ "blast|sql|SELECT make_dt_interval(1) AS r UNION ALL SELECT make_dt_interval(0, 1) AS r": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(1,0,0)"
+    ],
+    [
+     "td(0,3600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(1,0,0)"
+    ],
+    [
+     "td(0,3600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "blast|sql|SELECT sum(ts - TIMESTAMP'2023-12-31 00:00:00') AS r FROM mem WHERE id IN (1, 2)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(2,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(2,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "ctas|col": {
+  "false": {
+   "cls": "",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "",
+   "kind": "error"
+  }
+ },
+ "ctas|lit": {
+  "false": {
+   "cls": "",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "",
+   "kind": "error"
+  }
+ },
+ "ctas|nan": {
+  "false": {
+   "cls": "",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "",
+   "kind": "error"
+  }
+ },
+ "expr|lit|make_dt_interval()": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(-1)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(-1, 2147483647, 0, 0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(89478484,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(89478484,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(-106751991)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(-106751991, -4, 0, -54.775809)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "expr|lit|make_dt_interval(-106751992)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "expr|lit|make_dt_interval(-2147483648)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "expr|lit|make_dt_interval(0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, -1)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-1,82800,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-1,82800,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, -2147483648)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-89478486,57600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-89478486,57600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 0, -1)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-1,86340,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-1,86340,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 0, -2147483648)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-1491309,78720,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-1491309,78720,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 0, 0, 0.1234565D)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 0, 0, 0.1234567D)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 0, 0, 1.5D)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,1,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,1,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 0, 0, 1.5E0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,1,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,1,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 0, 0, 1000000000000)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "cls": "NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 0, 0, 1000000000000.5)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "cls": "NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 0, 0, 1E12D)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "cls": "NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 0, 0, 5)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,5,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,5,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 0, 0, 60)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,60,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,60,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 0, 0, 86400)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 0, 0, CAST('-Infinity' AS DOUBLE))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 0, 0, CAST('Infinity' AS DOUBLE))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 0, 0, CAST('NaN' AS DOUBLE))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 0, 0, CAST(0.1 AS FLOAT))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,0,100000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,0,100000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 0, 0, CAST(1.5 AS FLOAT))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,1,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,1,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 0, 0, CAST(4.5 AS DECIMAL(38, 10)))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,4,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,4,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 0, 0, NULL)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 0, 1)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,60,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,60,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 0, 2147483647)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1491308,7620,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1491308,7620,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 0, NULL)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 1)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,3600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,3600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 2147483647)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, 25)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,3600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,3600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(0, NULL)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(1)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(1, -24)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(1, 2, 3)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,7380,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,7380,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(1, 2, 3, 4, 5)": {
+  "false": {
+   "cls": "WRONG_NUM_ARGS.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "WRONG_NUM_ARGS.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "expr|lit|make_dt_interval(1, 2147483647, 0, 0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(89478486,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(89478486,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(106751991)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(106751991, 4)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(106751991,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(106751991,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(106751991, 4, 0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(106751991,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(106751991,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(106751991, 4, 0, 54.775808)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "expr|lit|make_dt_interval(106751991, 4, 1)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "expr|lit|make_dt_interval(106751991, 5)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "expr|lit|make_dt_interval(106751992)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "expr|lit|make_dt_interval(2147483647)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "expr|lit|make_dt_interval(2147483647, 2147483647)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "expr|lit|make_dt_interval(2147483647, 2147483647, 2147483647, 0.0)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "expr|lit|make_dt_interval(CAST(1 AS BIGINT))": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(CAST(1 AS SMALLINT), CAST(2 AS TINYINT))": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,7200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,7200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(CAST(NULL AS INT))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(NULL)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|lit|make_dt_interval(NULL, 0, 0, 0.0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|mem#1|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,4,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,4,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|mem#1|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|mem#1|make_dt_interval(d, h, m, s) > make_dt_interval(0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     true
+    ]
+   ],
+   "type": "boolean"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     true
+    ]
+   ],
+   "type": "boolean"
+  }
+ },
+ "expr|mem#2|CAST(make_dt_interval(d, h, m, s) AS STRING)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "expr|mem#2|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|mem#2|make_dt_interval(d)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "expr|mem#2|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "expr|mem#2|make_dt_interval(d, h, m, s) > make_dt_interval(0)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "expr|mem#2|ts + make_dt_interval(d, h, m, s)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "expr|mem#3|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|mem#3|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|mem#3|make_dt_interval(d, h, m, s) > make_dt_interval(0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     true
+    ]
+   ],
+   "type": "boolean"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     true
+    ]
+   ],
+   "type": "boolean"
+  }
+ },
+ "expr|mem#7|CAST(make_dt_interval(d, h, m, s) AS STRING)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "string"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "string"
+  }
+ },
+ "expr|mem#7|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|mem#7|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "expr|mem#7|make_dt_interval(d, h, m, s) > make_dt_interval(0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "boolean"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "boolean"
+  }
+ },
+ "expr|mem#7|ts + make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "timestamp"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "timestamp"
+  }
+ },
+ "fn|mem#1|fn()": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "fn|mem#1|fn(0,0,0,0.1234567)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "fn|mem#1|fn(0,2147483647)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "fn|mem#1|fn(1)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "fn|mem#1|fn(1,2,3,4.5)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "fn|mem#1|fn(2147483647)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "fn|mem#1|fn(d,h,m,s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "fn|mem#1|fn(lit0,lit0,lit0,s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,4,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,4,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "fn|mem#2|fn(d)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "fn|mem#2|fn(d,h,m,s)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "fn|mem#2|fn(lit0,lit0,lit0,s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "fn|mem#3|fn(d,h,m,s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "fn|mem#3|fn(lit0,lit0,lit0,s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "fn|mem#7|fn(d,h,m,s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "fn|mem#7|fn(lit0,lit0,lit0,s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "printSchema|col": {
+  "false": {
+   "kind": "ok",
+   "text": " |-- r: interval day to second (nullable = true)"
+  },
+  "true": {
+   "kind": "ok",
+   "text": " |-- r: interval day to second (nullable = true)"
+  }
+ },
+ "printSchema|lit": {
+  "false": {
+   "kind": "ok",
+   "text": " |-- r: interval day to second (nullable = false)"
+  },
+  "true": {
+   "kind": "ok",
+   "text": " |-- r: interval day to second (nullable = false)"
+  }
+ },
+ "printSchema|nan": {
+  "false": {
+   "kind": "ok",
+   "text": " |-- r: interval day to second (nullable = true)"
+  },
+  "true": {
+   "kind": "ok",
+   "text": " |-- r: interval day to second (nullable = true)"
+  }
+ },
+ "selectExpr|lit|make_dt_interval()": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(-1)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(-1, 2147483647, 0, 0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(89478484,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(89478484,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(-106751991)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(-106751991, -4, 0, -54.775808)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-106751992,71945,224192)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-106751992,71945,224192)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(-106751991, -4, 0, -54.775809)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(-106751992)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(-2147483648)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, -1)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-1,82800,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-1,82800,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, -2147483648)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-89478486,57600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-89478486,57600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, -1)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-1,86340,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-1,86340,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, -2147483648)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-1491309,78720,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-1491309,78720,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, -0.0000005)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-1,86399,999999)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-1,86399,999999)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, -1.5)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-1,86398,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-1,86398,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, -999999999999.999999)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-11574075,80000,1)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(-11574075,80000,1)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 0.0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 0.00000049)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 0.0000005)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,1)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,1)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 0.1)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,100000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,100000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 0.12)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,120000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,120000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 0.123)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,123000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,123000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 0.1234)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,123400)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,123400)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 0.12345)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,123450)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,123450)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 0.123456)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,123456)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,123456)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 0.1234565)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 0.1234565D)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 0.1234567)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 0.1234567D)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 1.5)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,1,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,1,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 1.5D)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,1,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,1,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 1.5E0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,1,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,1,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 1000000000000)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "cls": "NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 1000000000000.5)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "cls": "NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 1E12D)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "cls": "NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 3600.5)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,3600,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,3600,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 5)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,5,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,5,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 59.999999)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,59,999999)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,59,999999)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 59.9999995)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,60,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,60,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 60)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,60,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,60,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 86400)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, 999999999999.999999)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(11574074,6399,999999)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(11574074,6399,999999)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, CAST('-Infinity' AS DOUBLE))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, CAST('Infinity' AS DOUBLE))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, CAST('NaN' AS DOUBLE))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, CAST(0.1 AS FLOAT))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,0,100000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,0,100000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, CAST(1.5 AS FLOAT))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,1,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,1,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, CAST(4.5 AS DECIMAL(38, 10)))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,4,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,4,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 0, NULL)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 1)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,60,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,60,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, 2147483647)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1491308,7620,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1491308,7620,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 0, NULL)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 1)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,3600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,3600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 2147483647)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, 25)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,3600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,3600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(0, NULL)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(1)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(1, -24)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(1, 2, 3)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,7380,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,7380,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(1, 2, 3, 4, 5)": {
+  "false": {
+   "cls": "WRONG_NUM_ARGS.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "WRONG_NUM_ARGS.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(1, 2, 3, 4.5)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(1, 2147483647, 0, 0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(89478486,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(89478486,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(106751991)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(106751991, 4)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(106751991,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(106751991,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(106751991, 4, 0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(106751991,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(106751991,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(106751991, 4, 0, 54.775807)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(106751991,14454,775807)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(106751991,14454,775807)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(106751991, 4, 0, 54.775808)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(106751991, 4, 1)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(106751991, 5)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(106751992)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(2147483647)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(2147483647, 2147483647)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(2147483647, 2147483647, 2147483647, 0.0)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(CAST(1 AS BIGINT))": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(CAST(1 AS SMALLINT), CAST(2 AS TINYINT))": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,7200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,7200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(CAST(NULL AS INT))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(NULL)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|lit|make_dt_interval(NULL, 0, 0, 0.0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|mem#1|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,4,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,4,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|mem#1|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|mem#1|make_dt_interval(d, h, m, s) > make_dt_interval(0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     true
+    ]
+   ],
+   "type": "boolean"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     true
+    ]
+   ],
+   "type": "boolean"
+  }
+ },
+ "selectExpr|mem#2|CAST(make_dt_interval(d, h, m, s) AS STRING)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "selectExpr|mem#2|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|mem#2|make_dt_interval(d)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "selectExpr|mem#2|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "selectExpr|mem#2|make_dt_interval(d, h, m, s) > make_dt_interval(0)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "selectExpr|mem#2|ts + make_dt_interval(d, h, m, s)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "selectExpr|mem#3|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|mem#3|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|mem#3|make_dt_interval(d, h, m, s) > make_dt_interval(0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     true
+    ]
+   ],
+   "type": "boolean"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     true
+    ]
+   ],
+   "type": "boolean"
+  }
+ },
+ "selectExpr|mem#7|CAST(make_dt_interval(d, h, m, s) AS STRING)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "string"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "string"
+  }
+ },
+ "selectExpr|mem#7|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|mem#7|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "selectExpr|mem#7|make_dt_interval(d, h, m, s) > make_dt_interval(0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "boolean"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "boolean"
+  }
+ },
+ "selectExpr|mem#7|ts + make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "timestamp"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "timestamp"
+  }
+ },
+ "sql|ice.md.nl#10|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#10|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#10|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#10|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#10|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#11|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     11,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     11,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#11|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     11,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     11,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#11|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     11,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     11,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#11|make_dt_interval(d)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|ice.md.nl#11|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|ice.md.nl#12|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#12|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#12|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(-89478486,57600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(-89478486,57600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#12|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#12|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(-89478486,57600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(-89478486,57600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#13|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     13,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     13,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#13|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     13,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     13,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#13|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     13,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     13,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#13|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     13,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     13,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#13|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     13,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     13,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#1|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,4,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,4,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#1|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,180,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,180,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#1|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,7200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,7200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#1|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#1|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#2|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#2|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#2|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#2|make_dt_interval(d)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|ice.md.nl#2|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|ice.md.nl#3|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#3|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#3|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#3|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#3|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#4|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#4|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(1491308,7620,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(1491308,7620,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#4|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#4|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#4|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(1491308,7620,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(1491308,7620,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#5|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(0,54,775807)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(0,54,775807)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#5|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#5|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(0,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(0,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#5|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#5|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(106751991,14454,775807)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(106751991,14454,775807)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#6|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     6,
+     "td(0,54,775808)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     6,
+     "td(0,54,775808)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#6|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     6,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     6,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#6|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     6,
+     "td(0,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     6,
+     "td(0,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#6|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     6,
+     "td(106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     6,
+     "td(106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#6|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|ice.md.nl#7|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#7|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#7|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#7|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#7|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#8|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     8,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     8,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#8|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     8,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     8,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#8|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     8,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     8,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#8|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     8,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     8,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#8|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     8,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     8,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#9|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-1,86395,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-1,86395,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#9|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-1,86220,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-1,86220,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#9|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-1,79200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-1,79200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#9|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nl#9|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-2,79015,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-2,79015,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#10|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#10|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     10,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     10,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#10|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     10,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     10,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#10|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     10,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     10,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#10|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#11|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     11,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     11,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#11|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     11,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     11,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#11|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     11,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     11,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#11|make_dt_interval(d)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|ice.md.nn#11|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|ice.md.nn#12|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#12|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     12,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     12,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#12|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     12,
+     "td(-89478486,57600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     12,
+     "td(-89478486,57600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#12|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     12,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     12,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#12|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(-89478486,57600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(-89478486,57600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#1|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,4,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,4,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#1|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,180,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,180,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#1|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,7200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(0,7200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#1|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1,
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#1|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#2|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#2|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#2|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#2|make_dt_interval(d)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|ice.md.nn#2|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|ice.md.nn#3|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#3|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#3|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     3,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     3,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#3|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#3|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#4|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#4|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     4,
+     "td(1491308,7620,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     4,
+     "td(1491308,7620,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#4|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     4,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     4,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#4|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     4,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     4,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#4|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(1491308,7620,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(1491308,7620,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#5|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(0,54,775807)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(0,54,775807)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#5|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     5,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     5,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#5|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     5,
+     "td(0,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     5,
+     "td(0,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#5|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     5,
+     "td(106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     5,
+     "td(106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#5|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(106751991,14454,775807)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(106751991,14454,775807)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#6|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     6,
+     "td(0,54,775808)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     6,
+     "td(0,54,775808)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#6|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     6,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     6,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#6|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     6,
+     "td(0,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     6,
+     "td(0,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#6|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     6,
+     "td(106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     6,
+     "td(106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#6|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|ice.md.nn#7|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#7|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     7,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     7,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#7|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     7,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     7,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#7|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     7,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     7,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#7|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#8|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     8,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     8,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#8|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     8,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     8,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#8|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     8,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     8,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#8|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     8,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     8,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#8|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     8,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     8,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#9|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-1,86395,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-1,86395,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#9|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     9,
+     "td(-1,86220,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     9,
+     "td(-1,86220,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#9|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     9,
+     "td(-1,79200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     9,
+     "td(-1,79200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#9|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     9,
+     "td(-1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     9,
+     "td(-1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|ice.md.nn#9|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-2,79015,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-2,79015,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|TIMESTAMP'2024-01-02 00:00:00' - TIMESTAMP'2024-01-01 00:00:00'": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|coalesce(make_dt_interval(NULL), make_dt_interval(2))": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(2,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(2,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|extract(DAY FROM make_dt_interval(1, 2, 3, 4.5))": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "type": "int"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "type": "int"
+  }
+ },
+ "sql|lit|make_dt_interval()": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(-1)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(-1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(-1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(-1, 2147483647, 0, 0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(89478484,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(89478484,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(-106751991)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(-106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(-106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(-106751991, -4, 0, -54.775808)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(-106751992,71945,224192)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(-106751992,71945,224192)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(-106751991, -4, 0, -54.775809)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|lit|make_dt_interval(-106751991, -5, 60, 0)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|lit|make_dt_interval(-106751992)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|lit|make_dt_interval(-2147483648)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|lit|make_dt_interval(0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, -1)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(-1,82800,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(-1,82800,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, -2147483648)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(-89478486,57600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(-89478486,57600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, -1)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(-1,86340,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(-1,86340,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, -2147483648)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(-1491309,78720,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(-1491309,78720,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, -0.0000005)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(-1,86399,999999)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(-1,86399,999999)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, -1.5)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(-1,86398,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(-1,86398,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, -1E12D)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "cls": "NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, -5.0E-7D)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(-1,86399,999999)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(-1,86399,999999)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, -999999999999.999999)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(-11574075,80000,1)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(-11574075,80000,1)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 0.0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 0.00000049)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 0.0000005)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,1)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,1)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 0.1)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,100000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,100000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 0.12)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,120000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,120000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 0.123)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,123000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,123000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 0.1234)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,123400)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,123400)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 0.12345)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,123450)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,123450)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 0.123456)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,123456)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,123456)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 0.1234564999D)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,0,123456)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,0,123456)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 0.1234565)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 0.1234565D)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 0.1234567)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 0.1234567D)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 1.0000005D)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,1,1)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,1,1)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 1.5)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,1,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,1,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 1.5D)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,1,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,1,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 1.5E0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,1,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,1,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 1000000000000)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "cls": "NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 1000000000000.5)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "cls": "NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 1E-300D)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 1E12D)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "cls": "NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 2.5E-7D)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 3600.5)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,3600,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,3600,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 5)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,5,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,5,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 5.0E-7D)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,0,1)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,0,1)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 59.999999)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,59,999999)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,59,999999)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 59.9999995)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,60,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,60,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 60)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,60,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,60,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 86400)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, 999999999999.999999)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(11574074,6399,999999)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(11574074,6399,999999)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, CAST('-Infinity' AS DOUBLE))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, CAST('Infinity' AS DOUBLE))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, CAST('NaN' AS DOUBLE))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, CAST(-999999999999.9999995 AS DECIMAL(19, 7)))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "cls": "NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, CAST(0.1 AS FLOAT))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,0,100000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,0,100000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, CAST(1 AS BIGINT))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,1,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,1,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, CAST(1 AS DECIMAL(11, 0)))": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,1,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,1,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, CAST(1 AS DECIMAL(12, 0)))": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,1,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,1,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, CAST(1 AS DECIMAL(13, 0)))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,1,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,1,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, CAST(1 AS DECIMAL(13, 1)))": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,1,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,1,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, CAST(1 AS DECIMAL(18, 6)))": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,1,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,1,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, CAST(1 AS DECIMAL(18, 7)))": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,1,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,1,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, CAST(1 AS DECIMAL(19, 7)))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,1,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,1,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, CAST(1 AS DECIMAL(38, 30)))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,1,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,1,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, CAST(1 AS INT))": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,1,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,1,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, CAST(1 AS SMALLINT))": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,1,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,1,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, CAST(1.5 AS FLOAT))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,1,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,1,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, CAST(4.5 AS DECIMAL(38, 10)))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,4,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,4,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, CAST(999999999999.9999995 AS DECIMAL(19, 7)))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "cls": "NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 0, NULL)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 1)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,60,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,60,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, 2147483647)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(1491308,7620,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(1491308,7620,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 0, NULL)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 1)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,3600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,3600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 2147483647)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, 25)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(1,3600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(1,3600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(0, NULL)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(1)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(1) - make_dt_interval(2)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(-1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(-1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(1) = make_dt_interval(0, 24)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     true
+    ]
+   ],
+   "type": "boolean"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     true
+    ]
+   ],
+   "type": "boolean"
+  }
+ },
+ "sql|lit|make_dt_interval(1) > make_dt_interval(0, 23)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     true
+    ]
+   ],
+   "type": "boolean"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     true
+    ]
+   ],
+   "type": "boolean"
+  }
+ },
+ "sql|lit|make_dt_interval(1) IS NULL": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     false
+    ]
+   ],
+   "type": "boolean"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     false
+    ]
+   ],
+   "type": "boolean"
+  }
+ },
+ "sql|lit|make_dt_interval(1, -24)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(1, 2, 3)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(1,7380,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(1,7380,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(1, 2, 3, 4, 5)": {
+  "false": {
+   "cls": "WRONG_NUM_ARGS.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "WRONG_NUM_ARGS.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|lit|make_dt_interval(1, 2, 3, 4.5)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(1, 2, 3, 4.5) + make_dt_interval(0, 1)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(1,10984,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(1,10984,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(1, 2, 3, 4.5) IN (make_dt_interval(1, 2, 3, 4.5))": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     true
+    ]
+   ],
+   "type": "boolean"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     true
+    ]
+   ],
+   "type": "boolean"
+  }
+ },
+ "sql|lit|make_dt_interval(1, 2147483647, 0, 0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(89478486,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(89478486,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(106751991)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(106751991, 4)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(106751991,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(106751991,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(106751991, 4, 0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(106751991,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(106751991,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(106751991, 4, 0, 54.775807)": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(106751991,14454,775807)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(106751991,14454,775807)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(106751991, 4, 0, 54.775808)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|lit|make_dt_interval(106751991, 4, 1)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|lit|make_dt_interval(106751991, 5)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|lit|make_dt_interval(106751991, 5, -60, 0)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|lit|make_dt_interval(106751992)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|lit|make_dt_interval(2147483647)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|lit|make_dt_interval(2147483647, 2147483647)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|lit|make_dt_interval(2147483647, 2147483647, 2147483647, 0.0)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|lit|make_dt_interval(CAST(1 AS BIGINT))": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(CAST(1 AS SMALLINT), CAST(2 AS TINYINT))": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(1,7200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     "td(1,7200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(CAST(NULL AS INT))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(NULL)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_dt_interval(NULL, 0, 0, 0.0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|lit|make_interval()": {
+  "false": {
+   "cls": "NOT_IMPLEMENTED",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "NOT_IMPLEMENTED",
+   "kind": "error"
+  }
+ },
+ "sql|lit|make_interval(0, 0, 0, 2147483647)": {
+  "false": {
+   "cls": "NOT_IMPLEMENTED",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "NOT_IMPLEMENTED",
+   "kind": "error"
+  }
+ },
+ "sql|lit|make_interval(1, 2, 3, 4, 5, 6, 7.5)": {
+  "false": {
+   "cls": "NOT_IMPLEMENTED",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "NOT_IMPLEMENTED",
+   "kind": "error"
+  }
+ },
+ "sql|lit|make_ym_interval(2147483647, 0)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|lit|try_make_dt_interval(1)": {
+  "false": {
+   "cls": "UNRESOLVED_ROUTINE",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "UNRESOLVED_ROUTINE",
+   "kind": "error"
+  }
+ },
+ "sql|lit|try_make_interval(0, 0, 0, 2147483647)": {
+  "false": {
+   "cls": "NOT_IMPLEMENTED",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "NOT_IMPLEMENTED",
+   "kind": "error"
+  }
+ },
+ "sql|lit|try_make_interval(1, 2, 3, 4, 5, 6, 7.5)": {
+  "false": {
+   "cls": "NOT_IMPLEMENTED",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "NOT_IMPLEMENTED",
+   "kind": "error"
+  }
+ },
+ "sql|lit|try_make_ym_interval(1, 2)": {
+  "false": {
+   "cls": "UNRESOLVED_ROUTINE",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "UNRESOLVED_ROUTINE",
+   "kind": "error"
+  }
+ },
+ "sql|mem#1, 3|count(make_dt_interval(d, h, m, s))": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     2
+    ]
+   ],
+   "type": "bigint"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     2
+    ]
+   ],
+   "type": "bigint"
+  }
+ },
+ "sql|mem#1, 3|max(make_dt_interval(d, h, m, s))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#1, 3|min(make_dt_interval(d, h, m, s))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#1, 3|sum(make_dt_interval(d, h, m, s))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(89478486,32584,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(89478486,32584,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#1, 7|count(make_dt_interval(d, h, m, s))": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "type": "bigint"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "type": "bigint"
+  }
+ },
+ "sql|mem#1, 7|max(make_dt_interval(d, h, m, s))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#1, 7|min(make_dt_interval(d, h, m, s))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#1, 7|sum(make_dt_interval(d, h, m, s))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#1, 9|count(make_dt_interval(d, h, m, s))": {
+  "false": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     2
+    ]
+   ],
+   "type": "bigint"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": false,
+   "rows": [
+    [
+     2
+    ]
+   ],
+   "type": "bigint"
+  }
+ },
+ "sql|mem#1, 9|max(make_dt_interval(d, h, m, s))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#1, 9|min(make_dt_interval(d, h, m, s))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(-2,79015,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(-2,79015,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#1, 9|sum(make_dt_interval(d, h, m, s))": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#10|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#10|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#11|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     11,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     11,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#11|make_dt_interval(d)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|mem#11|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|mem#12|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#12|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(-89478486,57600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(-89478486,57600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#1|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,4,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,4,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#1|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(1,7384,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#1|make_dt_interval(d, h, m, s) > make_dt_interval(0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     true
+    ]
+   ],
+   "type": "boolean"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     true
+    ]
+   ],
+   "type": "boolean"
+  }
+ },
+ "sql|mem#2|CAST(make_dt_interval(d, h, m, s) AS STRING)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|mem#2|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#2|make_dt_interval(d)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|mem#2|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|mem#2|make_dt_interval(d, h, m, s) > make_dt_interval(0)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|mem#2|ts + make_dt_interval(d, h, m, s)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|mem#3|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#3|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#3|make_dt_interval(d, h, m, s) > make_dt_interval(0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     true
+    ]
+   ],
+   "type": "boolean"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     true
+    ]
+   ],
+   "type": "boolean"
+  }
+ },
+ "sql|mem#4|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#4|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(1491308,7620,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(1491308,7620,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#5|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(0,54,775807)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(0,54,775807)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#5|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(106751991,14454,775807)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(106751991,14454,775807)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#6|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     6,
+     "td(0,54,775808)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     6,
+     "td(0,54,775808)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#6|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|mem#7|CAST(make_dt_interval(d, h, m, s) AS STRING)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "string"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "string"
+  }
+ },
+ "sql|mem#7|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#7|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#7|make_dt_interval(d, h, m, s) > make_dt_interval(0)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "boolean"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "boolean"
+  }
+ },
+ "sql|mem#7|ts + make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "timestamp"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "timestamp"
+  }
+ },
+ "sql|mem#9|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-1,86395,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-1,86395,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|mem#9|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-2,79015,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-2,79015,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#10|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,123457)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#10|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#10|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#10|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     10,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#11|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     11,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     11,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#11|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     11,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     11,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#11|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     11,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     11,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#11|make_dt_interval(d)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|pq#11|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|pq#12|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#12|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#12|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(-89478486,57600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(-89478486,57600,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#12|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     12,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#13|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     13,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     13,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#13|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     13,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     13,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#13|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     13,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     13,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#13|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     13,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     13,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#1|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,4,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,4,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#1|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,180,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,180,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#1|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,7200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(0,7200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#1|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     1,
+     "td(1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#2|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#2|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#2|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     2,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#2|make_dt_interval(d)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|pq#2|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|pq#3|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#3|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#3|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(89478485,25200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#3|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     3,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#4|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#4|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(1491308,7620,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(1491308,7620,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#4|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#4|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     4,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#5|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(0,54,775807)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(0,54,775807)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#5|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#5|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(0,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(0,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#5|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     5,
+     "td(106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#6|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     6,
+     "td(0,54,775808)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     6,
+     "td(0,54,775808)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#6|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     6,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     6,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#6|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     6,
+     "td(0,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     6,
+     "td(0,14400,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#6|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     6,
+     "td(106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     6,
+     "td(106751991,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#6|make_dt_interval(d, h, m, s)": {
+  "false": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  },
+  "true": {
+   "cls": "INTERVAL_ARITHMETIC_OVERFLOW.WITHOUT_SUGGESTION",
+   "kind": "error"
+  }
+ },
+ "sql|pq#7|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#7|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#7|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#7|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     7,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#8|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     8,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     8,
+     null
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#8|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     8,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     8,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#8|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     8,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     8,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#8|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     8,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     8,
+     "td(0,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#9|make_dt_interval(0, 0, 0, s)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-1,86395,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-1,86395,500000)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#9|make_dt_interval(0, 0, m)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-1,86220,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-1,86220,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#9|make_dt_interval(0, h)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-1,79200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-1,79200,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ },
+ "sql|pq#9|make_dt_interval(d)": {
+  "false": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  },
+  "true": {
+   "kind": "ok",
+   "nullable": true,
+   "rows": [
+    [
+     9,
+     "td(-1,0,0)"
+    ]
+   ],
+   "type": "intervaldaytosecond"
+  }
+ }
+}

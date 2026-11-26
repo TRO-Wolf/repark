@@ -42,7 +42,8 @@ awaits the owner's rating. Each card row records its own status.
 - [CSV-JSON-PARTITION-DISCOVERY-1](csv-json-partition-discovery-1-card-2026-11-24.md) (S1) — **card:** CSV and JSON
   reads of a `key=value/` directory drop the partition columns.
 - [MAKE-DT-INTERVAL-OVERFLOW-1](make-dt-interval-overflow-1-card-2026-11-25.md) (S1) — **card:** `make_dt_interval`
-  answers NULL on overflow, where Spark raises or answers, and types its result as a string.
+  answers NULL on overflow, where Spark raises or answers, and types its result as a string. Built on
+  `fix/make-dt-interval-overflow-1` through delta 3, not merged.
 - [FILE-EXTENSION-FILTER-1](file-extension-filter-1-card-2026-11-25.md) (S1) — **built** on
   `fix/file-extension-filter-1`, not merged: Parquet path reads list every name Spark lists and skip Spark's hidden
   names; delta 1: append validation skips the same names; integrated with #1430's discovery listing.

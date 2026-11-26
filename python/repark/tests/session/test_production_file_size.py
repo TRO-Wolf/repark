@@ -250,7 +250,7 @@ EXPECTED_SYMBOL_HASHES = {
         "21e22aa6258c57cfaa589197c112e2d76e73d8d9debfe604ae2f0f45b3dba75f"
     ),
     "_parse_jdbc_int_option": ("d7c7ef7c127a54d0030f51a55020be27381931910e9908462ff6c2eb3d3fa4eb"),
-    "_parse_schema_ddl": ("f85655a15284092b9ba36ffad12139d4a802702274775be232aa769b1a37410f"),
+    "_parse_schema_ddl": ("411bee151c2f82cb5c627b3cc176782513eb0e2231be45f1c651078781c8d472"),
     "_parse_simple_sql_udf_call": (
         "50f36e7c91a615a258fabda9751bb66429264a3d49e87adfc00a0804119f5d4d"
     ),
