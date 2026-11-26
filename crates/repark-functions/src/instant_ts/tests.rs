@@ -462,6 +462,38 @@ async fn ntz_opt_in_dml_into_ltz_table_preserves_ltz_store_cast() {
 }
 
 #[test]
+fn to_timestamp_is_not_nullable_only_over_one_non_null_timestamp() {
+    let udf = to_timestamp_udf();
+    let nullable_over = |fields: Vec<FieldRef>| {
+        let scalars: Vec<Option<&ScalarValue>> = vec![None; fields.len()];
+        udf.return_field_from_args(ReturnFieldArgs {
+            arg_fields: &fields,
+            scalar_arguments: &scalars,
+        })
+        .expect("return field")
+        .is_nullable()
+    };
+    let field = |data_type: DataType, nullable: bool| -> FieldRef {
+        Arc::new(Field::new("a", data_type, nullable))
+    };
+    let ntz = DataType::Timestamp(TimeUnit::Microsecond, None);
+    assert!(!nullable_over(vec![field(ntz.clone(), false)]));
+    assert!(!nullable_over(vec![field(ltz_timestamp_type(), false)]));
+    assert!(nullable_over(vec![field(ntz.clone(), true)]));
+    assert!(nullable_over(vec![field(ntz, false), field(DataType::Utf8, false)]));
+    for data_type in [
+        DataType::Utf8,
+        DataType::Date32,
+        DataType::Float64,
+        DataType::Float32,
+        DataType::Int64,
+        DataType::Decimal128(10, 2),
+    ] {
+        assert!(nullable_over(vec![field(data_type.clone(), false)]), "{data_type}");
+    }
+}
+
+#[test]
 fn string_carries_timezone_recognizes_spark_zone_spellings() {
     for zoned in [
         "2024-01-01 02:00:00Z",

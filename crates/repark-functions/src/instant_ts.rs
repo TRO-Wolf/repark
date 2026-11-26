@@ -231,8 +231,12 @@ impl ScalarUDFImpl for SparkToTimestamp {
         Ok(ltz_timestamp_type())
     }
 
-    fn return_field_from_args(&self, _args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
-        Ok(Field::new(self.name(), ltz_timestamp_type(), true).into())
+    fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        let nullable = !matches!(
+            args.arg_fields,
+            [field] if !field.is_nullable() && matches!(field.data_type(), DataType::Timestamp(_, _))
+        );
+        Ok(Field::new(self.name(), ltz_timestamp_type(), nullable).into())
     }
 
     fn with_updated_config(&self, _config: &ConfigOptions) -> Option<ScalarUDF> {

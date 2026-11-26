@@ -19,7 +19,8 @@ Submodules of [instant_ts.rs](../instant_ts.rs) (FEXPR-TIMESTAMP-NTZ-1, 2026-11-
   inputs) and protecting Iceberg DML `arrow_cast(CAST(x AS TIMESTAMP), 'Timestamp(µs, "UTC")')`
   store casts as explicit LTZ markers; any post-coercion `Cast(Timestamp(µs, None) -> Timestamp(µs, UTC))`
   then localizes through `to_timestamp` in `SparkLtzTimestampCast`.
-- [tests.rs](tests.rs) — unit pins moved out of `instant_ts.rs` plus deferral, explicit-LTZ,
+- [tests.rs](tests.rs) — **FEXPR-TIMESTAMP-NTZ-1 delta 2:** `to_timestamp_is_not_nullable_only_over_one_non_null_timestamp`.
+  Unit pins moved out of `instant_ts.rs` plus deferral, explicit-LTZ,
   NTZ `TRY_CAST`, LTZ-to-NTZ wall conversion, stale-`Union` rebuild, NTZ-session DML-into-LTZ
   store-cast, Delta 1 mixed NTZ/LTZ comparison & `MERGE` `CASE` localization, gap/offset/ANSI
   string casts, Spark zone spellings, `date_trunc` LTZ return, and F-A9 nullability pins.

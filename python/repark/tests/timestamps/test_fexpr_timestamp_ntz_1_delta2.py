@@ -255,3 +255,47 @@ def test_typed_literals_stay_not_nullable_under_ntz(door: str, ansi: bool) -> No
     explicit = _expr_frame(spark, door, "CAST('2024-01-01 02:00:00' AS TIMESTAMP_NTZ)")
     assert explicit.schema.fields[0].nullable
     assert explicit.collect()[0][0] == WALL
+
+
+NULL_RULE_SOURCE = (
+    "SELECT TIMESTAMP_NTZ '2024-01-01 02:00:00' AS ntz, "
+    "TIMESTAMP_LTZ '2024-01-01 02:00:00' AS ltz, "
+    "DATE '2024-01-01' AS d, '2024-01-01 02:00:00' AS s"
+)
+
+
+def _null_rule(spark: ReparkSession, fragment: str) -> Any:
+    spark.sql(NULL_RULE_SOURCE).createOrReplaceTempView("null_rule_src")
+    return spark.sql(f"SELECT {fragment} AS v FROM null_rule_src")
+
+
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+def test_a_non_null_timestamp_input_gives_a_non_null_ltz(ansi: bool) -> None:
+    spark = _session(ansi)
+    for fragment in (
+        "CAST(ntz AS TIMESTAMP_LTZ)",
+        "CAST(ltz AS TIMESTAMP_LTZ)",
+        "to_timestamp(ntz)",
+        "to_timestamp(ltz)",
+        "coalesce(ntz, CAST('2024-01-01 03:00:00' AS TIMESTAMP_LTZ))",
+        "coalesce(ntz, ltz)",
+    ):
+        frame = _null_rule(spark, fragment)
+        assert frame.dtypes == [("v", "timestamp")], fragment
+        assert not frame.schema.fields[0].nullable, fragment
+    for fragment in ("to_timestamp(s)", "CAST(s AS TIMESTAMP_LTZ)"):
+        assert _null_rule(spark, fragment).schema.fields[0].nullable, fragment
+    if not ansi:
+        formatted = _null_rule(spark, "to_timestamp(s, 'yyyy-MM-dd HH:mm:ss')")
+        assert formatted.schema.fields[0].nullable
+
+
+def test_a_date_under_an_ntz_session_stays_nullable_for_to_timestamp() -> None:
+    spark = _session(True, timestamp_type="TIMESTAMP_NTZ")
+    assert _null_rule(spark, "to_timestamp(d)").schema.fields[0].nullable
+    for fragment in (
+        "CAST(ntz AS TIMESTAMP_LTZ)",
+        "to_timestamp_ltz(ntz)",
+        "coalesce(ntz, CAST('2024-01-01 03:00:00' AS TIMESTAMP_LTZ))",
+    ):
+        assert not _null_rule(spark, fragment).schema.fields[0].nullable, fragment
