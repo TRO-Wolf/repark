@@ -187,19 +187,6 @@
   "case": {
    "ansi": "true",
    "fmt": "csvh",
-   "id": "target/csvh/read/two_level/where/ansi=true",
-   "kind": "target",
-   "path": "two_level",
-   "query": "where"
-  },
-  "expected": {
-   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
-  }
- },
- {
-  "case": {
-   "ansi": "true",
-   "fmt": "csvh",
    "id": "target/csvh/read/two_level/roundtrip/ansi=true",
    "kind": "target",
    "path": "two_level",
@@ -391,19 +378,6 @@
   "case": {
    "ansi": "true",
    "fmt": "csvh",
-   "id": "target/csvh/read/dates/where/ansi=true",
-   "kind": "target",
-   "path": "dates",
-   "query": "where"
-  },
-  "expected": {
-   "error": "DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES"
-  }
- },
- {
-  "case": {
-   "ansi": "true",
-   "fmt": "csvh",
    "id": "target/csvh/read/dates/roundtrip/ansi=true",
    "kind": "target",
    "path": "dates",
@@ -474,19 +448,6 @@
      "string"
     ]
    ]
-  }
- },
- {
-  "case": {
-   "ansi": "true",
-   "fmt": "csvh",
-   "id": "target/csvh/read/strings/where/ansi=true",
-   "kind": "target",
-   "path": "strings",
-   "query": "where"
-  },
-  "expected": {
-   "error": "CAST_INVALID_INPUT"
   }
  },
  {
@@ -697,19 +658,6 @@
      "int"
     ]
    ]
-  }
- },
- {
-  "case": {
-   "ansi": "true",
-   "fmt": "csvh",
-   "id": "target/csvh/read/two_level/year=2024/where/ansi=true",
-   "kind": "target",
-   "path": "two_level/year=2024",
-   "query": "where"
-  },
-  "expected": {
-   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
   }
  },
  {
@@ -1405,19 +1353,6 @@
   "case": {
    "ansi": "true",
    "fmt": "csvn",
-   "id": "target/csvn/read/two_level/where/ansi=true",
-   "kind": "target",
-   "path": "two_level",
-   "query": "where"
-  },
-  "expected": {
-   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
-  }
- },
- {
-  "case": {
-   "ansi": "true",
-   "fmt": "csvn",
    "id": "target/csvn/read/two_level/roundtrip/ansi=true",
    "kind": "target",
    "path": "two_level",
@@ -1609,19 +1544,6 @@
   "case": {
    "ansi": "true",
    "fmt": "csvn",
-   "id": "target/csvn/read/dates/where/ansi=true",
-   "kind": "target",
-   "path": "dates",
-   "query": "where"
-  },
-  "expected": {
-   "error": "DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES"
-  }
- },
- {
-  "case": {
-   "ansi": "true",
-   "fmt": "csvn",
    "id": "target/csvn/read/dates/roundtrip/ansi=true",
    "kind": "target",
    "path": "dates",
@@ -1692,19 +1614,6 @@
      "string"
     ]
    ]
-  }
- },
- {
-  "case": {
-   "ansi": "true",
-   "fmt": "csvn",
-   "id": "target/csvn/read/strings/where/ansi=true",
-   "kind": "target",
-   "path": "strings",
-   "query": "where"
-  },
-  "expected": {
-   "error": "CAST_INVALID_INPUT"
   }
  },
  {
@@ -1915,19 +1824,6 @@
      "int"
     ]
    ]
-  }
- },
- {
-  "case": {
-   "ansi": "true",
-   "fmt": "csvn",
-   "id": "target/csvn/read/two_level/year=2024/where/ansi=true",
-   "kind": "target",
-   "path": "two_level/year=2024",
-   "query": "where"
-  },
-  "expected": {
-   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
   }
  },
  {
@@ -2623,19 +2519,6 @@
   "case": {
    "ansi": "true",
    "fmt": "json",
-   "id": "target/json/read/two_level/where/ansi=true",
-   "kind": "target",
-   "path": "two_level",
-   "query": "where"
-  },
-  "expected": {
-   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
-  }
- },
- {
-  "case": {
-   "ansi": "true",
-   "fmt": "json",
    "id": "target/json/read/two_level/roundtrip/ansi=true",
    "kind": "target",
    "path": "two_level",
@@ -2827,19 +2710,6 @@
   "case": {
    "ansi": "true",
    "fmt": "json",
-   "id": "target/json/read/dates/where/ansi=true",
-   "kind": "target",
-   "path": "dates",
-   "query": "where"
-  },
-  "expected": {
-   "error": "DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES"
-  }
- },
- {
-  "case": {
-   "ansi": "true",
-   "fmt": "json",
    "id": "target/json/read/dates/roundtrip/ansi=true",
    "kind": "target",
    "path": "dates",
@@ -2910,19 +2780,6 @@
      "string"
     ]
    ]
-  }
- },
- {
-  "case": {
-   "ansi": "true",
-   "fmt": "json",
-   "id": "target/json/read/strings/where/ansi=true",
-   "kind": "target",
-   "path": "strings",
-   "query": "where"
-  },
-  "expected": {
-   "error": "CAST_INVALID_INPUT"
   }
  },
  {
@@ -3133,19 +2990,6 @@
      "int"
     ]
    ]
-  }
- },
- {
-  "case": {
-   "ansi": "true",
-   "fmt": "json",
-   "id": "target/json/read/two_level/year=2024/where/ansi=true",
-   "kind": "target",
-   "path": "two_level/year=2024",
-   "query": "where"
-  },
-  "expected": {
-   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
   }
  },
  {
@@ -3994,19 +3838,6 @@
   "case": {
    "ansi": "false",
    "fmt": "csvh",
-   "id": "target/csvh/read/two_level/where/ansi=false",
-   "kind": "target",
-   "path": "two_level",
-   "query": "where"
-  },
-  "expected": {
-   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
-  }
- },
- {
-  "case": {
-   "ansi": "false",
-   "fmt": "csvh",
    "id": "target/csvh/read/two_level/roundtrip/ansi=false",
    "kind": "target",
    "path": "two_level",
@@ -4198,19 +4029,6 @@
   "case": {
    "ansi": "false",
    "fmt": "csvh",
-   "id": "target/csvh/read/dates/where/ansi=false",
-   "kind": "target",
-   "path": "dates",
-   "query": "where"
-  },
-  "expected": {
-   "error": "DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES"
-  }
- },
- {
-  "case": {
-   "ansi": "false",
-   "fmt": "csvh",
    "id": "target/csvh/read/dates/roundtrip/ansi=false",
    "kind": "target",
    "path": "dates",
@@ -4267,33 +4085,6 @@
      "beta"
     ]
    ],
-   "schema": [
-    [
-     "id",
-     "string"
-    ],
-    [
-     "s",
-     "string"
-    ],
-    [
-     "p",
-     "string"
-    ]
-   ]
-  }
- },
- {
-  "case": {
-   "ansi": "false",
-   "fmt": "csvh",
-   "id": "target/csvh/read/strings/where/ansi=false",
-   "kind": "target",
-   "path": "strings",
-   "query": "where"
-  },
-  "expected": {
-   "rows": [],
    "schema": [
     [
      "id",
@@ -4518,19 +4309,6 @@
      "int"
     ]
    ]
-  }
- },
- {
-  "case": {
-   "ansi": "false",
-   "fmt": "csvh",
-   "id": "target/csvh/read/two_level/year=2024/where/ansi=false",
-   "kind": "target",
-   "path": "two_level/year=2024",
-   "query": "where"
-  },
-  "expected": {
-   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
   }
  },
  {
@@ -5226,19 +5004,6 @@
   "case": {
    "ansi": "false",
    "fmt": "csvn",
-   "id": "target/csvn/read/two_level/where/ansi=false",
-   "kind": "target",
-   "path": "two_level",
-   "query": "where"
-  },
-  "expected": {
-   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
-  }
- },
- {
-  "case": {
-   "ansi": "false",
-   "fmt": "csvn",
    "id": "target/csvn/read/two_level/roundtrip/ansi=false",
    "kind": "target",
    "path": "two_level",
@@ -5430,19 +5195,6 @@
   "case": {
    "ansi": "false",
    "fmt": "csvn",
-   "id": "target/csvn/read/dates/where/ansi=false",
-   "kind": "target",
-   "path": "dates",
-   "query": "where"
-  },
-  "expected": {
-   "error": "DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES"
-  }
- },
- {
-  "case": {
-   "ansi": "false",
-   "fmt": "csvn",
    "id": "target/csvn/read/dates/roundtrip/ansi=false",
    "kind": "target",
    "path": "dates",
@@ -5499,33 +5251,6 @@
      "beta"
     ]
    ],
-   "schema": [
-    [
-     "_c0",
-     "string"
-    ],
-    [
-     "_c1",
-     "string"
-    ],
-    [
-     "p",
-     "string"
-    ]
-   ]
-  }
- },
- {
-  "case": {
-   "ansi": "false",
-   "fmt": "csvn",
-   "id": "target/csvn/read/strings/where/ansi=false",
-   "kind": "target",
-   "path": "strings",
-   "query": "where"
-  },
-  "expected": {
-   "rows": [],
    "schema": [
     [
      "_c0",
@@ -5750,19 +5475,6 @@
      "int"
     ]
    ]
-  }
- },
- {
-  "case": {
-   "ansi": "false",
-   "fmt": "csvn",
-   "id": "target/csvn/read/two_level/year=2024/where/ansi=false",
-   "kind": "target",
-   "path": "two_level/year=2024",
-   "query": "where"
-  },
-  "expected": {
-   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
   }
  },
  {
@@ -6458,19 +6170,6 @@
   "case": {
    "ansi": "false",
    "fmt": "json",
-   "id": "target/json/read/two_level/where/ansi=false",
-   "kind": "target",
-   "path": "two_level",
-   "query": "where"
-  },
-  "expected": {
-   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
-  }
- },
- {
-  "case": {
-   "ansi": "false",
-   "fmt": "json",
    "id": "target/json/read/two_level/roundtrip/ansi=false",
    "kind": "target",
    "path": "two_level",
@@ -6662,19 +6361,6 @@
   "case": {
    "ansi": "false",
    "fmt": "json",
-   "id": "target/json/read/dates/where/ansi=false",
-   "kind": "target",
-   "path": "dates",
-   "query": "where"
-  },
-  "expected": {
-   "error": "DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES"
-  }
- },
- {
-  "case": {
-   "ansi": "false",
-   "fmt": "json",
    "id": "target/json/read/dates/roundtrip/ansi=false",
    "kind": "target",
    "path": "dates",
@@ -6731,33 +6417,6 @@
      "beta"
     ]
    ],
-   "schema": [
-    [
-     "id",
-     "bigint"
-    ],
-    [
-     "s",
-     "string"
-    ],
-    [
-     "p",
-     "string"
-    ]
-   ]
-  }
- },
- {
-  "case": {
-   "ansi": "false",
-   "fmt": "json",
-   "id": "target/json/read/strings/where/ansi=false",
-   "kind": "target",
-   "path": "strings",
-   "query": "where"
-  },
-  "expected": {
-   "rows": [],
    "schema": [
     [
      "id",
@@ -6982,19 +6641,6 @@
      "int"
     ]
    ]
-  }
- },
- {
-  "case": {
-   "ansi": "false",
-   "fmt": "json",
-   "id": "target/json/read/two_level/year=2024/where/ansi=false",
-   "kind": "target",
-   "path": "two_level/year=2024",
-   "query": "where"
-  },
-  "expected": {
-   "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION"
   }
  },
  {

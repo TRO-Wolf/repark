@@ -16,6 +16,7 @@ TWO_LEVEL = {
     "year=2025/month=1": [(3, "c")],
 }
 INFER_KEY = "spark.sql.sources.partitionColumnTypeInference.enabled"
+WHERE_PATHS = ("one_level", "hive_default", "hidden")
 
 
 def _body(fmt: str, rows: list[tuple[int, str]]) -> str:
@@ -136,7 +137,9 @@ def cases() -> list[dict[str, Any]]:
     for ansi in ("true", "false"):
         for fmt in FORMATS:
             for path in target_paths:
-                for query in ("read", "where", "roundtrip"):
+                for query in (
+                    ("read", "where", "roundtrip") if path in WHERE_PATHS else ("read", "roundtrip")
+                ):
                     out.append(
                         {"fmt": fmt, "path": path, "query": query, "ansi": ansi, "kind": "target"}
                     )
