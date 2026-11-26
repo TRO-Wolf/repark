@@ -28,7 +28,7 @@ Two display-name seats, neither in `build_expr_context` or `SparkLtzTimestampCas
 - `python/repark/src/repark/spark/functions.py:312-339` (`expr(sql)`) and `column.py:1136-1152`: sets
   `projection_name = sql.strip()` statically before any session or time zone exists, and wraps the expression in
   `.alias(self._projection_name)`.
-- `crates/repark-spark/src/spark_typed.rs:86-141, 402-421` (`SparkProjectionDisplay` / `literal_spark`): renders folded
+- `crates/repark-spark/src/spark_typed.rs:88-151, 419-438` (`SparkProjectionDisplay` / `literal_spark`): renders folded
   `TimestampMicrosecond` literals as raw integer ticks, `Cast(Utf8, Timestamp(us, None))` as bare string text, and
   `__repark_cast_timestamp_ntz__` over non-literal/non-column arguments without Spark's `CAST(... AS TIMESTAMP_NTZ)`
   form.
