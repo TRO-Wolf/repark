@@ -53,10 +53,11 @@ Expectations recorded from Spark by `record_pins.py` over the layouts in `_csv_j
 |---|---:|---:|---:|---:|
 | main `pkg-m1rf1-fd5c3fcb` | 0 | 144 | 66 | 0 |
 | head `pkg-head-f52e438b` | 144 | 0 | 66 | 0 |
+| head `pkg-head-8fafb29e` (inside the whole-facade run) | 144 | 0 | 66 | 0 |
 | main-risk mutant (an unpartitioned read takes the discovery path) `pkg-mutant-m1-9a8a1538` | 144 | 0 | 6 | 60 |
 
-Whole facade on head `pkg-head-f52e438b` (`run-facade`): `facade: cases 47062 skipped 998 failed-or-error 4 pytest rc 1`,
-`allow-listed failures seen 4 of 4`, `verdict PASS`.
+Whole facade (`run-facade`), on `pkg-head-f52e438b` and again on `pkg-head-8fafb29e` (the final product tree): each
+`facade: cases 47062 skipped 998 failed-or-error 4 pytest rc 1`, `allow-listed failures seen 4 of 4`, `verdict PASS`.
 
 ## Rust mutant proofs (`cargo test -p repark-core --lib spark_nullable::partition_layout_tests`)
 
