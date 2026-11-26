@@ -72,8 +72,65 @@ The card proposed S2 provisionally and made Step 0 decisive: any cell writing or
   - Parquet (`pushdown_filters=true` and `false`, 3 files): pure NTZ retains `pruning_predicate` min/max statistics (`ts_min <= ... <= ts_max`); mixed NTZ/LTZ uses `predicate=to_timestamp(ts@1) = ...` and returns `[1]` under both pushdown settings.
   - Non-mixed `EXPLAIN` vs `main`: `6 / 6` byte-identical under `TIMESTAMP_LTZ`; under `TIMESTAMP_NTZ`, `4 / 4` non-LTZ-literal queries are byte-identical, and the 2 `TIMESTAMP_LTZ`-literal queries keep identical plan shape (`IcebergTableScan ... N=1`) while fixing `main`'s 5-hour wrong literal constant (`02:00 UTC` -> `07:00 UTC`).
 
+## Delta 2 (2026-11-26)
+
+- **D1-A1 (time-only NTZ strings):** `spark_string_timestamp/instant.rs::wall_only_micros` refuses a time-only parse,
+  as Spark's `stringToTimestampWithoutTimeZone` does, and takes no clock. `CAST('02:00:00' AS TIMESTAMP_NTZ)` and
+  `'T02:00:00'` now refuse with `CAST_INVALID_INPUT` under ANSI and answer NULL otherwise, on every door; CTAS and
+  Parquet writes store NULL or refuse. Time-only input to `TIMESTAMP` (LTZ) keeps today's date in the session zone
+  (the PROTECTED cells).
+- **D1-A2 (bracketed suffixes):** `spark_string_timestamp.rs::string_to_ntz_wall_micros` no longer strips `[...]`,
+  so `[UTC]`, `[INVALID_ZONE]`, `[]` and the other bracketed forms refuse as in Spark.
+- **D1-A3 and Q4 (explicit LTZ casts):** `keyword_lower/ntz_cast_lower.rs::lower_explicit_timestamp_ltz_cast` wraps
+  the string literal of a non-`TRY` `CAST` / `::` to `TIMESTAMP_LTZ` in the nullable marker on every door, so it is
+  nullable as in Spark, zoned strings included (Q2).
+  `spark_rewrites/timestamp_ltz_literal.rs::rewrite_fragment_timestamp_ltz_literals` now emits the LTZ marker call
+  for a typed `TIMESTAMP_LTZ '…'` fragment literal, so the typed literal stays not nullable.
+- **Q5 (explicit NTZ casts, ruling 2):** `ntz_cast_lower.rs::lower_timestamp_ntz_cast` wraps the string literal of a
+  non-`TRY` `CAST` / `::` to `TIMESTAMP_NTZ` the same way. Round 1's R-5 stands in
+  `SparkTimestampNtzCast::return_field_from_args`, so typed `TIMESTAMP` / `TIMESTAMP_NTZ` literals stay not nullable.
+- **Ruling 3:** `instant_ts.rs::SparkToTimestamp::return_field_from_args` declares `to_timestamp` not nullable only
+  over exactly one non-null Arrow `Timestamp` argument (Spark's rule, measured): `CAST(<ntz or ltz> AS TIMESTAMP_LTZ)`
+  and the coalesce coercion of an NTZ value keep Spark's non-null answer; strings, dates, numbers and format arguments
+  stay nullable.
+- **Ruling 4:** `timestamp_ntz_cast.rs::cast_arg_name` peels the nullable marker, so a refusal names the cast's
+  literal as Spark does (`CAST(CAST(2024-01-01 AS TIMESTAMP_NTZ) AS BIGINT)`).
+- **Forced caller:** `timestamp_ntz_cast.rs::parse_timestamp_ntz_wall` calls the clock-free parser.
+
+Measured on `c3bff6102` (release-fast wheel built from it) against live Spark 4.1.2 + Iceberg 1.11.0, main
+`fd5c3fcb9` and `7791f6f84`; every write is read back:
+
+| Suite | Cells | Head = Spark | `7791f6f84` = Spark | Main = Spark | Moved onto Spark | Moved off Spark | Main = Spark, head off |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| step 0 (time-only, brackets, nullability, writes) | 4,828 | 4,343 | 2,123 | 2,076 | 2,220 | 0 | 0 |
+| PROTECTED LTZ time-only | 600 | 420 | 240 | 178 | 180 | 0 | 0 |
+| NOT NULL Iceberg guard and stored nullability | 360 | 324 | 270 | 246 | 54 | 0 | 0 |
+| `attack_delta1.py` | 1,305 | 1,107 | 885 | 363 | 222 | 0 | 0 |
+| `repro_delta1_findings.py` | 635 | 609 | 73 | 184 | 536 | 0 | 0 |
+| `attack_writes.py` | 756 | 548 | 532 | 354 | 16 | 0 | 0 |
+| `attack_writes_2.py` | 236 | 228 | 228 | 132 | 0 | 0 | 0 |
+| `attack_regressions.py` | 2,272 | 1,534 | 1,361 | 926 | 173 | 0 | 0 |
+| the 1,769-cell domain sweep | 1,769 | 1,628 | 1,628 | 1,048 | 0 | 0 | 0 |
+
+- **Moved off Spark against `7791f6f84`:** 0 cells in all suites. **Equal to Spark on main and off on head:** 0.
+- **NOT NULL guard:** INSERT SELECT, INSERT VALUES, INSERT OVERWRITE, MERGE and `writeTo().append()` of every newly
+  nullable shape into a `NOT NULL` Iceberg column store the value, as Spark does; stored Iceberg `required` and Parquet
+  nullability equal Spark's on every CTAS.
+- **Mutant proofs:** the restored time-only branch, the restored bracket strip, the dropped LTZ wrap, the typed literal
+  emitted as `CAST`, the dropped NTZ wrap and an always-nullable `to_timestamp` each fail their pins; R-5 dropped is
+  killed by the facade pin `test_typed_literals_stay_not_nullable_under_ntz` (measured on the round's first head,
+  which carried it). The `cast_arg_name` peel is held by `test_ntz_1.py::test_select_cells_replay_spark[UTC]`, which
+  failed on the head without it.
+- **Row-order flake:** `attack_regressions.py`'s `union_bad_and_valid_ts` (unordered `UNION ALL`, UTC, NTZ, ANSI off)
+  once came back in the other row order with equal values; two re-runs on the same head gave Spark's order.
+- **Facade:** the full `python/repark/tests` suite on the `c3bff6102` wheel: 47,034 cases, 998 skipped, and only main's 4 allow-listed failures (verdict PASS).
+
+The probes are delta 2's `probe_step0.py`, `probe_protected.py` and `probe_guard.py` (four configs: New York LTZ with
+ANSI on and off, New York NTZ with ANSI on, UTC NTZ with ANSI off), plus the verifier's suites replayed unchanged.
+
 ## Pins
 
 - **Facade pin (`python/repark/tests/timestamps/test_fexpr_timestamp_ntz_1.py`):** **123** parametrized cases (100 original + 23 new Delta 1 cases covering F-A1..F-A10 and zoned-literal date casts across all doors, zones, ANSI modes, Parquet/Iceberg pushdown, MERGE/UPDATE/INSERT, DST gaps, offsets, `date_trunc`, nullability, and marker-free display/`EXPLAIN`) — on the first head (`fb2c1e948`) 21 of the 23 new cases fail and the 2 UTC control cases of `test_delta1_fa2_zoned_typed_literal_date_cast_on_sql_and_select_expr` pass (`21 failed, 102 passed`, re-measured in delta 2); **123 / 123 passed on `22e77e4aa`**.
 - **Timestamps suite (`python/repark/tests/timestamps/`):** original `8e5c9deb1` run was **5,879 passed, 7 skipped (5,886 collected)** (corrected from the earlier 5,979 typo, F-B1). On Delta 1 (`22e77e4aa`), direct microsecond NTZ wall parsing also retired **146** post-2262 NTZ cells from `zone_horizon_render_1_residue.json` (`334` remain; `test_zone_horizon_render_1.py` `12 passed, 1 skipped`); total timestamps suite is **5,902 passed, 7 skipped (5,909 collected)**.
 - **Rust unit tests:** deferral config (`timestamp_type.rs`), pre-coercion `SparkNtzTimestampCast` + explicit LTZ marker / mixed NTZ-LTZ comparison & `MERGE` `CASE` / gap & offset / Spark zone spellings / `date_trunc` / F-A9 nullability (`instant_ts/tests.rs`), direct wall parsing & `SparkTimestampNtzCast::simplify` (`timestamp_ntz_cast/tests.rs`), Iceberg conform stage (`conform_stage/tests.rs`), SQL & fragment timestamp lowering (`ntz_cast_lower.rs`, `ltz_values_cast.rs`, `timestamp_ltz_literal.rs`), analyzer seating (`extension/tests.rs`), and `F.expr` lowering (`expr_tests.rs`).
+- **Delta 2 facade pin (`python/repark/tests/timestamps/test_fexpr_timestamp_ntz_1_delta2.py`):** time-only and bracketed NTZ strings on six doors in both ANSI modes, the writes, the PROTECTED LTZ time-only cells, explicit LTZ and NTZ casts nullable, typed literals not nullable under LTZ and NTZ, and Spark's `to_timestamp` nullability rule. The defect pins are red on `7791f6f84`; the PROTECTED and typed-literal guard pins are green there and on head.

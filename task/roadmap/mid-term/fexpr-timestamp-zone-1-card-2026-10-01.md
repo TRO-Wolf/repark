@@ -94,6 +94,62 @@ and 0 regressions across all verifier neighbour/pruning/write/DML suites; 123 ca
   string-to-timestamp, `CAST(DATE AS TIMESTAMP_LTZ)`, `CAST(TIMESTAMP_NTZ AS DATE)`, and legacy `!ansi`
   `unix_timestamp`; internal marker UDF names are unwrapped in `SparkProjectionDisplay` and `schema_name`/`display_name`.
 
+## Delta 2 (2026-11-26, FEXPR-TIMESTAMP-NTZ-1, after the Neon re-check of `7791f6f84`)
+
+The re-check failed `7791f6f84` on D1-A1 (time-only strings became today's date), D1-A2 (bracketed suffixes
+accepted) and D1-A3 (explicit LTZ casts not nullable). Delta 2 closes them, with the owner's rulings 1 to 3:
+
+- **D1-A1 (time-only NTZ strings):** `spark_string_timestamp/instant.rs::wall_only_micros` refuses a time-only parse,
+  as Spark's `stringToTimestampWithoutTimeZone` does, and takes no clock. `CAST('02:00:00' AS TIMESTAMP_NTZ)` and
+  `'T02:00:00'` now refuse with `CAST_INVALID_INPUT` under ANSI and answer NULL otherwise, on every door; CTAS and
+  Parquet writes store NULL or refuse. Time-only input to `TIMESTAMP` (LTZ) keeps today's date in the session zone
+  (the PROTECTED cells).
+- **D1-A2 (bracketed suffixes):** `spark_string_timestamp.rs::string_to_ntz_wall_micros` no longer strips `[...]`,
+  so `[UTC]`, `[INVALID_ZONE]`, `[]` and the other bracketed forms refuse as in Spark.
+- **D1-A3 and Q4 (explicit LTZ casts):** `keyword_lower/ntz_cast_lower.rs::lower_explicit_timestamp_ltz_cast` wraps
+  the string literal of a non-`TRY` `CAST` / `::` to `TIMESTAMP_LTZ` in the nullable marker on every door, so it is
+  nullable as in Spark, zoned strings included (Q2).
+  `spark_rewrites/timestamp_ltz_literal.rs::rewrite_fragment_timestamp_ltz_literals` now emits the LTZ marker call
+  for a typed `TIMESTAMP_LTZ '…'` fragment literal, so the typed literal stays not nullable.
+- **Q5 (explicit NTZ casts, ruling 2):** `ntz_cast_lower.rs::lower_timestamp_ntz_cast` wraps the string literal of a
+  non-`TRY` `CAST` / `::` to `TIMESTAMP_NTZ` the same way. Round 1's R-5 stands in
+  `SparkTimestampNtzCast::return_field_from_args`, so typed `TIMESTAMP` / `TIMESTAMP_NTZ` literals stay not nullable.
+- **Ruling 3:** `instant_ts.rs::SparkToTimestamp::return_field_from_args` declares `to_timestamp` not nullable only
+  over exactly one non-null Arrow `Timestamp` argument (Spark's rule, measured): `CAST(<ntz or ltz> AS TIMESTAMP_LTZ)`
+  and the coalesce coercion of an NTZ value keep Spark's non-null answer; strings, dates, numbers and format arguments
+  stay nullable.
+- **Ruling 4:** `timestamp_ntz_cast.rs::cast_arg_name` peels the nullable marker, so a refusal names the cast's
+  literal as Spark does (`CAST(CAST(2024-01-01 AS TIMESTAMP_NTZ) AS BIGINT)`).
+- **Forced caller:** `timestamp_ntz_cast.rs::parse_timestamp_ntz_wall` calls the clock-free parser.
+
+Measured on `c3bff6102` (release-fast wheel built from it) against live Spark 4.1.2 + Iceberg 1.11.0, main
+`fd5c3fcb9` and `7791f6f84`; every write is read back:
+
+| Suite | Cells | Head = Spark | `7791f6f84` = Spark | Main = Spark | Moved onto Spark | Moved off Spark | Main = Spark, head off |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| step 0 (time-only, brackets, nullability, writes) | 4,828 | 4,343 | 2,123 | 2,076 | 2,220 | 0 | 0 |
+| PROTECTED LTZ time-only | 600 | 420 | 240 | 178 | 180 | 0 | 0 |
+| NOT NULL Iceberg guard and stored nullability | 360 | 324 | 270 | 246 | 54 | 0 | 0 |
+| `attack_delta1.py` | 1,305 | 1,107 | 885 | 363 | 222 | 0 | 0 |
+| `repro_delta1_findings.py` | 635 | 609 | 73 | 184 | 536 | 0 | 0 |
+| `attack_writes.py` | 756 | 548 | 532 | 354 | 16 | 0 | 0 |
+| `attack_writes_2.py` | 236 | 228 | 228 | 132 | 0 | 0 | 0 |
+| `attack_regressions.py` | 2,272 | 1,534 | 1,361 | 926 | 173 | 0 | 0 |
+| the 1,769-cell domain sweep | 1,769 | 1,628 | 1,628 | 1,048 | 0 | 0 | 0 |
+
+- **Moved off Spark against `7791f6f84`:** 0 cells in all suites. **Equal to Spark on main and off on head:** 0.
+- **NOT NULL guard:** INSERT SELECT, INSERT VALUES, INSERT OVERWRITE, MERGE and `writeTo().append()` of every newly
+  nullable shape into a `NOT NULL` Iceberg column store the value, as Spark does; stored Iceberg `required` and Parquet
+  nullability equal Spark's on every CTAS.
+- **Mutant proofs:** the restored time-only branch, the restored bracket strip, the dropped LTZ wrap, the typed literal
+  emitted as `CAST`, the dropped NTZ wrap and an always-nullable `to_timestamp` each fail their pins; R-5 dropped is
+  killed by the facade pin `test_typed_literals_stay_not_nullable_under_ntz` (measured on the round's first head,
+  which carried it). The `cast_arg_name` peel is held by `test_ntz_1.py::test_select_cells_replay_spark[UTC]`, which
+  failed on the head without it.
+- **Row-order flake:** `attack_regressions.py`'s `union_bad_and_valid_ts` (unordered `UNION ALL`, UTC, NTZ, ANSI off)
+  once came back in the other row order with equal values; two re-runs on the same head gave Spark's order.
+- **Facade:** the full `python/repark/tests` suite on the `c3bff6102` wheel: 47,034 cases, 998 skipped, and only main's 4 allow-listed failures (verdict PASS).
+
 ## Still unlike Spark (measured on `22e77e4aa`, out of scope for this unit)
 
 Every remaining cell below is **present on `main` (`8c07d619`)** (`0` new divergences introduced):
@@ -131,6 +187,15 @@ Every remaining cell below is **present on `main` (`8c07d619`)** (`0` new diverg
 7. **Original "Not this card" items above** (**present on main**): `TIMESTAMP 'bad'` /
    `TIMESTAMP '2024-01-01 02:00:00[UTC]'` over-acceptance (refusal difference) and `T - T` interval `dtypes` reporting
    `string`.
+
+8. **Seen in delta 2, present on main:**
+   - `col.cast("timestamp_ltz")` and `col.try_cast("timestamp_ltz")` raise `ParseException`; Spark accepts them (present
+  on main).
+   - `createDataFrame(df.collect(), df.schema)` declares every field nullable; Spark keeps the schema (present on main).
+   - On `spark.sql` and `selectExpr`, `CAST('<valid>' AS TIMESTAMP)` (the bare keyword) is not nullable; Spark says
+  nullable (present on main; the fragment doors already match).
+   - Under `timestampType=TIMESTAMP_NTZ`, `to_timestamp_ltz(<non-null NTZ>)` is nullable; Spark says not nullable
+  (present on main and on `7791f6f84`; a separate function from `to_timestamp`).
 
 ## Pointers
 
