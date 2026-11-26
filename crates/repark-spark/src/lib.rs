@@ -71,6 +71,7 @@ pub use collation::{
     COLLATION_REFUSAL_NEEDLE, collation_refusal_message, is_collation_session_key,
     refuse_collation_in_sql, refuse_collation_in_statement,
 };
+pub use insert_overwrite::const_cast::note_cache_view;
 pub use repark_functions::declared_refuse::{
     refuse_in_sql as refuse_declared_function_in_sql,
     refuse_in_statement as refuse_declared_function_in_statement,

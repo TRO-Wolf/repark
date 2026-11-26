@@ -23,6 +23,7 @@ use crate::catalog_ops::{
     name_parts, namespace_schema_name, refuse_read_only_dml_table_sql, reregister,
     table_or_view_not_found,
 };
+use crate::insert_overwrite::const_cast;
 use crate::spark_ast;
 use crate::write_options::StatementWriteOptions;
 
@@ -246,6 +247,7 @@ pub(crate) async fn execute_replace_where(
     let source_df =
         spark_ast::execute_insert_source(ctx, catalogs, &planning_sql, options.source_by_name)
             .await?;
+    const_cast::refuse_overwrite_where(ctx, catalogs, source, options).await?;
     let namespace = namespace_schema_name(table.identifier().namespace());
     let base_table = format!(
         "`{catalog_name}`.`{namespace}`.`{}`",

@@ -27,6 +27,8 @@ use crate::void_type::refuse_partition_overwrite_sources;
 
 mod assignment_types;
 
+pub(crate) mod const_cast;
+
 mod store;
 
 // A non-empty source is staged before the table is replaced.
@@ -110,6 +112,7 @@ pub(crate) async fn execute_insert_overwrite(
                 false,
             )
             .await?;
+            const_cast::refuse_overwrite(ctx, catalogs, source, options).await?;
             // Re-probe immediately before the wipe.
             let reprobe = spark_ast::execute_passthrough(ctx, catalogs, &probe_sql).await?;
             let reprobe_batches = reprobe.collect().await?;
@@ -220,6 +223,7 @@ pub(crate) async fn execute_partition_overwrite(
     let schema = table.metadata().current_schema();
     let filled = overwrite_source_with_defaults(schema, &listed, &reserved, source)?;
     refuse_partition_overwrite_sources(ctx, &table, table_name, &filled, &reserved).await?;
+    const_cast::refuse_overwrite(ctx, catalogs, source, options).await?;
     let column_names = filled.columns;
     let source_df = spark_ast::execute_passthrough(ctx, catalogs, &filled.sql).await?;
     let pairing = StructPairing::from_source_by_name(

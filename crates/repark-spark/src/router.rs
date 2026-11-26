@@ -135,7 +135,11 @@ pub(crate) async fn execute_in_session<S: std::hash::BuildHasher>(
     {
         return outcome;
     }
-    execute_calibrated(ctx, &catalogs, canonical_sql, Some(sql), write_options).await
+    let write_options = crate::write_options::StatementWriteOptions {
+        cached_frames: crate::insert_overwrite::const_cast::session_holds_cache(temp_views),
+        ..write_options.clone()
+    };
+    execute_calibrated(ctx, &catalogs, canonical_sql, Some(sql), &write_options).await
 }
 
 async fn execute_calibrated(
