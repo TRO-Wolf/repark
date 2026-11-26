@@ -218,4 +218,43 @@ cast raises a generic Arrow error there, not Spark's class.
 | BY NAME / any-schema overwrite | `crates/repark-spark/src/insert_by_name.rs:140` | the by-name empty-overwrite wipe | no: not a listed door |
 | `INSERT INTO`, CTAS create, SQL RTAS, `writeTo().replace()` / `createOrReplace()`, `MERGE`, `UPDATE`, `DELETE`, `COPY`, reads, `EXPLAIN`, the native door | `append_with_options.rs`, `ctas.rs`, `merge.rs`, `router/delete_update.rs`, `spark_ast.rs:191` | not overwrite doors | no |
 
+## 4. Delta 2: a cache in another session (2026-11-26)
+
+- **Measured:** 2026-11-26 on Spark 4.1.2, main `c69af55bd`, the delta-1 head `d20427b68` and delta 2, one case per
+  process. The card overwrite runs in `spark` on five doors (SQL, static `PARTITION`, `insertInto`,
+  `writeTo().overwrite`, `saveAsTable`) for `DOUBLE` and `TIMESTAMP`, while `s2 = spark.newSession()` holds or has let
+  go of a cache of `SELECT 'x' AS s`. Four no-cache controls run before and after each case.
+- **Cause:** `newSession()` builds a new engine, so the sibling's `__repark_cache_*` view sits in another temp-view
+  home, and the delta-1 guard listed only its own session's home.
+- **Fix:** one process-wide count of caches, kept by their owner (`CacheViewHandle`) through
+  `_native.note_cache_view`. It rises when a cache registers and falls only on an explicit release: `unpersist()`,
+  `uncacheTable`, `UNCACHE TABLE`, and `clearCache()`, which also releases every collected handle of the process.
+  Garbage collection does not lower it, because Spark keeps a collected frame's cache. The guard reads the count in
+  place of the listing.
+
+| Case (`s2` is the sibling) | Cells | Spark 4.1.2 | main | `d20427b68` | delta 2 |
+|---|---|---|---|---|---|
+| `s2` holds a cache: `cache()` with and without `count()`, `persist()`, `cacheTable`, SQL `CACHE TABLE` | 50 | write | write | **refuse** | write |
+| `s2` releases it: `unpersist()`, `uncacheTable`, `UNCACHE TABLE`, `s2.catalog.clearCache()` (frame and table) | 50 | refuse | write | refuse | refuse |
+| `spark.catalog.clearCache()` while `s2` holds a cache (frame and table) | 20 | refuse | write | refuse | write: the sibling's cache is still live in RePark |
+| `s2`, or only its frame, goes out of scope and is collected (frame and table) | 30 | write | write | refuse | write |
+| the same session: a cached frame goes out of scope and is collected | 10 | write | write | refuse | write |
+| `spark.stop()` while a cached frame is held, then a new session | 10 | refuse | write | refuse | write |
+| the same, after that frame is collected | 10 | refuse | write | refuse | write |
+
+"refuse" is `[CAST_INVALID_INPUT]` with the rows kept; every control matched Spark, except the controls after a
+collected cache, where Spark's cache is still live and Spark writes. Spark keeps a cache until `unpersist`,
+`uncacheTable` or `clearCache()`: its `CacheManager` was not empty after the frame was collected.
+
+- **Replays on delta 2** (the verifier's `cache2`, `cache3`, `cachecoll`, `cachevar`, `atk`, `atk_orig`,
+  `atk_nocache` and #1431's corpora; delta 2, `d20427b68`, main `c69af55bd` and Spark 4.1.2): 4,518 cells, **0 false
+  refusals**, and 0 moved cells where main equals Spark.
+  - 16 cells move from `d20427b68`. Twelve move onto Spark: the sibling-session cells of `cache2` and `cache3`, and a
+    `cache3` control after the sibling's SQL `CACHE TABLE`, which Spark still holds.
+  - Four move off Spark: `atk_nocache`'s `filter_false_api` frame on `insertInto`, `saveAsTable`, `writeTo().overwrite`
+    and `overwritePartitions()`. Earlier cells there cache unrelated frames and never release them, and Spark cannot
+    match those caches, so it raises while main and delta 2 write.
+  - #1431's corpora: 2,116 cells, 0 moved.
+- **Cost** (`SELECT 1` x 3,000, best of 3, two rounds): 0.98x main with no temp views and 0.99x with 2,000.
+
 Up: [../../map.md](../../map.md).

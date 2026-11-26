@@ -87,9 +87,9 @@ main (the head re-measure is recorded with the PR).
   `[NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION]`: not a string literal.
 - **Whole-table BY NAME and any-schema tables:** a whole-table overwrite routed by name (`insert_by_name.rs`) is not
   guarded. A BY NAME overwrite with a static `PARTITION` spec delegates to the partition path, so it is guarded.
-- **An unrelated cached frame:** the guard stands down while any session of the process holds any cached frame, so
-  with an unrelated cache such as `SELECT 7 AS n`, in this session or another, the overwrite writes as on main, where
-  Spark raises.
+- **An unrelated cache, held or collected:** it keeps the guard down until it is released or `clearCache()` runs, in
+  this session or another (for example `SELECT 7 AS n`). Spark refuses there because it cannot match the cache to the
+  source, while main and this head write (measured on four `atk_nocache` frame cells, delta 2).
 - **`clearCache()` in another session:** RePark's `clearCache()` clears only its own session's caches; Spark's clears
   the shared cache manager. After `spark.catalog.clearCache()` while a sibling session holds a cache, the guard stays
   down and the overwrite writes as on main, where Spark raises (delta 2, measured on five doors).
