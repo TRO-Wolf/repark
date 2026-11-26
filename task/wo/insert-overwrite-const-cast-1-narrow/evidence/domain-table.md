@@ -243,8 +243,10 @@ cast raises a generic Arrow error there, not Spark's class.
 | the same, after that frame is collected | 10 | refuse | write | refuse | write |
 
 "refuse" is `[CAST_INVALID_INPUT]` with the rows kept; every control matched Spark, except the controls after a
-collected cache, where Spark's cache is still live and Spark writes. Spark keeps a cache until `unpersist`,
-`uncacheTable` or `clearCache()`: its `CacheManager` was not empty after the frame was collected.
+collected cache, where Spark's cache is still live and Spark writes. Spark keeps a collected frame's cache until
+`unpersist`, `uncacheTable` or `clearCache()` releases it: its `CacheManager` was not empty after the frame was
+collected. That holds for the frame's own handles; Spark also releases it by plan (an equal or derived frame's
+`unpersist()`, or a drop or uncache of a temp view over it), which RePark does not match (card, still-unlike list).
 
 - **Replays on delta 2** (the verifier's `cache2`, `cache3`, `cachecoll`, `cachevar`, `atk`, `atk_orig`,
   `atk_nocache` and #1431's corpora; delta 2, `d20427b68`, main `c69af55bd` and Spark 4.1.2): 4,518 cells, **0 false

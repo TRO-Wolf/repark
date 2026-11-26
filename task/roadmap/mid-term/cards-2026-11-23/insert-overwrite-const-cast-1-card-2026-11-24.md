@@ -52,10 +52,18 @@ The guard acts only where the answer is certain. Everything else stays exactly a
   `const_cast.rs::session_holds_cache`) decides it. A cache counts from `cache()` until `unpersist()`, `uncacheTable`,
   `UNCACHE TABLE` or `clearCache()` releases it, and the guard then acts again. A cached frame the program lets go stays
   counted until a `clearCache()`, because Spark keeps its cache after the DataFrame object is collected and writes.
+  So a process that has cached a frame and let it be collected keeps the guard off until `clearCache()`; where Spark
+  has since released that cache by plan, the overwrite empties the table as on main, where Spark refuses.
 - **Size:** `crates/repark-spark/src/insert_overwrite/const_cast.rs` holds 309 product lines (plus its unit tests); the
-  doors add 14 lines of wiring. The process-wide count adds a re-export in `lib.rs`, one `#[pyfunction]` in
-  `repark-python/src/cache_budget.rs` and three calls in `cache_handle.py` (delta 2). The Spark door plans `CAST(s AS TIMESTAMP)` as
-  `to_timestamp(__repark_decimal_cast_nullable__(s))`; the guard looks through that identity marker (delta 1).
+  doors add 14 lines of wiring. The process-wide count (delta 2) adds a re-export in `lib.rs`, one `#[pyfunction]`
+  in `repark-python/src/cache_budget.rs`, three calls in `cache_handle.py`, the `_COLLECTED` and `_LIVE` globals and
+  the 10-line `_release_collected` there, and a 3-line hook in `catalog.py::clearCache`. The Spark door plans
+  `CAST(s AS TIMESTAMP)` as `to_timestamp(__repark_decimal_cast_nullable__(s))`; the guard looks through that
+  identity marker (delta 1).
+- **Design notes:** the count is process-global mutable state (`const_cast.rs::LIVE_CACHE_VIEWS` and the
+  `cache_handle.py` globals), which a later multi-tenant server has to scope per tenant. If `drop_temp_view` raises
+  inside `CacheViewHandle.release`, the count stays one too high; that fails open to main's behaviour and never
+  refuses a write.
 
 ## Still unlike Spark (left as on main, each measured on main and the narrow head)
 
@@ -96,9 +104,12 @@ main (the head re-measure is recorded with the PR).
 - **A temp view dropped over a cache:** after `catalog.cacheTable("dv")` and `dropTempView("dv")`, or after a cached
   frame's temp view is dropped by name, Spark uncaches and raises. RePark keeps the `__repark_cache_` view, so the guard
   stays down until that cache is released, and the overwrite writes as on main.
-- **A collected cache and an equal plan:** Spark also releases a collected frame's cache when a new frame with the
-  same plan is `unpersist()`ed. RePark does not match plans, so only `clearCache()` releases it; until then the
-  overwrite writes as on main, where Spark raises.
+- **A collected cached frame whose cache Spark releases by plan:** `unpersist()` of an equal or derived frame (in
+  this session or a sibling), or `dropTempView`, `uncacheTable` or `UNCACHE TABLE` of a temp view over it. Spark's
+  cache manager is then empty and Spark raises; RePark does not match plans, so the collected handle stays counted and
+  the overwrite writes as on main until `clearCache()` (re-check 2: seven triggers, 14 cells on the SQL door and
+  `insertInto`, Spark `[CAST_INVALID_INPUT]`, main and head write). Closing it in code means matching cache releases
+  by plan, a follow-up card.
 - **After `stop()`:** cached frames from a stopped session, held or collected, keep the count up, so a later session's
   overwrite writes as on main until they are released or a `clearCache()` runs; Spark's stopped context drops its
   caches, and a new session raises.

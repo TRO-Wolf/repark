@@ -36,7 +36,7 @@ awaits the owner's rating. Each card row records its own status.
 - [INSERT-OVERWRITE-CONST-CAST-1](insert-overwrite-const-cast-1-card-2026-11-24.md) (S2) — **card:** an empty
   `INSERT OVERWRITE` with an invalid constant cast wipes the table where Spark refuses. Narrow fix built 2026-11-25
   (replaces parked #1431); delta 2 (2026-11-26) stands the guard down while any cache is live in the process; the card
-  lists what stays unlike Spark.
+  lists what stays unlike Spark, including a collected cache that Spark releases by plan.
 - [SPARK-DOOR-OVER-ACCEPT-SYNTAX-1](spark-door-over-accept-syntax-1-card-2026-11-24.md) (S3) — **card:** `1e2foo`,
   `named_struct(…).a` with a bad sibling, `* EXCLUDE` and `DELETE` without `FROM` answer where Spark refuses.
   **Fixed on branch** for four seats (2026-11-24, PR #1434); the struct seat stays as on main (delta 1).
