@@ -37,7 +37,7 @@ pins.
 - [test_decimal_cache_1.py](test_decimal_cache_1.py) — DECIMAL-CACHE-1 pins: every oracle decimal cell on both doors and every action.
 - [test_decimal_float_coercion_1.py](test_decimal_float_coercion_1.py) — WO-2 (xo-muse8 UNIT1 fix-b): decimal literals against DOUBLE/FLOAT widen the literal. Its 17 zero-bound legs answer Spark since SIGNED-ZERO-NORMALIZE-1.
 - [test_facade_4_census_pins.py](test_facade_4_census_pins.py) — FACADE-4 step-1 census pins: every Agree and D1-D24 row's measured answer. D11 (Arrow `duration[us]`) answers `interval day to second` since MAKE-DT-INTERVAL-OVERFLOW-1 (2026-11-25).
-- [test_make_dt_interval_ddl_schema.py](test_make_dt_interval_ddl_schema.py) — MAKE-DT-INTERVAL-OVERFLOW-1 delta 2: interval DDL spellings, DDL-string `createDataFrame` refusals; delta 3: an interval nested in a JSON type string refuses as on main, and a field named `` `interval day` `` still parses.
+- [test_make_dt_interval_ddl_schema.py](test_make_dt_interval_ddl_schema.py) — MAKE-DT-INTERVAL-OVERFLOW-1: interval DDL spellings, DDL-string `createDataFrame` refusals, a JSON type string with a nested interval.
 - [test_facade_4_ddl_round_trip.py](test_facade_4_ddl_round_trip.py) — FACADE-4 type-conversion goldens against the committed JSON file.
 - [test_facade_4_step1_remediation.py](test_facade_4_step1_remediation.py) — FACADE-4 step-1 remediation pins: byte-identity repros for the round-2 findings.
 - [test_intdiv_1.py](test_intdiv_1.py) — INTDIV-1: integer division scopes and the `div` operator replay Spark on both doors.
