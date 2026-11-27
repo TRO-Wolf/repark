@@ -715,8 +715,9 @@ fn widen_values(
             && !declared_ns
             && (!declared_instant || counts.walls > counts.null_walls)
         {
+            let keep_wall = ntz_default && !declared_instant;
             for (row, (cell, found)) in rows.iter_mut().zip(cells.into_iter().zip(types)) {
-                row[column] = if found == wall && ntz_default {
+                let widened = if found == wall && ntz_default {
                     Expr::ScalarFunction(ScalarFunction::new_udf(
                         crate::instant_ts::to_timestamp_udf(),
                         vec![cell],
@@ -726,9 +727,16 @@ fn widen_values(
                 } else {
                     cell
                 };
+                row[column] = if keep_wall {
+                    crate::timestamp_ntz_cast::timestamp_ntz_cast_expr(widened, false)
+                } else {
+                    widened
+                };
             }
-            let field = &mut fields[column].1;
-            *field = Arc::new(field.as_ref().clone().with_data_type(instant.clone()));
+            if !keep_wall {
+                let field = &mut fields[column].1;
+                *field = Arc::new(field.as_ref().clone().with_data_type(instant.clone()));
+            }
             changed = true;
         } else if !declared_instant
             && counts.instants == 0
@@ -794,7 +802,7 @@ fn classify_values_column(
 ) -> Option<(ValuesColumnCounts, Vec<Expr>, Vec<DataType>)> {
     let cells = pres
         .iter()
-        .map(|cell| rewrite(instant_cell_source(cell, ntz_default).clone()))
+        .map(|cell| rewrite(values_evidence::instant_cell_source(cell, ntz_default).clone()))
         .collect::<Result<Vec<Expr>>>()
         .ok()?;
     let types = cells
@@ -845,20 +853,6 @@ fn values_cell_class(
         ValuesCellClass::Instant
     } else {
         ValuesCellClass::Other
-    }
-}
-
-fn instant_cell_source(pre: &Expr, ntz_default: bool) -> &Expr {
-    if !ntz_default || values_evidence::values_cell_evidence(pre) != Evidence::NamedInstant {
-        return pre;
-    }
-    match strip_values_wrappers(pre) {
-        Expr::Cast(cast)
-            if cast.field.data_type() == &DataType::Timestamp(TimeUnit::Microsecond, None) =>
-        {
-            &cast.expr
-        }
-        _ => pre,
     }
 }
 

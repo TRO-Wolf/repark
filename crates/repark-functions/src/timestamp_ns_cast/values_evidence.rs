@@ -20,6 +20,20 @@ pub(super) fn values_cell_evidence(pre: &Expr) -> Evidence {
     cell_evidence(pre, true)
 }
 
+pub(super) fn instant_cell_source(pre: &Expr, ntz_default: bool) -> &Expr {
+    if !ntz_default || values_cell_evidence(pre) != Evidence::NamedInstant {
+        return pre;
+    }
+    match strip_values_wrappers(pre) {
+        Expr::Cast(cast)
+            if cast.field.data_type() == &DataType::Timestamp(TimeUnit::Microsecond, None) =>
+        {
+            &cast.expr
+        }
+        _ => pre,
+    }
+}
+
 fn cell_evidence(pre: &Expr, branches: bool) -> Evidence {
     let core = strip_values_wrappers(pre);
     let evidence = core_evidence(core, branches);
