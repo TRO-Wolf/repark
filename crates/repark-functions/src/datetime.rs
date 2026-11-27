@@ -823,7 +823,14 @@ impl ScalarUDFImpl for DateTrunc {
             )));
         };
         let _ = format;
-        let timestamp = coerce_to_timestamp_micros(timestamp).ok_or_else(|| {
+        let timestamp = match timestamp {
+            DataType::Timestamp(TimeUnit::Microsecond, None) => Some(DataType::Timestamp(
+                TIMESTAMP_UNIT,
+                Some(INSTANT_ZONE.into()),
+            )),
+            other => coerce_to_timestamp_micros(other),
+        }
+        .ok_or_else(|| {
             DataFusionError::Plan(format!(
                 "'date_trunc' cannot accept a timestamp of type {timestamp}"
             ))

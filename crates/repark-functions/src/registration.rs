@@ -47,6 +47,7 @@ pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     rules.push(crate::temporal_ctor::interval_string_cast_rule());
     rules.push(crate::datetime::extract_date_part_rule());
     rules.push(Arc::new(TypeCoercion::new()));
+    rules.push(crate::ntz_ltz_widen::ntz_ltz_widen_rule());
     rules.push(Arc::new(crate::lambda_rebind::LambdaRebind));
     rules.push(Arc::new(crate::collection::SparkMapRewrite));
     rules.push(Arc::new(crate::collection::SparkMapSubscript));
