@@ -1,0 +1,52 @@
+{
+ "by_family_class_state": {
+  "matrix|final|EXPLORATORY|changed_still_unlike": 67,
+  "matrix|final|EXPLORATORY|closed": 71,
+  "matrix|final|EXPLORATORY|unchanged": 359,
+  "matrix|final|KNOWN_DIVERGENCE|sql_equal_main": 1924,
+  "matrix|final|KNOWN_DIVERGENCE|unchanged": 916,
+  "matrix|final|PROTECTED|REGRESSED": 28,
+  "matrix|final|PROTECTED|equal": 3603,
+  "matrix|final|PROTECTED|sql_equal_main": 1856,
+  "matrix|final|TARGET|changed_still_unlike": 308,
+  "matrix|final|TARGET|closed": 1040,
+  "matrix|final|TARGET|unchanged": 538,
+  "route|final|EXPLORATORY|clock_dependent": 144,
+  "route|final|KNOWN_DIVERGENCE|sql_equal_main": 974,
+  "route|final|PROTECTED|equal": 534,
+  "route|final|PROTECTED|sql_equal_main": 934,
+  "route|final|PROTECTED|unchanged": 60,
+  "route|final|TARGET|changed_still_unlike": 26,
+  "route|final|TARGET|closed": 80,
+  "route|final|TARGET|unchanged": 1208,
+  "wrong_value|final|KNOWN_DIVERGENCE|unchanged": 130,
+  "wrong_value|final|PROTECTED|REGRESSED": 32,
+  "wrong_value|final|PROTECTED|equal": 1042,
+  "wrong_value|final|TARGET|changed_still_unlike": 106,
+  "wrong_value|final|TARGET|closed": 704,
+  "wrong_value|final|TARGET|unchanged": 92
+ },
+ "cells": 16776,
+ "head_package_built_from": "65aa980c",
+ "main_wrong_stored_values": {
+  "all": 236,
+  "changed_still_unlike": 12,
+  "closed": 176,
+  "not_closed|DST-gap string cast": 15,
+  "not_closed|column-bearing": 39,
+  "not_closed|zoned literal into NTZ": 6,
+  "unchanged": 48
+ },
+ "protected_moved_off_spark": 60,
+ "spark": "4.1.2",
+ "sql_door_cells_equal_main": 5688,
+ "sql_door_cells_moved": 0,
+ "sql_door_grid": {
+  "cells": 7560,
+  "head_equals_main": 7560,
+  "main_reproduces_recorded": 7560
+ },
+ "target_cells": 4102,
+ "target_closed": 1824,
+ "unit": "FEXPR-TIMESTAMP-NTZ-1 narrow"
+}
