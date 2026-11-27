@@ -40,11 +40,15 @@ def _store(session: ReparkSession, cell: dict[str, Any]) -> list[list[Any]]:
     else:
         session.sql(f"CREATE TABLE {table} (id INT, v TIMESTAMP_{target}) USING iceberg")
         session.sql(f"INSERT INTO {table} {source}")
-    rows = session.sql(f"SELECT id, typeof(v), CAST(v AS STRING) FROM {table} ORDER BY id").collect()
+    rows = session.sql(
+        f"SELECT id, typeof(v), CAST(v AS STRING) FROM {table} ORDER BY id"
+    ).collect()
     return [[row[0], row[1], row[2]] for row in rows]
 
 
-@pytest.mark.parametrize("name", sorted(name for name, cell in _CELLS.items() if cell["kind"] != "TARGET_OR_REFUSE"))
+@pytest.mark.parametrize(
+    "name", sorted(name for name, cell in _CELLS.items() if cell["kind"] != "TARGET_OR_REFUSE")
+)
 def test_explicit_ltz_values_store_sparks_value(name: str, tmp_path: Path) -> None:
     cell = _CELLS[name]
     session = _open(cell, tmp_path)
@@ -54,7 +58,9 @@ def test_explicit_ltz_values_store_sparks_value(name: str, tmp_path: Path) -> No
         session.stop()
 
 
-@pytest.mark.parametrize("name", sorted(name for name, cell in _CELLS.items() if cell["kind"] == "TARGET_OR_REFUSE"))
+@pytest.mark.parametrize(
+    "name", sorted(name for name, cell in _CELLS.items() if cell["kind"] == "TARGET_OR_REFUSE")
+)
 def test_explicit_ltz_values_store_sparks_value_or_refuse(name: str, tmp_path: Path) -> None:
     cell = _CELLS[name]
     session = _open(cell, tmp_path)

@@ -369,7 +369,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `__repark_cast_timestamp_ntz__` (the session wall), because under NTZ the analyzer does not retarget the
   DML store cast and an instant column into a `TIMESTAMP_NTZ` table failed at execution.
   `strip_values_wrappers` also peels `__repark_decimal_cast_nullable__`. Details in
-  [timestamp_ns_cast/map.md](timestamp_ns_cast/map.md).
+  `timestamp_ns_cast/map.md`.
 - `timestamp_ns_cast.rs`, `registration.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** the narrowing kernel name re-exports from `repark_common::udf_names`, and `narrow_timestamp_ns_udf()` is added beside the wall kernel (WS2-13). `registration.rs` registers the zone seam (`zone_seam_udf(false)`, WS2-12) and the narrowing kernel by name on the Spark session builder.
 - `timestamp_ns_cast.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):**
   `wall_kernel_by_target` applies the nanosecond wall kernel from the **type** of a cast
