@@ -76,6 +76,7 @@ allowed to answer NULL with ANSI off, as INSERT stores it. `tests.rs`
   `None`, so `is_values_wall_cell` and `timestamp_unit_widen` read what they read before. Without the
   arms a `COALESCE(CAST('…' AS TIMESTAMP_LTZ), NULL)` cell beside `TIMESTAMP_NTZ '2024-03-10 02:30:00'`
   left the column naive and stored the New York gap wall `02:30` where Spark widens and stores `03:30`.
+  `widen_columns` picks the columns `widen_values` reads.
 
 ## Pointers
 
