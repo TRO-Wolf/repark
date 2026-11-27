@@ -1,0 +1,349 @@
+{
+ "cells": {
+  "case_plain_kolkata_ntz": {
+   "a": "CASE WHEN 1 = 1 THEN TIMESTAMP_NTZ '2024-06-01 09:00:00' ELSE to_timestamp_ltz('2024-01-01 02:00:00') END",
+   "b": "",
+   "kind": "PROTECTED",
+   "site": "expr",
+   "spark": [
+    "timestamp",
+    true,
+    [
+     [
+      1,
+      "2024-06-01 09:00:00",
+      "1717212600000000"
+     ]
+    ]
+   ],
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "Asia/Kolkata"
+  },
+  "coalesce_ntz_only_ny_ntz": {
+   "a": "coalesce(TIMESTAMP_NTZ '2024-03-10 02:30:00', TIMESTAMP_NTZ '2024-06-01 09:00:00')",
+   "b": "",
+   "kind": "PROTECTED",
+   "site": "expr",
+   "spark": [
+    "timestamp_ntz",
+    false,
+    [
+     [
+      1,
+      "2024-03-10 02:30:00",
+      null
+     ]
+    ]
+   ],
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "America/New_York"
+  },
+  "date_trunc_day_date_ny_ltz": {
+   "a": "date_trunc('DAY', DATE '2024-03-10')",
+   "b": "",
+   "kind": "PROTECTED",
+   "site": "expr",
+   "spark": [
+    "timestamp",
+    true,
+    [
+     [
+      1,
+      "2024-03-10 00:00:00",
+      "1710046800000000"
+     ]
+    ]
+   ],
+   "timestamp_type": "TIMESTAMP_LTZ",
+   "zone": "America/New_York"
+  },
+  "date_trunc_day_plain_kolkata_ntz": {
+   "a": "date_trunc('DAY', TIMESTAMP_NTZ '2024-06-01 09:00:00')",
+   "b": "",
+   "kind": "TARGET",
+   "site": "expr",
+   "spark": [
+    "timestamp",
+    true,
+    [
+     [
+      1,
+      "2024-06-01 00:00:00",
+      "1717180200000000"
+     ]
+    ]
+   ],
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "Asia/Kolkata"
+  },
+  "date_trunc_hour_gap_ny_ltz": {
+   "a": "date_trunc('HOUR', TIMESTAMP_NTZ '2024-03-10 02:30:00')",
+   "b": "",
+   "kind": "TARGET",
+   "site": "expr",
+   "spark": [
+    "timestamp",
+    true,
+    [
+     [
+      1,
+      "2024-03-10 03:00:00",
+      "1710054000000000"
+     ]
+    ]
+   ],
+   "timestamp_type": "TIMESTAMP_LTZ",
+   "zone": "America/New_York"
+  },
+  "date_trunc_hour_ltz_gap_ny_ntz": {
+   "a": "date_trunc('HOUR', to_timestamp_ltz('2024-03-10 03:30:00'))",
+   "b": "",
+   "kind": "PROTECTED",
+   "site": "expr",
+   "spark": [
+    "timestamp",
+    true,
+    [
+     [
+      1,
+      "2024-03-10 03:00:00",
+      "1710054000000000"
+     ]
+    ]
+   ],
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "America/New_York"
+  },
+  "date_trunc_hour_plain_utc_ltz": {
+   "a": "date_trunc('HOUR', TIMESTAMP_NTZ '2024-06-01 09:00:00')",
+   "b": "",
+   "kind": "TARGET",
+   "site": "expr",
+   "spark": [
+    "timestamp",
+    true,
+    [
+     [
+      1,
+      "2024-06-01 09:00:00",
+      "1717232400000000"
+     ]
+    ]
+   ],
+   "timestamp_type": "TIMESTAMP_LTZ",
+   "zone": "UTC"
+  },
+  "df_union_gap_ny_ntz": {
+   "a": "TIMESTAMP_NTZ '2024-03-10 02:30:00'",
+   "b": "to_timestamp_ltz('2024-01-01 02:00:00')",
+   "kind": "TARGET",
+   "site": "df_union",
+   "spark": [
+    "timestamp",
+    true,
+    [
+     [
+      1,
+      "2024-03-10 03:30:00",
+      "1710055800000000"
+     ],
+     [
+      2,
+      "2024-01-01 02:00:00",
+      "1704092400000000"
+     ]
+    ]
+   ],
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "America/New_York"
+  },
+  "df_union_ntz_only_kolkata_ltz": {
+   "a": "TIMESTAMP_NTZ '2024-03-10 02:30:00'",
+   "b": "TIMESTAMP_NTZ '2024-06-01 09:00:00'",
+   "kind": "PROTECTED",
+   "site": "df_union",
+   "spark": [
+    "timestamp_ntz",
+    false,
+    [
+     [
+      1,
+      "2024-03-10 02:30:00",
+      null
+     ],
+     [
+      2,
+      "2024-06-01 09:00:00",
+      null
+     ]
+    ]
+   ],
+   "timestamp_type": "TIMESTAMP_LTZ",
+   "zone": "Asia/Kolkata"
+  },
+  "df_union_plain_kolkata_ntz": {
+   "a": "TIMESTAMP_NTZ '2024-06-01 09:00:00'",
+   "b": "to_timestamp_ltz('2024-01-01 02:00:00')",
+   "kind": "TARGET",
+   "site": "df_union",
+   "spark": [
+    "timestamp",
+    true,
+    [
+     [
+      1,
+      "2024-06-01 09:00:00",
+      "1717212600000000"
+     ],
+     [
+      2,
+      "2024-01-01 02:00:00",
+      "1704054600000000"
+     ]
+    ]
+   ],
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "Asia/Kolkata"
+  },
+  "eq_gap_ny_ntz": {
+   "a": "TIMESTAMP_NTZ '2024-03-10 02:30:00' = to_timestamp_ltz('2024-03-10 03:30:00')",
+   "b": "",
+   "kind": "PROTECTED",
+   "site": "expr",
+   "spark": [
+    "boolean",
+    true,
+    [
+     [
+      1,
+      "true",
+      null
+     ]
+    ]
+   ],
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "America/New_York"
+  },
+  "sql_union_fold_ny_ntz_ltz_first": {
+   "a": "to_timestamp_ltz('2024-01-01 02:00:00')",
+   "b": "TIMESTAMP_NTZ '2024-11-03 01:30:00'",
+   "kind": "TARGET",
+   "site": "sql_union",
+   "spark": [
+    "timestamp",
+    true,
+    [
+     [
+      1,
+      "2024-01-01 02:00:00",
+      "1704092400000000"
+     ],
+     [
+      2,
+      "2024-11-03 01:30:00",
+      "1730611800000000"
+     ]
+    ]
+   ],
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "America/New_York"
+  },
+  "sql_union_gap_ny_ltz": {
+   "a": "TIMESTAMP_NTZ '2024-03-10 02:30:00'",
+   "b": "to_timestamp_ltz('2024-01-01 02:00:00')",
+   "kind": "PROTECTED",
+   "site": "sql_union",
+   "spark": [
+    "timestamp",
+    true,
+    [
+     [
+      1,
+      "2024-03-10 03:30:00",
+      "1710055800000000"
+     ],
+     [
+      2,
+      "2024-01-01 02:00:00",
+      "1704092400000000"
+     ]
+    ]
+   ],
+   "timestamp_type": "TIMESTAMP_LTZ",
+   "zone": "America/New_York"
+  },
+  "sql_union_gap_ny_ntz": {
+   "a": "TIMESTAMP_NTZ '2024-03-10 02:30:00'",
+   "b": "to_timestamp_ltz('2024-01-01 02:00:00')",
+   "kind": "TARGET",
+   "site": "sql_union",
+   "spark": [
+    "timestamp",
+    true,
+    [
+     [
+      1,
+      "2024-03-10 03:30:00",
+      "1710055800000000"
+     ],
+     [
+      2,
+      "2024-01-01 02:00:00",
+      "1704092400000000"
+     ]
+    ]
+   ],
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "America/New_York"
+  },
+  "sql_union_ltz_only_ny_ntz": {
+   "a": "to_timestamp_ltz('2024-01-01 02:00:00')",
+   "b": "to_timestamp_ltz('2024-03-10 03:30:00')",
+   "kind": "PROTECTED",
+   "site": "sql_union",
+   "spark": [
+    "timestamp",
+    true,
+    [
+     [
+      1,
+      "2024-01-01 02:00:00",
+      "1704092400000000"
+     ],
+     [
+      2,
+      "2024-03-10 03:30:00",
+      "1710055800000000"
+     ]
+    ]
+   ],
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "America/New_York"
+  },
+  "sql_union_ntz_only_ny_ntz": {
+   "a": "TIMESTAMP_NTZ '2024-03-10 02:30:00'",
+   "b": "TIMESTAMP_NTZ '2024-06-01 09:00:00'",
+   "kind": "PROTECTED",
+   "site": "sql_union",
+   "spark": [
+    "timestamp_ntz",
+    false,
+    [
+     [
+      1,
+      "2024-03-10 02:30:00",
+      null
+     ],
+     [
+      2,
+      "2024-06-01 09:00:00",
+      null
+     ]
+    ]
+   ],
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "America/New_York"
+  }
+ },
+ "spark_version": "4.1.2"
+}
