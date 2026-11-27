@@ -10,6 +10,7 @@ pins.
 
 ## Contents
 
+- [fexpr_timestamp_ntz_1_narrow_spark.json](fexpr_timestamp_ntz_1_narrow_spark.json) — Spark 4.1.2 answers for the FEXPR-TIMESTAMP-NTZ-1 narrow pins.
 - [test_attr_id_1_s2.py](test_attr_id_1_s2.py) — ATTR-ID-1 S2: the seam pins.
 - [test_attr_id_1_s3a.py](test_attr_id_1_s3a.py) — ATTR-ID-1 S3A: the cutover pins, each under both case rules unless noted.
 - [test_attr_id_1_s3b.py](test_attr_id_1_s3b.py) — ATTR-ID-1 S3B: the filter/sort cutover pins, each under both case rules unless noted.
@@ -36,6 +37,7 @@ pins.
 - [test_casesens_2.py](test_casesens_2.py) — WO CASESENS-2 slice 1: bare DataFrame names resolve in Rust.
 - [test_cs2p1_alias_qualifier.py](test_cs2p1_alias_qualifier.py) — R-CS2P-1: DataFrame-alias qualifiers keep their case and bind under both case rules.
 - [test_fa_5_duplicate_csv.py](test_fa_5_duplicate_csv.py) — FA-5: CSV writes of frames with exact-duplicate display names match the live Spark 4.1.2 cells (header, rows, options).
+- [test_fexpr_timestamp_ntz_1_narrow.py](test_fexpr_timestamp_ntz_1_narrow.py) — FEXPR-TIMESTAMP-NTZ-1 narrow: how `F.expr` resolves `TIMESTAMP_NTZ` casts and `spark.sql.timestampType` (TARGET pins red on main, PROTECTED and SQL-door pins green on both).
 - [test_perf_attr_stamp_2_o1.py](test_perf_attr_stamp_2_o1.py) — STAMP-2 O1: the facade pins for the per-handle executable twin.
 - [test_stamp_2_r5p6_1.py](test_stamp_2_r5p6_1.py) — STAMP-2 R5P6: `fillna` over twin, star, appended, union and self-join frames answers the same on the native route as on the forced SQL route.
 - [test_stamp_2_r5p6_2.py](test_stamp_2_r5p6_2.py) — STAMP-2 R5P6: the H1 join door's differential pins.

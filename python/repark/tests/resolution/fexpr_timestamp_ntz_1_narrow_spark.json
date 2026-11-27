@@ -1,5 +1,60 @@
 {
  "cells": {
+  "extra|ltz_built|false|CAST('bad' AS TIMESTAMP_NTZ)": {
+   "ansi": "false",
+   "class": "TARGET",
+   "dtype": "timestamp_ntz",
+   "expr": "CAST('bad' AS TIMESTAMP_NTZ)",
+   "kind": "harden",
+   "session": "ltz_built",
+   "text": [
+    null
+   ]
+  },
+  "extra|ntz_built|false|CAST('bad' AS TIMESTAMP)": {
+   "ansi": "false",
+   "class": "TARGET",
+   "dtype": "timestamp_ntz",
+   "expr": "CAST('bad' AS TIMESTAMP)",
+   "kind": "harden",
+   "session": "ntz_built",
+   "text": [
+    null
+   ]
+  },
+  "extra|ntz_built|false|CAST('bad' AS TIMESTAMP_NTZ)": {
+   "ansi": "false",
+   "class": "TARGET",
+   "dtype": "timestamp_ntz",
+   "expr": "CAST('bad' AS TIMESTAMP_NTZ)",
+   "kind": "harden",
+   "session": "ntz_built",
+   "text": [
+    null
+   ]
+  },
+  "extra|rt_after|false|'bad'::timestamp": {
+   "ansi": "false",
+   "class": "TARGET",
+   "dtype": "timestamp_ntz",
+   "expr": "'bad'::timestamp",
+   "kind": "harden",
+   "session": "rt_after",
+   "text": [
+    null
+   ]
+  },
+  "extra|rt_after|true|CAST(TIMESTAMP '1969-12-31 23:59:59.123456' AS TIMESTAMP_NTZ)": {
+   "ansi": "true",
+   "class": "TARGET",
+   "dtype": "timestamp_ntz",
+   "expr": "CAST(TIMESTAMP '1969-12-31 23:59:59.123456' AS TIMESTAMP_NTZ)",
+   "kind": "harden",
+   "session": "rt_after",
+   "text": [
+    "1969-12-31 23:59:59.123456"
+   ]
+  },
   "harden|ntz_built|acute_ident": {
    "class": "PROTECTED",
    "dtype": "timestamp_ntz",

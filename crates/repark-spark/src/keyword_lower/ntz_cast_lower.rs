@@ -8,25 +8,30 @@ use super::{function_call, null_expr};
 use crate::spark_rewrites::{byte_offset, line_starts, skip_whitespace};
 
 pub(super) fn lower_fragment_timestamp_ntz_cast(node: &mut Expr, nullable: &str) -> bool {
-    if let Expr::Cast {
-        kind: CastKind::Cast | CastKind::DoubleColon,
-        expr,
-        data_type: DataType::TimestampNtz(_),
-        array: false,
-        format: None,
-    } = node
-        && matches!(
+    let string_operand = matches!(
+        node,
+        Expr::Cast {
+            kind: CastKind::Cast | CastKind::DoubleColon,
+            expr,
+            data_type: DataType::TimestampNtz(_),
+            array: false,
+            format: None,
+        } if matches!(
             expr.as_ref(),
             Expr::Value(ValueWithSpan {
                 value: Value::SingleQuotedString(_) | Value::DoubleQuotedString(_),
                 ..
             })
         )
-    {
-        let value = std::mem::replace(expr, Box::new(null_expr()));
-        *expr = Box::new(function_call(nullable, vec![*value]));
+    );
+    if !lower_timestamp_ntz_cast(node) {
+        return false;
     }
-    lower_timestamp_ntz_cast(node)
+    if string_operand {
+        let lowered = std::mem::replace(node, null_expr());
+        *node = function_call(nullable, vec![lowered]);
+    }
+    true
 }
 
 fn is_bare_word(token: Option<&Token>, names: &[&str]) -> bool {
@@ -185,7 +190,7 @@ mod tests {
         );
         assert!(
             text.contains(
-                "__repark_cast_timestamp_ntz__(__repark_decimal_cast_nullable__('2024-01-01 02:00:00')) AS a"
+                "__repark_decimal_cast_nullable__(__repark_cast_timestamp_ntz__('2024-01-01 02:00:00')) AS a"
             ) && text.contains("__repark_cast_timestamp_ntz__(s) AS b")
                 && text.contains("__repark_try_cast_timestamp_ntz__('x') AS c")
                 && text.contains("__repark_cast_timestamp_ntz__(TIMESTAMP '2024-01-01 02:00:00') AS d"),

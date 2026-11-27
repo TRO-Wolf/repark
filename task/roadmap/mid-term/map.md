@@ -172,9 +172,8 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   Spark stores.
 - [fexpr-timestamp-zone-1-card-2026-10-01.md](fexpr-timestamp-zone-1-card-2026-10-01.md) — **card
   FEXPR-TIMESTAMP-ZONE-1 (2026-10-01, from the overnight owner-items backlog, #888 re-verify
-  10):** `F.expr` TIMESTAMP literals resolved in UTC; fixed by #1420 (2026-11-24). The NTZ cast and
-  `timestampType=TIMESTAMP_NTZ` on `F.expr` (S1) are fixed for column-free fragments by FEXPR-TIMESTAMP-NTZ-1 narrow
-  (2026-11-27), with 60 named moved cells; column-bearing casts wait for TIMESTAMP-NTZ-STRING-PARSE-1.
+  10):** `F.expr` TIMESTAMP literals resolved in UTC; fixed by #1420 (2026-11-24). Open: column-bearing
+  `F.expr` NTZ casts (S1; column-free ones fixed by FEXPR-TIMESTAMP-NTZ-1 narrow, 2026-11-27).
 - [ml-cv-fold-test-strength-1-card-2026-10-01.md](ml-cv-fold-test-strength-1-card-2026-10-01.md) — **card
   ML-CV-FOLD-TEST-STRENGTH-1 (2026-10-01, from the overnight owner-items backlog, VE4-2):**
   `test_ml_boost_oracle.py::test_cross_validator_materializes_fold_labels` cannot tell folds that

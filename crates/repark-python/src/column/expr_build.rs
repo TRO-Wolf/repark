@@ -18,8 +18,11 @@ use datafusion::scalar::ScalarValue;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
+mod py_functions;
 use super::PyColumn;
-use crate::fence::fenced;
+#[cfg(test)]
+pub(crate) use py_functions::grouping_id_column;
+pub(crate) use py_functions::register;
 
 /// Preserve Spark's `±Inf` result at an exact zero reciprocal-trig divisor.
 pub(super) fn reciprocal_trig_or_inf(divisor: Expr) -> Expr {
@@ -583,27 +586,6 @@ impl PyColumn {
             else_expr: None,
         }))
     }
-}
-
-pub(crate) fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
-    module.add_function(wrap_pyfunction!(grouping_id_column, module)?)?;
-    module.add_function(wrap_pyfunction!(fragment_timestamp_ntz_sql, module)?)
-}
-
-#[pyfunction]
-pub(crate) fn fragment_timestamp_ntz_sql(sql: &str) -> Option<String> {
-    repark_spark::values_marker::fragment_timestamp_types_as_ntz(sql)
-}
-
-#[pyfunction]
-pub(crate) fn grouping_id_column(args: Vec<PyColumn>) -> PyResult<PyColumn> {
-    fenced!("grouping_id_column", {
-        let exprs = args.iter().map(PyColumn::expr).collect::<Vec<_>>();
-        Ok(PyColumn::combine_surveyed(
-            PyColumn::grouping_id_call(exprs)?,
-            &args,
-        ))
-    })
 }
 
 pub(super) fn cast_unsigned_count_to_signed(udaf: &AggregateUDF, arity: usize, expr: Expr) -> Expr {

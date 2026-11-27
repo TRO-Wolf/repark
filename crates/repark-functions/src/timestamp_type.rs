@@ -154,7 +154,7 @@ pub fn spark_timestamp_type_from_options(options: &ConfigOptions) -> SparkTimest
 pub fn typed_literal_resolves_ntz(text: &str) -> bool {
     crate::spark_string_timestamp::grammar::parse_timestamp_string(text)
         .is_some_and(|parsed| parsed.zone.is_none() && !parsed.just_time)
-        && crate::timestamp_ntz_cast::parse_timestamp_ntz_wall(text).is_some()
+        && crate::timestamp_ntz_cast::parse_timestamp_ntz_wall(text).is_some_and(|wall| wall >= 0)
 }
 
 #[cfg(test)]
@@ -248,6 +248,7 @@ mod tests {
             "02:00:00",
             "T02:00:00",
             "2024-01-01 02:00",
+            "1969-12-31 23:59:59.123456",
             "bad",
             "",
         ] {
