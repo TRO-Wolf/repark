@@ -110,7 +110,6 @@ fn fragment_logical_expr(
     let state = context.state();
     let dialect = state.config().options().sql_parser.dialect;
     let mut parsed = state.sql_to_expr_with_alias(sql, &dialect)?;
-    repark_spark::values_marker::lower_fragment_timestamp_ntz_casts(&mut parsed.expr);
     repark_spark::values_marker::mark_fragment_cells(&mut parsed.expr);
     state.create_logical_expr_from_sql_expr(parsed, schema)
 }
