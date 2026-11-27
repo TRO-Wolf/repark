@@ -151,10 +151,15 @@ pub fn spark_timestamp_type_from_options(options: &ConfigOptions) -> SparkTimest
 }
 
 #[must_use]
-pub fn typed_literal_resolves_ntz(text: &str) -> bool {
+pub fn typed_literal_ntz_wall(text: &str) -> Option<i64> {
     crate::spark_string_timestamp::grammar::parse_timestamp_string(text)
-        .is_some_and(|parsed| parsed.zone.is_none() && !parsed.just_time)
-        && crate::timestamp_ntz_cast::parse_timestamp_ntz_wall(text).is_some_and(|wall| wall >= 0)
+        .filter(|parsed| parsed.zone.is_none() && !parsed.just_time)
+        .and_then(|_| crate::timestamp_ntz_cast::parse_timestamp_ntz_wall(text))
+}
+
+#[must_use]
+pub fn typed_literal_resolves_ntz(text: &str) -> bool {
+    typed_literal_ntz_wall(text).is_some_and(|wall| wall >= 0)
 }
 
 #[cfg(test)]

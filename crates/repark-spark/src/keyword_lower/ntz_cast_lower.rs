@@ -2,32 +2,38 @@ use datafusion::sql::sqlparser::ast::{CastKind, DataType, Expr, Value, ValueWith
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::tokenizer::{Span, Token, Tokenizer};
 use repark_functions::timestamp_ntz_cast::{TIMESTAMP_NTZ_CAST_NAME, TRY_TIMESTAMP_NTZ_CAST_NAME};
-use repark_functions::timestamp_type::typed_literal_resolves_ntz;
+use repark_functions::timestamp_type::{typed_literal_ntz_wall, typed_literal_resolves_ntz};
 
 use super::{function_call, null_expr};
 use crate::spark_rewrites::{byte_offset, line_starts, skip_whitespace};
 
 pub(super) fn lower_fragment_timestamp_ntz_cast(node: &mut Expr, nullable: &str) -> bool {
-    let string_operand = matches!(
-        node,
+    let string_operand = match node {
         Expr::Cast {
             kind: CastKind::Cast | CastKind::DoubleColon,
             expr,
             data_type: DataType::TimestampNtz(_),
             array: false,
             format: None,
-        } if matches!(
-            expr.as_ref(),
+        } => match expr.as_ref() {
             Expr::Value(ValueWithSpan {
-                value: Value::SingleQuotedString(_) | Value::DoubleQuotedString(_),
+                value: Value::SingleQuotedString(text) | Value::DoubleQuotedString(text),
                 ..
-            })
-        )
-    );
+            }) => Some(typed_literal_ntz_wall(text).is_some()),
+            _ => None,
+        },
+        _ => None,
+    };
+    if string_operand == Some(true)
+        && let Expr::Cast { expr, .. } = node
+    {
+        let value = std::mem::replace(expr, Box::new(null_expr()));
+        *expr = Box::new(function_call(nullable, vec![*value]));
+    }
     if !lower_timestamp_ntz_cast(node) {
         return false;
     }
-    if string_operand {
+    if string_operand == Some(false) {
         let lowered = std::mem::replace(node, null_expr());
         *node = function_call(nullable, vec![lowered]);
     }
@@ -59,9 +65,27 @@ pub(super) fn bare_timestamp_types_as_ntz(sql: &str) -> Option<String> {
                 let next = tokens
                     .get(skip_whitespace(&tokens, index + 1))
                     .map(|next| &next.token);
-                let typed_literal = matches!(next,
-                    Some(Token::SingleQuotedString(text) | Token::DoubleQuotedString(text))
-                        if typed_literal_resolves_ntz(text));
+                let next_index = skip_whitespace(&tokens, index + 1);
+                let wall = match next {
+                    Some(Token::SingleQuotedString(text) | Token::DoubleQuotedString(text)) => {
+                        typed_literal_ntz_wall(text)
+                    }
+                    _ => None,
+                };
+                if let (Some(wall), Some(literal)) = (wall, tokens.get(next_index))
+                    && wall < 0
+                {
+                    let end = byte_offset(&starts, sql, literal.span.end)?;
+                    let text_start = byte_offset(&starts, sql, literal.span.start)?;
+                    cuts.push((
+                        byte_offset(&starts, sql, with_span.span.start)?,
+                        end,
+                        format!("CAST({} AS TIMESTAMP_NTZ)", sql.get(text_start..end)?),
+                    ));
+                    previous = Some(token);
+                    continue;
+                }
+                let typed_literal = wall.is_some_and(|wall| wall >= 0);
                 let cast_target = matches!(previous, Some(Token::DoubleColon))
                     || (is_bare_word(previous, &["AS"])
                         && cast_parens.last() == Some(&true)
@@ -70,6 +94,7 @@ pub(super) fn bare_timestamp_types_as_ntz(sql: &str) -> Option<String> {
                     cuts.push((
                         byte_offset(&starts, sql, with_span.span.start)?,
                         byte_offset(&starts, sql, with_span.span.end)?,
+                        "TIMESTAMP_NTZ".to_owned(),
                     ));
                 }
             }
@@ -84,10 +109,15 @@ pub(super) fn bare_timestamp_types_as_ntz(sql: &str) -> Option<String> {
     }
     let mut rewritten = String::with_capacity(sql.len() + 4 * cuts.len());
     let mut kept = 0;
-    for (start, end) in cuts {
+    let mut skip_until = 0;
+    for (start, end, replacement) in cuts {
+        if start < skip_until {
+            continue;
+        }
         rewritten.push_str(sql.get(kept..start)?);
-        rewritten.push_str("TIMESTAMP_NTZ");
+        rewritten.push_str(&replacement);
         kept = end;
+        skip_until = end;
     }
     rewritten.push_str(sql.get(kept..)?);
     Some(rewritten)
@@ -186,13 +216,15 @@ mod tests {
     fn fragment_ntz_casts_lower_and_string_operands_stay_nullable() {
         let text = fragment_lowered(
             "SELECT CAST('2024-01-01 02:00:00' AS TIMESTAMP_NTZ) AS a, s::timestamp_ntz AS b, \
-             TRY_CAST('x' AS TIMESTAMP_NTZ) AS c, CAST(TIMESTAMP '2024-01-01 02:00:00' AS TIMESTAMP_NTZ) AS d",
+             TRY_CAST('x' AS TIMESTAMP_NTZ) AS c, CAST(TIMESTAMP '2024-01-01 02:00:00' AS TIMESTAMP_NTZ) AS d, \
+             CAST('bad' AS TIMESTAMP_NTZ) AS e",
         );
         assert!(
             text.contains(
-                "__repark_decimal_cast_nullable__(__repark_cast_timestamp_ntz__('2024-01-01 02:00:00')) AS a"
+                "__repark_cast_timestamp_ntz__(__repark_decimal_cast_nullable__('2024-01-01 02:00:00')) AS a"
             ) && text.contains("__repark_cast_timestamp_ntz__(s) AS b")
                 && text.contains("__repark_try_cast_timestamp_ntz__('x') AS c")
+                && text.contains("__repark_decimal_cast_nullable__(__repark_cast_timestamp_ntz__('bad')) AS e")
                 && text.contains("__repark_cast_timestamp_ntz__(TIMESTAMP '2024-01-01 02:00:00') AS d"),
             "{text}"
         );
@@ -213,6 +245,11 @@ mod tests {
             )
         );
         assert_eq!(
+            bare_timestamp_types_as_ntz("IF(x, TIMESTAMP '1969-12-31 23:59:59.5', NULL)")
+                .as_deref(),
+            Some("IF(x, CAST('1969-12-31 23:59:59.5' AS TIMESTAMP_NTZ), NULL)")
+        );
+        assert_eq!(
             bare_timestamp_types_as_ntz("TRY_CAST(CAST(s AS STRING) AS TIMESTAMP), s::TIMESTAMP")
                 .as_deref(),
             Some("TRY_CAST(CAST(s AS STRING) AS TIMESTAMP_NTZ), s::TIMESTAMP_NTZ")
@@ -222,6 +259,7 @@ mod tests {
             "TIMESTAMP '2024-01-01 02:00:00 America/New_York'",
             "TIMESTAMP '2024-01-01T02:00:00+05:30'",
             "TIMESTAMP '02:00:00'",
+            "TIMESTAMP 'T02:00:00'",
             "TIMESTAMP 'not a timestamp'",
             "TIMESTAMP_LTZ '2024-01-01 02:00:00'",
             "CAST(s AS TIMESTAMP_LTZ)",
