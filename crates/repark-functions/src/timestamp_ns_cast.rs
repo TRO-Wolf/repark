@@ -668,23 +668,8 @@ fn widen_values(
     ntz_default: bool,
 ) -> Result<(LogicalPlan, bool)> {
     let wall = DataType::Timestamp(TimeUnit::Microsecond, None);
-    let wall_ns = DataType::Timestamp(TimeUnit::Nanosecond, None);
     let instant = crate::instant_ts::ltz_timestamp_type();
-    let columns: Vec<(usize, bool)> = values
-        .schema
-        .fields()
-        .iter()
-        .enumerate()
-        .filter_map(|(column, field)| {
-            if field.data_type() == &wall || (ntz_default && field.data_type() == &instant) {
-                Some((column, false))
-            } else if field.data_type() == &wall_ns {
-                Some((column, true))
-            } else {
-                None
-            }
-        })
-        .collect();
+    let columns = values_evidence::widen_columns(&values.schema, ntz_default);
     if columns.is_empty() {
         return Ok((LogicalPlan::Values(values), false));
     }

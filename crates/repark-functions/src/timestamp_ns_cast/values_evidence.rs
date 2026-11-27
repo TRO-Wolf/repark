@@ -20,6 +20,26 @@ pub(super) fn values_cell_evidence(pre: &Expr) -> Evidence {
     cell_evidence(pre, true)
 }
 
+pub(super) fn widen_columns(schema: &DFSchema, ntz_default: bool) -> Vec<(usize, bool)> {
+    let wall = DataType::Timestamp(TimeUnit::Microsecond, None);
+    let wall_ns = DataType::Timestamp(TimeUnit::Nanosecond, None);
+    let instant = crate::instant_ts::ltz_timestamp_type();
+    schema
+        .fields()
+        .iter()
+        .enumerate()
+        .filter_map(|(column, field)| {
+            if field.data_type() == &wall || (ntz_default && field.data_type() == &instant) {
+                Some((column, false))
+            } else if field.data_type() == &wall_ns {
+                Some((column, true))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
 pub(super) fn instant_cell_source(pre: &Expr, ntz_default: bool) -> &Expr {
     if !ntz_default || values_cell_evidence(pre) != Evidence::NamedInstant {
         return pre;
