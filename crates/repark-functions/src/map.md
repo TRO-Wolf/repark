@@ -706,7 +706,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
 - `datetime.rs` — session-zone semantics are type-driven (`coerce_date_arg` / `coerce_to_timestamp_micros` /
   `coerce_to_date32`): `Timestamp(_, Some(_))` is an LTZ instant, `Timestamp(_, None)` NTZ, date/time/string
   zone-free; each arm is a fixed point (DataFusion re-analyzes at physical planning). NTZ-LTZ-WIDENING-1: only
-  `date_trunc` coerces a µs NTZ to the instant, so the wall localizes in the session zone and it returns
+  `date_trunc` coerces a µs NTZ to the instant (a ns wall stays one), so the wall localizes in the session zone and it returns
   `timestamp`, as Spark. `LocalSource` splits instants from walls; overlaps keep the source offset.
 - `ntz_ltz_widen.rs` — NTZ-LTZ-WIDENING-1: `SparkNtzLtzWiden`, pushed after the second `type_coercion` in
   `analyzer_rules()`, turns each remaining µs NTZ-to-LTZ `Cast` (leaf or container, outside `VALUES`) into

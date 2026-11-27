@@ -828,6 +828,7 @@ impl ScalarUDFImpl for DateTrunc {
                 TIMESTAMP_UNIT,
                 Some(INSTANT_ZONE.into()),
             )),
+            DataType::Timestamp(TimeUnit::Nanosecond, None) => Some(timestamp.clone()),
             other => coerce_to_timestamp_micros(other),
         }
         .ok_or_else(|| {
