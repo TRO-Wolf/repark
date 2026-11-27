@@ -2,7 +2,7 @@ use datafusion::sql::sqlparser::ast::{CastKind, DataType, Expr, Value, ValueWith
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::tokenizer::{Span, Token, Tokenizer};
 use repark_functions::timestamp_ntz_cast::{TIMESTAMP_NTZ_CAST_NAME, TRY_TIMESTAMP_NTZ_CAST_NAME};
-use repark_functions::timestamp_type::{typed_literal_ntz_wall, typed_literal_resolves_ntz};
+use repark_functions::timestamp_type::typed_literal_ntz_wall;
 
 use super::{function_call, null_expr};
 use crate::spark_rewrites::{byte_offset, line_starts, skip_whitespace};
@@ -28,7 +28,7 @@ pub(super) fn lower_fragment_timestamp_ntz_cast(node: &mut Expr, nullable: &str)
         && let Expr::Cast { expr, .. } = node
     {
         let value = std::mem::replace(expr, Box::new(null_expr()));
-        *expr = Box::new(function_call(nullable, vec![*value]));
+        **expr = function_call(nullable, vec![*value]);
     }
     if !lower_timestamp_ntz_cast(node) {
         return false;
