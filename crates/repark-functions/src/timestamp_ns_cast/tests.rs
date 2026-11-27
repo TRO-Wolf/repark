@@ -445,8 +445,16 @@ fn is_localized(cell: &Expr) -> bool {
 
 #[test]
 fn wrapped_ltz_casts_widen_a_mixed_values_column() {
+    let twice_cast_null = Expr::Cast(Cast::new(
+        Box::new(Expr::Cast(Cast::new(
+            Box::new(lit(ScalarValue::Null)),
+            wall_type(),
+        ))),
+        instant_type(),
+    ));
     let wrapped = [
         datafusion::functions::core::expr_fn::coalesce(vec![ltz_string_cast(), null_instant()]),
+        datafusion::functions::core::expr_fn::coalesce(vec![ltz_call(), twice_cast_null]),
         datafusion::logical_expr::when(lit(true), ltz_string_cast())
             .end()
             .unwrap(),

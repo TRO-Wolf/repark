@@ -71,7 +71,8 @@ allowed to answer NULL with ANSI off, as INSERT stores it. `tests.rs`
   **TIMESTAMP-LTZ-EXPLICIT-CAST-1 (2026-11-27):** `to_timestamp_ltz` is a named instant, and a named
   instant stays one under `± INTERVAL` literal arithmetic. `coalesce`, `nvl`, `ifnull`, `if` and `CASE`
   answer the evidence of their non-null branches when every branch answers the same `Timestamp` or
-  `NamedInstant` (`instant_branch_evidence`, one level, no nested wrappers); a wrapped wall still answers
+  `NamedInstant` (`instant_branch_evidence`, one level, no nested wrappers; a branch that is `NULL` under
+  any casts is skipped, `is_null_branch`); a wrapped wall still answers
   `None`, so `is_values_wall_cell` and `timestamp_unit_widen` read what they read before. Without the
   arms a `COALESCE(CAST('…' AS TIMESTAMP_LTZ), NULL)` cell beside `TIMESTAMP_NTZ '2024-03-10 02:30:00'`
   left the column naive and stored the New York gap wall `02:30` where Spark widens and stores `03:30`.

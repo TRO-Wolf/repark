@@ -171,6 +171,25 @@
    "timestamp_type": "TIMESTAMP_LTZ",
    "zone": "America/New_York"
   },
+  "target_coalesce_fn_ntz_session_into_ltz": {
+   "kind": "TARGET",
+   "source": "VALUES (0, COALESCE(to_timestamp_ltz('2024-06-01 12:00:00'), NULL)), (1, TIMESTAMP_NTZ '2024-03-10 02:30:00')",
+   "spark": [
+    [
+     0,
+     "timestamp",
+     "2024-06-01 12:00:00"
+    ],
+    [
+     1,
+     "timestamp",
+     "2024-03-10 03:30:00"
+    ]
+   ],
+   "target": "LTZ",
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "America/New_York"
+  },
   "target_coalesce_ltz_session": {
    "kind": "TARGET",
    "source": "VALUES (0, COALESCE(CAST('2024-06-01 12:00:00' AS TIMESTAMP_LTZ), NULL)), (1, TIMESTAMP_NTZ '2024-03-10 02:30:00')",

@@ -111,7 +111,7 @@ fn core_evidence(expr: &Expr, branches: bool) -> Evidence {
 fn instant_branch_evidence<'a>(branches: impl IntoIterator<Item = &'a Expr>) -> Evidence {
     let mut found = Evidence::None;
     for branch in branches {
-        if super::is_values_null_cell(branch) {
+        if is_null_branch(branch) {
             continue;
         }
         let evidence = cell_evidence(branch, false);
@@ -123,6 +123,17 @@ fn instant_branch_evidence<'a>(branches: impl IntoIterator<Item = &'a Expr>) -> 
         found = evidence;
     }
     found
+}
+
+fn is_null_branch(mut expr: &Expr) -> bool {
+    loop {
+        match strip_values_wrappers(expr) {
+            Expr::Cast(cast) => expr = cast.expr.as_ref(),
+            Expr::TryCast(cast) => expr = cast.expr.as_ref(),
+            Expr::Literal(scalar, _) => return scalar.is_null(),
+            _ => return false,
+        }
+    }
 }
 
 fn peel_interval_arithmetic(mut expr: &Expr) -> (&Expr, bool) {

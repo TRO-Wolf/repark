@@ -29,6 +29,9 @@ CELLS = {
     "target_fn_merge_source_into_ntz": (
         "TARGET", NY, "TIMESTAMP_NTZ", "NTZ", f"MERGE:SELECT * FROM VALUES (0, {FN}), (1, {NTZ_LIT}) AS x(id, v)",
     ),
+    "target_coalesce_fn_ntz_session_into_ltz": (
+        "TARGET", NY, "TIMESTAMP_NTZ", "LTZ", f"VALUES (0, COALESCE({FN}, NULL)), (1, {NTZ_LIT})",
+    ),
     "target_coalesce_ltz_session": (
         "TARGET", NY, "TIMESTAMP_LTZ", "NTZ", f"VALUES (0, COALESCE({LTZ_CAST}, NULL)), (1, {NTZ_LIT})",
     ),
