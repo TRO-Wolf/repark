@@ -544,6 +544,7 @@ class DataFrameReader:
         self._reject_csv_json_parse_options(is_csv=False)
         path_str = _reader_path_to_str(path)
         native_options = self._native_options_for(_JSON_NATIVE_OPTION_KEYS)
+        native_options.update({} if self._schema is None else {"user_schema": "true"})
         frame = self._session.read_json(path_str, native_options)
         # multiLine=true maps to DF newline_delimited=false, which accepts a **JSON array** only.
         # A pretty single object or NDJSON under multiLine yields an empty schema — silent wrong
@@ -704,8 +705,9 @@ class DataFrameReader:
         schema = self._schema
         columns = list(frame.columns)
         null_token = self._option_str("nullvalue")
+        parts = list(self._session._ensure_alive().partition_columns(frame._inner))
         if path is not None and (schema is not None or not infer_schema):
-            return _reader_support._csv_text_frame(frame, schema, header, null_token)
+            return _reader_support._csv_text_frame(frame, schema, header or bool(parts), null_token)
 
         # Apply nullValue on the string form of every column before casts (Spark parse nulls).
         # Engine may already have Utf8-forced the scan when nullValue is set (R1-C1-001).
@@ -721,6 +723,12 @@ class DataFrameReader:
 
         if schema is not None:
             fields = _schema_fields(schema)
+            folded = {name.casefold(): name for name in parts}
+            if any(field["name"].casefold() in folded for field in fields):
+                columns, folded = [name for name in columns if name not in parts], {}
+            fields += [
+                {"name": name, "dataType": frame.schema[name].dataType} for name in folded.values()
+            ]
             if not fields:
                 return frame
             column_by_case = {name.casefold(): name for name in columns}

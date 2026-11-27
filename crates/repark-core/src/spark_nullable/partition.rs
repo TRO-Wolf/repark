@@ -9,20 +9,26 @@ use arrow::datatypes::{Field, FieldRef, Schema, SchemaRef};
 use async_trait::async_trait;
 use datafusion::catalog::Session;
 use datafusion::common::config::{ConfigEntry, ConfigExtension, ConfigOptions, ExtensionOptions};
+use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::common::{Column, ScalarValue};
+use datafusion::datasource::default_table_source::source_as_provider;
 use datafusion::datasource::file_format::FileFormat;
 use datafusion::datasource::file_format::options::ReadOptions;
-use datafusion::datasource::listing::{ListingTableUrl, PartitionedFile};
+use datafusion::datasource::listing::{ListingOptions, ListingTableUrl, PartitionedFile};
 use datafusion::datasource::physical_plan::{FileGroup, FileScanConfigBuilder};
 use datafusion::datasource::table_schema::TableSchema;
 use datafusion::datasource::{TableProvider, TableType};
 use datafusion::error::{DataFusionError, Result as DataFusionResult};
-use datafusion::logical_expr::{Expr, TableProviderFilterPushDown};
-use datafusion::physical_plan::ExecutionPlan;
+use datafusion::execution::TaskContext;
+use datafusion::logical_expr::{Expr, LogicalPlan, TableProviderFilterPushDown};
 use datafusion::physical_plan::empty::EmptyExec;
+use datafusion::physical_plan::union::UnionExec;
+use datafusion::physical_plan::{
+    DisplayAs, DisplayFormatType, ExecutionPlan, PlanProperties, SendableRecordBatchStream,
+};
 use datafusion::prelude::{DataFrame, ParquetReadOptions, SessionConfig, SessionContext};
-use futures::TryStreamExt;
-use object_store::ObjectMeta;
+use futures::{StreamExt, TryStreamExt};
+use object_store::{ObjectMeta, ObjectStore, ObjectStoreExt};
 use repark_common::java_case::{string_lower_equal, string_lowered};
 use repark_common::{Error, Result};
 use url::Url;
@@ -248,6 +254,98 @@ impl ReparkSession {
         )
         .await
     }
+
+    pub(crate) async fn read_partitioned(
+        &self,
+        resolved: &str,
+        spec: DiscoveryFormat,
+        case_sensitive: bool,
+    ) -> Result<Option<DataFrame>> {
+        let session_zone = self.session_time_zone();
+        let canonical = crate::canonical_session_zone_id(session_zone.id());
+        let type_inference = partition_column_type_inference_from_ctx(self.context());
+        read_discovered(
+            self.context(),
+            resolved,
+            canonical.as_str(),
+            case_sensitive,
+            type_inference,
+            spec,
+        )
+        .await
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DiscoveredKind {
+    Parquet,
+    Csv,
+    Json,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum RootFileOpens {
+    Never,
+    Largest,
+    All,
+}
+
+const SPARK_OPEN_COST_BYTES: u64 = 4 * 1024 * 1024;
+
+pub(crate) struct DiscoveryFormat {
+    kind: DiscoveredKind,
+    format: Arc<dyn FileFormat>,
+    file_schema: Option<SchemaRef>,
+    suffix: Option<String>,
+    target_partitions: usize,
+    opens: RootFileOpens,
+}
+
+impl DiscoveryFormat {
+    pub(crate) fn new(
+        kind: DiscoveredKind,
+        listing: ListingOptions,
+        file_schema: Option<SchemaRef>,
+        opens: RootFileOpens,
+    ) -> Self {
+        let (format, suffix): (Arc<dyn FileFormat>, Option<String>) = match kind {
+            DiscoveredKind::Parquet => (
+                Arc::new(FloatBoundsInexactFormat::new(listing.format)),
+                None,
+            ),
+            DiscoveredKind::Csv | DiscoveredKind::Json => {
+                (listing.format, Some(listing.file_extension))
+            }
+        };
+        Self {
+            kind,
+            format,
+            file_schema,
+            suffix,
+            target_partitions: listing.target_partitions,
+            opens,
+        }
+    }
+}
+
+#[must_use]
+pub fn partition_column_names(frame: &DataFrame) -> Vec<String> {
+    let mut names = Vec::new();
+    let _ = frame.logical_plan().apply(|node| {
+        if let LogicalPlan::TableScan(scan) = node
+            && let Ok(provider) = source_as_provider(&scan.source)
+            && let Some(table) = provider.downcast_ref::<PartitionedParquetProvider>()
+        {
+            names.extend(
+                table
+                    .partition_fields
+                    .iter()
+                    .map(|field| field.name().clone()),
+            );
+        }
+        Ok(TreeNodeRecursion::Continue)
+    });
+    names
 }
 
 fn names_match(left: &str, right: &str, case_sensitive: bool) -> bool {
@@ -314,8 +412,60 @@ pub(crate) struct PartitionedParquetProvider {
     partition_fields: Vec<FieldRef>,
     table_schema: SchemaRef,
     files: Vec<PartitionedFile>,
+    listed: Vec<PartitionedFile>,
     format: Arc<dyn FileFormat>,
     target_partitions: usize,
+}
+
+#[derive(Debug)]
+struct ListedOnlyExec {
+    listed: Arc<dyn ExecutionPlan>,
+    empty: Arc<EmptyExec>,
+}
+
+impl DisplayAs for ListedOnlyExec {
+    fn fmt_as(
+        &self,
+        _: DisplayFormatType,
+        formatter: &mut std::fmt::Formatter,
+    ) -> std::fmt::Result {
+        write!(formatter, "ListedOnlyExec")
+    }
+}
+
+impl ExecutionPlan for ListedOnlyExec {
+    fn name(&self) -> &'static str {
+        "ListedOnlyExec"
+    }
+
+    fn properties(&self) -> &Arc<PlanProperties> {
+        self.empty.properties()
+    }
+
+    fn children(&self) -> Vec<&Arc<dyn ExecutionPlan>> {
+        vec![&self.listed]
+    }
+
+    fn with_new_children(
+        self: Arc<Self>,
+        children: Vec<Arc<dyn ExecutionPlan>>,
+    ) -> DataFusionResult<Arc<dyn ExecutionPlan>> {
+        match children.into_iter().next() {
+            Some(listed) => Ok(Arc::new(Self {
+                listed,
+                empty: Arc::clone(&self.empty),
+            })),
+            None => Ok(self),
+        }
+    }
+
+    fn execute(
+        &self,
+        partition: usize,
+        context: Arc<TaskContext>,
+    ) -> DataFusionResult<SendableRecordBatchStream> {
+        self.empty.execute(partition, context)
+    }
 }
 
 impl PartitionedParquetProvider {
@@ -355,15 +505,36 @@ impl TableProvider for PartitionedParquetProvider {
             &self.table_schema,
             filters,
         )?;
-        if kept.is_empty() {
-            let projected = match projection {
-                None => Arc::clone(&self.table_schema),
-                Some(indices) => Arc::new(self.table_schema.project(indices)?),
-            };
-            return Ok(Arc::new(EmptyExec::new(projected)));
+        let projected = match projection {
+            None => Arc::clone(&self.table_schema),
+            Some(indices) => Arc::new(self.table_schema.project(indices)?),
+        };
+        let scanned: Arc<dyn ExecutionPlan> = if kept.is_empty() {
+            Arc::new(EmptyExec::new(Arc::clone(&projected)))
+        } else {
+            self.scan_files(state, kept, projection, limit).await?
+        };
+        if self.listed.is_empty() {
+            return Ok(scanned);
         }
+        let listed = self
+            .scan_files(state, self.listed.clone(), projection, Some(0))
+            .await?;
+        let empty = Arc::new(EmptyExec::new(projected));
+        UnionExec::try_new(vec![scanned, Arc::new(ListedOnlyExec { listed, empty })])
+    }
+}
+
+impl PartitionedParquetProvider {
+    async fn scan_files(
+        &self,
+        state: &dyn Session,
+        files: Vec<PartitionedFile>,
+        projection: Option<&Vec<usize>>,
+        limit: Option<usize>,
+    ) -> DataFusionResult<Arc<dyn ExecutionPlan>> {
         let target = self.target_partitions.max(1);
-        let file_groups = FileGroup::new(kept).split_files(target);
+        let file_groups = FileGroup::new(files).split_files(target);
         let table_schema =
             TableSchema::new(Arc::clone(&self.file_schema), self.partition_fields.clone());
         let file_source = self.format.file_source(table_schema);
@@ -461,7 +632,6 @@ fn normalize_file_dir_url(path: String) -> String {
     path
 }
 
-#[allow(clippy::too_many_lines)]
 pub(crate) async fn read_parquet_discovered(
     context: &SessionContext,
     path: &str,
@@ -471,17 +641,98 @@ pub(crate) async fn read_parquet_discovered(
 ) -> Result<DataFrame> {
     let resolved =
         normalize_file_dir_url(object_store_s3::resolve_s3_prefix_for_read(context, path).await?);
-    let table_url = ListingTableUrl::parse(&resolved).map_err(engine_err)?;
+    let listing = ParquetReadOptions::default()
+        .to_listing_options(&context.copied_config(), context.copied_table_options());
+    let spec = DiscoveryFormat::new(DiscoveredKind::Parquet, listing, None, RootFileOpens::Never);
+    match read_discovered(
+        context,
+        &resolved,
+        session_zone,
+        case_sensitive,
+        type_inference,
+        spec,
+    )
+    .await?
+    {
+        Some(frame) => Ok(frame),
+        None => read_parquet_listing_fallback(context, &resolved).await,
+    }
+}
+
+pub(super) async fn refuse_unreadable_root_files(
+    store: &dyn ObjectStore,
+    roots: &[DiscoveredEntry],
+    scanned: &[DiscoveredEntry],
+    opens: RootFileOpens,
+) -> Result<()> {
+    let sized: Vec<&ObjectMeta> = roots
+        .iter()
+        .map(|(meta, _, _, _)| meta)
+        .filter(|meta| meta.size > 0)
+        .collect();
+    let largest_part = scanned
+        .iter()
+        .map(|(meta, _, _, _)| meta.size)
+        .max()
+        .unwrap_or(0);
+    let top = sized.iter().map(|meta| meta.size).max().unwrap_or(0);
+    let opened: Vec<&ObjectMeta> = match opens {
+        RootFileOpens::All => sized,
+        RootFileOpens::Largest if top >= largest_part && top <= SPARK_OPEN_COST_BYTES => {
+            sized.into_iter().filter(|meta| meta.size == top).collect()
+        }
+        RootFileOpens::Largest | RootFileOpens::Never => Vec::new(),
+    };
+    let in_flight = if opens == RootFileOpens::Largest {
+        1
+    } else {
+        64
+    };
+    let mut checks = futures::stream::iter(&opened)
+        .map(|meta| store.get_range(&meta.location, 0..1))
+        .buffered(in_flight);
+    let mut refusal = None;
+    while let Some(check) = checks.next().await {
+        match check {
+            Ok(_) if opens == RootFileOpens::Largest => return Ok(()),
+            Ok(_) => {}
+            Err(error) if opens == RootFileOpens::All => return Err(engine_err(error.into())),
+            Err(error) => {
+                refusal.get_or_insert(error);
+            }
+        }
+    }
+    refusal.map_or(Ok(()), |error| Err(engine_err(error.into())))
+}
+
+#[allow(clippy::too_many_lines)]
+async fn read_discovered(
+    context: &SessionContext,
+    resolved: &str,
+    session_zone: &str,
+    case_sensitive: bool,
+    type_inference: bool,
+    spec: DiscoveryFormat,
+) -> Result<Option<DataFrame>> {
+    let parquet = spec.kind == DiscoveredKind::Parquet;
+    let table_url = match ListingTableUrl::parse(normalize_file_dir_url(resolved.to_string())) {
+        Ok(table_url) => table_url,
+        Err(error) if parquet => return Err(engine_err(error)),
+        Err(_) => return Ok(None),
+    };
     if !table_url.is_collection() || table_url.get_glob().is_some() {
-        return read_parquet_listing_fallback(context, &resolved).await;
+        return Ok(None);
     }
     let Ok(store) = context.runtime_env().object_store(&table_url) else {
-        return read_parquet_listing_fallback(context, &resolved).await;
+        return Ok(None);
     };
     let prefix = (!table_url.prefix().as_ref().is_empty()).then(|| table_url.prefix().clone());
     let Ok(mut listed) = store.list(prefix.as_ref()).try_collect::<Vec<_>>().await else {
-        return read_parquet_listing_fallback(context, &resolved).await;
+        return Ok(None);
     };
+    if let Some(suffix) = spec.suffix.as_deref() {
+        listed.retain(|meta| meta.location.as_ref().ends_with(suffix));
+    }
     listed.sort_by(|left, right| {
         left.location
             .as_ref()
@@ -503,22 +754,23 @@ pub(crate) async fn read_parquet_discovered(
         visible.push((meta, specs, depth, base));
     }
     if visible.is_empty() {
-        return read_parquet_listing_fallback(context, &resolved).await;
+        return Ok(None);
     }
     if !visible.iter().any(|(_, specs, _, _)| !specs.is_empty()) {
-        let root_only: Vec<DiscoveredEntry> = visible
-            .into_iter()
-            .filter(|(_, _, depth, _)| *depth == 1)
-            .collect();
-        refuse_zero_byte_footer(footer_file(&root_only))?;
-        return read_parquet_listing_fallback(context, &resolved).await;
+        if parquet {
+            let root_only: Vec<DiscoveredEntry> = visible
+                .into_iter()
+                .filter(|(_, _, depth, _)| *depth == 1)
+                .collect();
+            refuse_zero_byte_footer(footer_file(&root_only))?;
+        }
+        return Ok(None);
     }
     refuse_conflicting_directory_structures(&table_url, &visible)?;
     let footer = footer_file(&visible).cloned();
-    let kept: Vec<DiscoveredEntry> = visible
+    let (kept, unscanned): (Vec<DiscoveredEntry>, Vec<DiscoveredEntry>) = visible
         .into_iter()
-        .filter(|(_, specs, _, _)| !specs.is_empty())
-        .collect();
+        .partition(|(_, specs, _, _)| !specs.is_empty());
     let mut seen_norm: Vec<Vec<String>> = Vec::new();
     let mut display_by_norm: HashMap<Vec<String>, (Vec<String>, PathBuf)> = HashMap::new();
     for (meta, specs, _, _) in &kept {
@@ -552,7 +804,9 @@ pub(crate) async fn read_parquet_discovered(
             &dir_by_list,
         )));
     }
-    refuse_zero_byte_footer(footer.as_ref())?;
+    if parquet {
+        refuse_zero_byte_footer(footer.as_ref())?;
+    }
     let canonical_names: Vec<String> = seen_norm
         .first()
         .and_then(|norm| display_by_norm.get(norm))
@@ -574,23 +828,29 @@ pub(crate) async fn read_parquet_discovered(
     }
     let scanned: Vec<DiscoveredEntry> = kept
         .into_iter()
-        .filter(|(meta, _, _, _)| meta.size > 0)
+        .filter(|(meta, _, _, _)| !parquet || meta.size > 0)
         .collect();
     let mut kept_metas: Vec<ObjectMeta> =
         scanned.iter().map(|(meta, _, _, _)| meta.clone()).collect();
     if kept_metas.is_empty() {
         kept_metas.extend(footer);
     }
-    let listing_options = ParquetReadOptions::default()
-        .to_listing_options(&context.copied_config(), context.copied_table_options());
-    let format: Arc<dyn FileFormat> =
-        Arc::new(FloatBoundsInexactFormat::new(listing_options.format));
-    let inferred_file_schema = format
-        .infer_schema(&context.state(), &store, &kept_metas)
-        .await
-        .map_err(engine_err)?;
-    let relaxed_file_schema = relax_schema_to_nullable(inferred_file_schema.as_ref());
-    let sparked_file_schema = promote_parquet_null_types(&relaxed_file_schema);
+    refuse_unreadable_root_files(store.as_ref(), &unscanned, &scanned, spec.opens).await?;
+    let sparked_file_schema: SchemaRef = if let Some(schema) = spec.file_schema {
+        schema
+    } else {
+        let inferred = spec
+            .format
+            .infer_schema(&context.state(), &store, &kept_metas)
+            .await
+            .map_err(engine_err)?;
+        if parquet {
+            let relaxed = relax_schema_to_nullable(inferred.as_ref());
+            Arc::new(promote_parquet_null_types(&relaxed))
+        } else {
+            inferred
+        }
+    };
     let mut scan_file_fields: Vec<Field> = Vec::new();
     let mut final_order: Vec<String> = Vec::new();
     let mut placed_parts: Vec<bool> = vec![false; partition_fields.len()];
@@ -600,6 +860,9 @@ pub(crate) async fn read_parquet_discovered(
             .enumerate()
             .find(|(_, part)| names_match(field.name(), part.name(), case_sensitive))
         {
+            if spec.kind == DiscoveredKind::Csv {
+                return Ok(None);
+            }
             if !placed_parts[part_index] {
                 final_order.push(part_field.name().clone());
                 placed_parts[part_index] = true;
@@ -645,22 +908,35 @@ pub(crate) async fn read_parquet_discovered(
             file
         })
         .collect();
+    let listed: Vec<PartitionedFile> = unscanned
+        .into_iter()
+        .filter(|_| !parquet)
+        .map(|(meta, _, _, _)| {
+            let mut file: PartitionedFile = meta.into();
+            file.partition_values = partition_fields
+                .iter()
+                .map(|field| scalar_from_partition_text(None, field.data_type(), zone))
+                .collect();
+            file
+        })
+        .collect();
     let provider = Arc::new(PartitionedParquetProvider {
         table_url,
         file_schema: scan_file_schema,
         partition_fields,
         table_schema: provider_schema,
         files: partitioned_files,
-        format,
-        target_partitions: listing_options.target_partitions,
+        listed,
+        format: spec.format,
+        target_partitions: spec.target_partitions,
     });
     let frame = context.read_table(provider).map_err(engine_err)?;
     if final_order == provider_names {
-        return Ok(frame);
+        return Ok(Some(frame));
     }
     let projection: Vec<Expr> = final_order
         .into_iter()
         .map(|name| Expr::Column(Column::new_unqualified(name)))
         .collect();
-    frame.select(projection).map_err(engine_err)
+    frame.select(projection).map(Some).map_err(engine_err)
 }

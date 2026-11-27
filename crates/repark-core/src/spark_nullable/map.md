@@ -71,9 +71,8 @@ leaving text and ORC discovery untouched. Rules pinned to live Spark 4.1.2:
   inference. The refusal comes after both conflict checks.
 - When no visible file has a partition spec, the root files' footer rule runs and the read takes the Spark-listing
   fallback, which reads root files only.
-- Partition spec extraction (`parse_relative_specs`) scans directory segments in reverse, taking only the trailing
-  contiguous run of `key=value` directories above the file (skipping trailing non-`=` subdirectories like `a=1/b=2/sub/`,
-  stopping before a non-`=` separator like `a=1/sub/b=2/` -> `b` only). Leaf reads (`root/p=1`) and root names holding
+- Partition spec extraction (`parse_relative_specs`) takes the trailing contiguous run of `key=value` directories
+  above the file, scanning in reverse (`a=1/b=2/sub/` skips `sub/`; `a=1/sub/b=2/` -> `b` only). Leaf reads (`root/p=1`) and root names holding
   `=` (`tag=foo`) yield no partition columns.
 - Base paths (Spark `PartitioningUtils.parsePartitions`): a file's directory has the base path where that walk stops
   (the non-`=` segment, or the root); a directory without `key=value` segments is its own base path. When any file is
@@ -145,9 +144,13 @@ leaving text and ORC discovery untouched. Rules pinned to live Spark 4.1.2:
   an explicit setting.
 
 - `partition.rs` — `PARTITION_COLUMN_TYPE_INFERENCE_KEY`, `PartitionColumnTypeInferenceConfig`,
-  `PartitionPruningAnsiConfig`, `PartitionedParquetProvider`, `read_parquet_with_case_sensitivity`, and
-  `set_partition_column_type_inference`.
-- `partition_layout_tests.rs` — Delta 2 Rust pins: the base-path rule (two sub-bases, root beside `sub/`, a `sub/`
+  `PartitionPruningAnsiConfig`, `PartitionedParquetProvider`, `read_parquet_with_case_sensitivity`,
+  `set_partition_column_type_inference`, `partition_column_names`. **CSV-JSON-PARTITION-DISCOVERY-1:**
+  `read_discovered` over a `DiscoveryFormat`; footer, relax and all-suffix rules are Parquet's; a CSV
+  column named like a partition goes to main; root files stay in `inputFiles` via a never-run `ListedOnlyExec`;
+  `refuse_unreadable_root_files` byte-probes the ones Spark opens.
+- `partition_layout_tests.rs` — CSV/JSON pins (CSV-JSON-PARTITION-DISCOVERY-1, unreadable roots).
+  Delta 2 Rust pins: the base-path rule (two sub-bases, root beside `sub/`, a `sub/`
   file or 0-byte file, `a=1/sub/b=2` beside `a=2/sub/b=3`, directory conflict before names; root, hidden and
   base-directory files answer; same mid base and case-only base differences answer), footer order (root, `Z` before
   `a`, unpartitioned first refuse; later 0-byte files skip; a 0-byte leaf types `p` as string; a root file's schema

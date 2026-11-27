@@ -1,11 +1,16 @@
 //! CSV/JSON read-option helpers for Spark-style option maps.
 
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
+use datafusion::datasource::file_format::options::ReadOptions;
 use datafusion::prelude::{CsvReadOptions, DataFrame, JsonReadOptions, SessionContext};
 use repark_common::{Error, Result};
 
 use crate::engine_err;
+use crate::session::ReparkSession;
+use crate::spark_nullable::partition::RootFileOpens as Opens;
+use crate::spark_nullable::partition::{DiscoveredKind, DiscoveryFormat, partition_column_names};
 
 /// Build [`CsvReadOptions`] from a lowercased Spark option map.
 /// # Errors
@@ -210,10 +215,11 @@ pub(crate) fn apply_secret_column_flag(
 }
 
 pub(crate) async fn read_csv_path(
-    context: &SessionContext,
+    session: &ReparkSession,
     path: &str,
     options: &HashMap<String, String>,
 ) -> Result<DataFrame> {
+    let context = session.context();
     let resolved = crate::object_store_s3::resolve_s3_prefix_for_read(context, path).await?;
     let flag = secret_column_flag(options)?;
     let mut csv_options = csv_read_options_from_map(options)?;
@@ -221,7 +227,14 @@ pub(crate) async fn read_csv_path(
     let multiline = options
         .get("multiline")
         .is_some_and(|raw| parse_bool_option("multiLine", raw).ok() == Some(true));
-    let utf8_schema = if let Some(scan) = csv_text_scan(options)? {
+    let text_scan = csv_text_scan(options)?;
+    let discover = match text_scan {
+        _ if options.contains_key("nullvalue") => None,
+        Some(CsvTextScan::Positions) => None,
+        Some(CsvTextScan::Header { case_sensitive }) => Some((case_sensitive, Opens::Largest)),
+        None => Some((false, Opens::All)),
+    };
+    let utf8_schema = if let Some(scan) = text_scan {
         let null_value = options.get("nullvalue").map(String::as_str);
         Some(csv_text_scan_schema(context, &resolved, &csv_options, null_value, scan).await?)
     } else if csv_force_utf8_schema(options) || options.contains_key("utf8_columns") || multiline {
@@ -232,23 +245,114 @@ pub(crate) async fn read_csv_path(
     if let Some(ref schema) = utf8_schema {
         csv_options = csv_options.schema(schema);
     }
-    let frame = context
-        .read_csv(&resolved, csv_options.clone())
-        .await
-        .map_err(engine_err)?;
+    let frame = read_csv_frame(
+        session,
+        &resolved,
+        csv_options.clone(),
+        discover,
+        text_scan.is_some() && !csv_options.has_header,
+    )
+    .await?;
     let frame = if utf8_schema.is_some() {
         frame
     } else {
-        match csv_utf8_column_schema(options, frame.schema().as_ref()) {
+        let parts = partition_column_names(&frame);
+        let file_fields: Vec<arrow::datatypes::FieldRef> = frame
+            .schema()
+            .fields()
+            .iter()
+            .filter(|field| !parts.contains(field.name()))
+            .cloned()
+            .collect();
+        match csv_utf8_column_schema(options, &arrow::datatypes::Schema::new(file_fields)) {
             None => frame,
-            Some(schema) => context
-                .read_csv(&resolved, csv_options.schema(&schema))
-                .await
-                .map_err(engine_err)?,
+            Some(schema) => {
+                let reread = csv_options.schema(&schema);
+                read_csv_frame(session, &resolved, reread, discover, false).await?
+            }
         }
     };
     apply_secret_column_flag(flag, frame.schema().as_ref())?;
     Ok(frame)
+}
+
+async fn read_csv_frame(
+    session: &ReparkSession,
+    resolved: &str,
+    csv_options: CsvReadOptions<'_>,
+    discover: Option<(bool, Opens)>,
+    spark_names: bool,
+) -> Result<DataFrame> {
+    let context = session.context();
+    if let Some((case_sensitive, opens)) = discover {
+        let listing = csv_options
+            .to_listing_options(&context.copied_config(), context.copied_table_options());
+        let file_schema = csv_options.schema.map(|schema| {
+            let fields: Vec<arrow::datatypes::Field> = schema
+                .fields()
+                .iter()
+                .enumerate()
+                .map(|(index, field)| {
+                    let field = field.as_ref().clone();
+                    if spark_names {
+                        field.with_name(format!("_c{index}"))
+                    } else {
+                        field
+                    }
+                })
+                .collect();
+            Arc::new(arrow::datatypes::Schema::new_with_metadata(
+                fields,
+                schema.metadata().clone(),
+            ))
+        });
+        let spec = DiscoveryFormat::new(DiscoveredKind::Csv, listing, file_schema, opens);
+        if let Some(frame) = session
+            .read_partitioned(resolved, spec, case_sensitive)
+            .await?
+        {
+            return Ok(frame);
+        }
+    }
+    context
+        .read_csv(resolved, csv_options)
+        .await
+        .map_err(engine_err)
+}
+
+impl ReparkSession {
+    #[allow(clippy::missing_errors_doc)]
+    pub async fn read_json_with_case_sensitivity(
+        &self,
+        path: &str,
+        options: &HashMap<String, String>,
+        case_sensitive: bool,
+    ) -> Result<DataFrame> {
+        if let Some((_scheme, bucket)) = crate::object_store_s3::parse_s3_bucket(path) {
+            self.ensure_s3_bucket_registered(&bucket)?;
+        }
+        let flag = secret_column_flag(options)?;
+        let json_options = crate::json_read_options_from_map(options)?;
+        let context = self.context();
+        let resolved = crate::object_store_s3::resolve_s3_prefix_for_read(context, path).await?;
+        let listing = json_options
+            .to_listing_options(&context.copied_config(), context.copied_table_options());
+        let user = options.contains_key("user_schema");
+        let opens = if user { Opens::Never } else { Opens::All };
+        let spec = DiscoveryFormat::new(DiscoveredKind::Json, listing, None, opens);
+        let frame = match self
+            .read_partitioned(&resolved, spec, case_sensitive)
+            .await?
+        {
+            Some(frame) => frame,
+            None => context
+                .read_json(&resolved, json_options)
+                .await
+                .map_err(engine_err)?,
+        };
+        apply_secret_column_flag(flag, frame.schema().as_ref())?;
+        Ok(frame)
+    }
 }
 
 pub(crate) const CSV_TEXT_SCAN_OPTION: &str = "text_scan";

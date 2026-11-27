@@ -513,29 +513,28 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - `read_options.rs` — CSV/JSON Spark option-map helpers, `read_csv_path` (nullValue
   all-Utf8 scan; `utf8_columns` re-read; `text_scan`: header-only, Spark or `_cN` names), and the
   local-CSV first-line Utf8 schema. **CSV-INFER-PERF-1** moved the CSV read body here so
-  `session.rs` could drop under the default ceiling. Round 2: `inferSchema`
-  without `nullValue` keeps DataFusion's 1000-row sample. Round 3: `utf8_columns`
-  forces an all-Utf8 schema from the first local record (no second infer), so a
-  `multiLine` re-read past 1000 records cannot raise on chunked record boundaries.
-  Round 4: a `multiLine` first read also uses that infer-free schema, so quoted
-  fields with embedded newlines infer at any record count. Round 5: an embedded
-  newline inside the header still raises (line-based first-record read);
-  DECLARED `CSV-INFER-HEADER-NEWLINE`.
+  `session.rs` could drop under the default ceiling. Rounds 2-5: `inferSchema`
+  without `nullValue` keeps the 1000-row sample; `utf8_columns` and a `multiLine` first read
+  take an infer-free all-Utf8 schema from the first local record (no chunk-boundary raise;
+  embedded newlines infer at any count); a newline inside the header still raises
+  (DECLARED `CSV-INFER-HEADER-NEWLINE`).
   **TORTURE-1 step 3 (D-4/D-4a):** `flag_secret_columns` = `off|warn|refuse` (default
   `off`; `flagsecretcolumns` is the folded alias; any other value refuses naming the
   option and the three values, before any I/O). `read_csv_path` applies the flag once on
-  the final frame and `session.rs::read_json` does the same: `warn` eprintln's one
-  `WARNING: flag_secret_columns=warn` line naming the flagged top-level columns,
-  `refuse` raises `Error::Analysis` naming them — `prop_key_is_secret` on each schema
-  name verbatim, no nested walk, no value inspection. Readers without the csv/json
-  option map (parquet, table) never see the key; the facade refuses it loud there.
-  **S3-PATH-WRITE-1 round 2 (2026-09-28):** `read_csv_path` resolves the S3
-  prefix once per call through `object_store_s3`, so both the first read and
-  the `utf8_columns` re-read share the directory spelling.
+  the final frame and `read_json_with_case_sensitivity` does the same: `warn` prints one
+  `WARNING: flag_secret_columns=warn` line naming the flagged top-level columns, `refuse`
+  raises `Error::Analysis` naming them (each schema name verbatim; no nested walk, no
+  values). Parquet and table reads never see the key; the facade refuses it there.
+  **S3-PATH-WRITE-1 round 2 (2026-09-28):** `read_csv_path` resolves the S3 prefix once,
+  so the first read and the `utf8_columns` re-read share the directory spelling.
   **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the `flag_secret_columns` flag reads
   `repark_common::redaction::column_name_is_secret_shaped`, the pre-widening rule, so the
   widened display key rule changes no column decision; the flag, boolean and single-character
   option refusals echo the value masked.
+  **CSV-JSON-PARTITION-DISCOVERY-1:** `read_csv_path` (session zone) and `read_json_with_case_sensitivity`
+  try `spark_nullable::partition`'s discovery, else main's read; `positions`, `nullValue` and a CSV file column
+  named like a partition stay on main; no-header fields are `_cN`; the re-read drops partition fields. Root
+  files opened: text scan `Largest`, else `All`; JSON `Never` under `user_schema`.
 - `text_scan.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` scan. **IO-TEXT-1 (2026-09-15, orchestrator):** `text_scan.rs` carries no doc comments (its workers were briefed comment-free); its two public `Result` entry points take `#[allow(clippy::missing_errors_doc)]`.
   A `TableProvider` over sorted local files, plain dirs (hidden `_`/`.` skipped,
   `key=value` dirs descended), and Hadoop globs (see `text_glob.rs`), serving one
