@@ -274,10 +274,32 @@ impl PyReparkSession {
     ) -> PyResult<PyDataFrame> {
         fenced_span!("py.read", "PyReparkSession.read_json", {
             let opts = options.unwrap_or_default();
+            let case_sensitive = {
+                let state_lock = self.session.context().state_ref();
+                let state = state_lock.read();
+                repark_functions::case_sensitive::spark_case_sensitive_from_options(
+                    state.config().options(),
+                )
+            };
             let df = py
-                .detach(|| self.runtime.block_on(self.session.read_json(path, &opts)))
+                .detach(|| {
+                    self.runtime
+                        .block_on(self.session.read_json_with_case_sensitivity(
+                            path,
+                            &opts,
+                            case_sensitive,
+                        ))
+                })
                 .map_err(to_py_err)?;
             Ok(PyDataFrame::new(df, Arc::clone(&self.runtime)))
+        })
+    }
+
+    #[staticmethod]
+    #[allow(clippy::missing_errors_doc)]
+    pub fn partition_columns(frame: PyRef<'_, PyDataFrame>) -> PyResult<Vec<String>> {
+        fenced_span!("py.read", "PyReparkSession.partition_columns", {
+            Ok(repark_core::spark_nullable::partition::partition_column_names(&frame.df))
         })
     }
 
