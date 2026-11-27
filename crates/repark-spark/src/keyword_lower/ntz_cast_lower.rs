@@ -226,4 +226,40 @@ mod tests {
             assert_eq!(bare_timestamp_types_as_ntz(kept), None, "{kept}");
         }
     }
+
+    #[test]
+    fn respelling_cuts_by_character_across_non_ascii_lines_tabs_and_crlf() {
+        for (sql, respelled) in [
+            (
+                "concat('é', CAST(CAST(s AS TIMESTAMP) AS STRING))",
+                "concat('é', CAST(CAST(s AS TIMESTAMP_NTZ) AS STRING))",
+            ),
+            (
+                "IF(concat('日本', '🙂') = 'x', NULL, TIMESTAMP '2024-03-10 02:30:00')",
+                "IF(concat('日本', '🙂') = 'x', NULL, TIMESTAMP_NTZ '2024-03-10 02:30:00')",
+            ),
+            (
+                "IF(`café` = 'é', TIMESTAMP '2024-03-10 02:30:00', café::timestamp)",
+                "IF(`café` = 'é', TIMESTAMP_NTZ '2024-03-10 02:30:00', café::TIMESTAMP_NTZ)",
+            ),
+            (
+                "COALESCE(\n\n    CAST('x' AS TIMESTAMP),\n '🙂'::timestamp)",
+                "COALESCE(\n\n    CAST('x' AS TIMESTAMP_NTZ),\n '🙂'::TIMESTAMP_NTZ)",
+            ),
+            (
+                "IF(s\tIS NOT NULL,\tTIMESTAMP\t'2024-03-10 02:30:00',\tNULL)",
+                "IF(s\tIS NOT NULL,\tTIMESTAMP_NTZ\t'2024-03-10 02:30:00',\tNULL)",
+            ),
+            (
+                "IF('日本' = '日本',\r\n  CAST(s AS TIMESTAMP),\r\n  TIMESTAMP '2024-03-10 02:30:00')",
+                "IF('日本' = '日本',\r\n  CAST(s AS TIMESTAMP_NTZ),\r\n  TIMESTAMP_NTZ '2024-03-10 02:30:00')",
+            ),
+        ] {
+            assert_eq!(
+                bare_timestamp_types_as_ntz(sql).as_deref(),
+                Some(respelled),
+                "{sql}"
+            );
+        }
+    }
 }

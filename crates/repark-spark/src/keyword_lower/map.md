@@ -23,7 +23,8 @@ lowering it calls first.
   respells a bare `TIMESTAMP` as `TIMESTAMP_NTZ` where it names a type (a `CAST` / `TRY_CAST` target, a `::`
   target, or a typed literal whose text parses with no zone and is not time-only), for a fragment built under
   `spark.sql.timestampType=TIMESTAMP_NTZ`. A zoned literal stays an instant, as Spark's parser keeps it. The
-  SQL door never calls either.
+  SQL door never calls either. Its cuts map token line and column to bytes by character (`spark_rewrites::byte_offset`),
+  pinned over non-ASCII text, multi-line fragments, tabs and CRLF.
 - `ltz_values_cast.rs` — **WO NTZ-STORE-DOORS-1 second re-verify fold (2026-09-29,
   RD3-1):** `mark_values_timestamp_casts` wraps each `VALUES` cell that is a written
   `CAST` / `::` to `TIMESTAMP` (or `TIMESTAMP_LTZ`), through parentheses, in one more
