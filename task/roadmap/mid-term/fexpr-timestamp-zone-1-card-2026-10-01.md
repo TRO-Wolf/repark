@@ -101,6 +101,22 @@ modes. The counts are machine-emitted under
   and main answer true. The column holds unit 2's gap shift, and main was right only because both sides shifted
   alike.
 
+**Beyond the named 60 (fix round, 2026-11-27).** The prior corpora, replayed against fresh Spark recordings, move
+102 more cells. They are listed by id in
+[`moved-beyond-60.tsv`](../../wo/fexpr-timestamp-ntz-1-narrow/evidence/moved-beyond-60.tsv):
+- 27 `date_trunc` type cells (unit 2). `date_trunc` over an NTZ fragment stays `timestamp_ntz`, so CTAS and Parquet
+  store an NTZ wall where Spark and main store an instant.
+- 26 R2 refusals, plus 6 `insert_fexpr_lit_ltz` inserts that store nothing.
+- 9 nullability-only cells.
+- 8 EXPLAIN texts.
+- 1 build-time-binding cell.
+- 25 cells with no Spark analogue.
+
+This round fixed two of this unit's own cells:
+- an unparsable `CAST('bad' AS TIMESTAMP_NTZ)` under ANSI off now answers NULL;
+- a pre-1970 bare literal is respelled `CAST('…' AS TIMESTAMP_NTZ)`. Main's `TIMESTAMP_NTZ '1969-…'` fails to plan on
+  both doors, which is a card line for unit 2.
+
 **Still unlike Spark, by owner.**
 - **Unit 2:**
   - the NTZ string kernel moves a DST-gap wall: `CAST('2024-03-10 02:30:00' AS TIMESTAMP_NTZ)` answers `03:30` in
