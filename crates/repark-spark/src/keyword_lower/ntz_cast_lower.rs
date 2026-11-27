@@ -203,7 +203,9 @@ mod tests {
                 "TIMESTAMP '2024-01-01 02:00:00' + INTERVAL 1 HOUR > cast(s AS timestamp)"
             )
             .as_deref(),
-            Some("TIMESTAMP_NTZ '2024-01-01 02:00:00' + INTERVAL 1 HOUR > cast(s AS TIMESTAMP_NTZ)")
+            Some(
+                "TIMESTAMP_NTZ '2024-01-01 02:00:00' + INTERVAL 1 HOUR > cast(s AS TIMESTAMP_NTZ)"
+            )
         );
         assert_eq!(
             bare_timestamp_types_as_ntz("TRY_CAST(CAST(s AS STRING) AS TIMESTAMP), s::TIMESTAMP")

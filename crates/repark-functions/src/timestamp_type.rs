@@ -232,7 +232,12 @@ mod tests {
 
     #[test]
     fn typed_literal_is_ntz_only_for_a_zoneless_date_time() {
-        for ntz in ["2024-01-01 02:00:00", "2024-03-10 02:30:00.5", "2024-01-01", " 2024-01-01T02:00:00 "] {
+        for ntz in [
+            "2024-01-01 02:00:00",
+            "2024-03-10 02:30:00.5",
+            "2024-01-01",
+            " 2024-01-01T02:00:00 ",
+        ] {
             assert!(typed_literal_resolves_ntz(ntz), "{ntz}");
         }
         for ltz_or_invalid in [
@@ -246,8 +251,10 @@ mod tests {
             "bad",
             "",
         ] {
-            assert!(!typed_literal_resolves_ntz(ltz_or_invalid), "{ltz_or_invalid}");
+            assert!(
+                !typed_literal_resolves_ntz(ltz_or_invalid),
+                "{ltz_or_invalid}"
+            );
         }
     }
 }
-
