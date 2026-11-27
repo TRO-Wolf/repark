@@ -1,0 +1,366 @@
+{
+ "cells": {
+  "protected_cast_ltz_session": {
+   "kind": "PROTECTED",
+   "source": "VALUES (0, CAST('2024-06-01 12:00:00' AS TIMESTAMP_LTZ)), (1, TIMESTAMP_NTZ '2024-03-10 02:30:00')",
+   "spark": [
+    [
+     0,
+     "timestamp_ntz",
+     "2024-06-01 12:00:00"
+    ],
+    [
+     1,
+     "timestamp_ntz",
+     "2024-03-10 03:30:00"
+    ]
+   ],
+   "target": "NTZ",
+   "timestamp_type": "TIMESTAMP_LTZ",
+   "zone": "America/New_York"
+  },
+  "protected_cast_ltz_session_into_ltz": {
+   "kind": "PROTECTED",
+   "source": "VALUES (0, CAST('2024-06-01 12:00:00' AS TIMESTAMP_LTZ)), (1, TIMESTAMP_NTZ '2024-03-10 02:30:00')",
+   "spark": [
+    [
+     0,
+     "timestamp",
+     "2024-06-01 12:00:00"
+    ],
+    [
+     1,
+     "timestamp",
+     "2024-03-10 03:30:00"
+    ]
+   ],
+   "target": "LTZ",
+   "timestamp_type": "TIMESTAMP_LTZ",
+   "zone": "America/New_York"
+  },
+  "protected_fn_utc_ntz_session": {
+   "kind": "PROTECTED",
+   "source": "VALUES (0, to_timestamp_ltz('2024-06-01 12:00:00')), (1, TIMESTAMP_NTZ '2024-03-10 02:30:00')",
+   "spark": [
+    [
+     0,
+     "timestamp_ntz",
+     "2024-06-01 12:00:00"
+    ],
+    [
+     1,
+     "timestamp_ntz",
+     "2024-03-10 02:30:00"
+    ]
+   ],
+   "target": "NTZ",
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "UTC"
+  },
+  "protected_kernel_cancel_coalesce": {
+   "kind": "PROTECTED",
+   "source": "VALUES (0, COALESCE(CAST('2024-06-01 12:00:00' AS TIMESTAMP_LTZ), NULL)), (1, CAST('2024-03-10 02:30:00' AS TIMESTAMP_NTZ))",
+   "spark": [
+    [
+     0,
+     "timestamp_ntz",
+     "2024-06-01 12:00:00"
+    ],
+    [
+     1,
+     "timestamp_ntz",
+     "2024-03-10 03:30:00"
+    ]
+   ],
+   "target": "NTZ",
+   "timestamp_type": "TIMESTAMP_LTZ",
+   "zone": "America/New_York"
+  },
+  "protected_kernel_cancel_ntz_session": {
+   "kind": "PROTECTED",
+   "source": "VALUES (0, CAST('2024-06-01 12:00:00' AS TIMESTAMP_LTZ)), (1, CAST('2024-03-10 02:30:00' AS TIMESTAMP_NTZ))",
+   "spark": [
+    [
+     0,
+     "timestamp_ntz",
+     "2024-06-01 12:00:00"
+    ],
+    [
+     1,
+     "timestamp_ntz",
+     "2024-03-10 03:30:00"
+    ]
+   ],
+   "target": "NTZ",
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "America/New_York"
+  },
+  "protected_ntz_only_ntz_session": {
+   "kind": "PROTECTED",
+   "source": "VALUES (0, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (1, TIMESTAMP_NTZ '2024-06-01 09:00:00')",
+   "spark": [
+    [
+     0,
+     "timestamp_ntz",
+     "2024-03-10 02:30:00"
+    ],
+    [
+     1,
+     "timestamp_ntz",
+     "2024-06-01 09:00:00"
+    ]
+   ],
+   "target": "NTZ",
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "America/New_York"
+  },
+  "protected_wrapped_ntz_ltz_session": {
+   "kind": "PROTECTED",
+   "source": "VALUES (0, COALESCE(TIMESTAMP_NTZ '2024-03-10 02:30:00', NULL)), (1, TIMESTAMP_NTZ '2024-03-10 02:30:00')",
+   "spark": [
+    [
+     0,
+     "timestamp_ntz",
+     "2024-03-10 02:30:00"
+    ],
+    [
+     1,
+     "timestamp_ntz",
+     "2024-03-10 02:30:00"
+    ]
+   ],
+   "target": "NTZ",
+   "timestamp_type": "TIMESTAMP_LTZ",
+   "zone": "America/New_York"
+  },
+  "refuse_or_spark_cast_ntz_session_into_ltz": {
+   "kind": "TARGET_OR_REFUSE",
+   "source": "VALUES (0, CAST('2024-06-01 12:00:00' AS TIMESTAMP_LTZ)), (1, TIMESTAMP_NTZ '2024-03-10 02:30:00')",
+   "spark": [
+    [
+     0,
+     "timestamp",
+     "2024-06-01 12:00:00"
+    ],
+    [
+     1,
+     "timestamp",
+     "2024-03-10 03:30:00"
+    ]
+   ],
+   "target": "LTZ",
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "America/New_York"
+  },
+  "target_case_ltz_session": {
+   "kind": "TARGET",
+   "source": "VALUES (0, CASE WHEN 1 = 1 THEN CAST('2024-06-01 12:00:00' AS TIMESTAMP_LTZ) END), (1, TIMESTAMP_NTZ '2024-03-10 02:30:00')",
+   "spark": [
+    [
+     0,
+     "timestamp_ntz",
+     "2024-06-01 12:00:00"
+    ],
+    [
+     1,
+     "timestamp_ntz",
+     "2024-03-10 03:30:00"
+    ]
+   ],
+   "target": "NTZ",
+   "timestamp_type": "TIMESTAMP_LTZ",
+   "zone": "America/New_York"
+  },
+  "target_coalesce_fn_ntz_session_into_ltz": {
+   "kind": "TARGET",
+   "source": "VALUES (0, COALESCE(to_timestamp_ltz('2024-06-01 12:00:00'), NULL)), (1, TIMESTAMP_NTZ '2024-03-10 02:30:00')",
+   "spark": [
+    [
+     0,
+     "timestamp",
+     "2024-06-01 12:00:00"
+    ],
+    [
+     1,
+     "timestamp",
+     "2024-03-10 03:30:00"
+    ]
+   ],
+   "target": "LTZ",
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "America/New_York"
+  },
+  "target_coalesce_ltz_session": {
+   "kind": "TARGET",
+   "source": "VALUES (0, COALESCE(CAST('2024-06-01 12:00:00' AS TIMESTAMP_LTZ), NULL)), (1, TIMESTAMP_NTZ '2024-03-10 02:30:00')",
+   "spark": [
+    [
+     0,
+     "timestamp_ntz",
+     "2024-06-01 12:00:00"
+    ],
+    [
+     1,
+     "timestamp_ntz",
+     "2024-03-10 03:30:00"
+    ]
+   ],
+   "target": "NTZ",
+   "timestamp_type": "TIMESTAMP_LTZ",
+   "zone": "America/New_York"
+  },
+  "target_ctas_fn_ntz_session": {
+   "kind": "TARGET",
+   "source": "SELECT * FROM VALUES (0, to_timestamp_ltz('2024-06-01 12:00:00')), (1, TIMESTAMP_NTZ '2024-03-10 02:30:00') AS x(id, v)",
+   "spark": [
+    [
+     0,
+     "timestamp",
+     "2024-06-01 12:00:00"
+    ],
+    [
+     1,
+     "timestamp",
+     "2024-03-10 03:30:00"
+    ]
+   ],
+   "target": "CTAS",
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "America/New_York"
+  },
+  "target_fn_interval_into_ntz": {
+   "kind": "TARGET",
+   "source": "VALUES (0, to_timestamp_ltz('2024-06-01 12:00:00') + INTERVAL '0' SECOND), (1, TIMESTAMP_NTZ '2024-03-10 02:30:00')",
+   "spark": [
+    [
+     0,
+     "timestamp_ntz",
+     "2024-06-01 12:00:00"
+    ],
+    [
+     1,
+     "timestamp_ntz",
+     "2024-03-10 03:30:00"
+    ]
+   ],
+   "target": "NTZ",
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "America/New_York"
+  },
+  "target_fn_kolkata_into_ntz": {
+   "kind": "TARGET",
+   "source": "VALUES (0, to_timestamp_ltz('2024-06-01 12:00:00')), (1, TIMESTAMP_NTZ '2024-06-01 09:00:00')",
+   "spark": [
+    [
+     0,
+     "timestamp_ntz",
+     "2024-06-01 12:00:00"
+    ],
+    [
+     1,
+     "timestamp_ntz",
+     "2024-06-01 09:00:00"
+    ]
+   ],
+   "target": "NTZ",
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "Asia/Kolkata"
+  },
+  "target_fn_merge_source_into_ntz": {
+   "kind": "TARGET",
+   "source": "MERGE:SELECT * FROM VALUES (0, to_timestamp_ltz('2024-06-01 12:00:00')), (1, TIMESTAMP_NTZ '2024-03-10 02:30:00') AS x(id, v)",
+   "spark": [
+    [
+     0,
+     "timestamp_ntz",
+     "2024-06-01 12:00:00"
+    ],
+    [
+     1,
+     "timestamp_ntz",
+     "2024-03-10 03:30:00"
+    ]
+   ],
+   "target": "NTZ",
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "America/New_York"
+  },
+  "target_fn_ntz_first_into_ltz": {
+   "kind": "TARGET",
+   "source": "VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (0, to_timestamp_ltz('2024-06-01 12:00:00'))",
+   "spark": [
+    [
+     0,
+     "timestamp",
+     "2024-06-01 12:00:00"
+    ],
+    [
+     1,
+     "timestamp",
+     "2024-03-10 03:30:00"
+    ]
+   ],
+   "target": "LTZ",
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "America/New_York"
+  },
+  "target_fn_ntz_session_into_ltz": {
+   "kind": "TARGET",
+   "source": "VALUES (0, to_timestamp_ltz('2024-06-01 12:00:00')), (1, TIMESTAMP_NTZ '2024-03-10 02:30:00')",
+   "spark": [
+    [
+     0,
+     "timestamp",
+     "2024-06-01 12:00:00"
+    ],
+    [
+     1,
+     "timestamp",
+     "2024-03-10 03:30:00"
+    ]
+   ],
+   "target": "LTZ",
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "America/New_York"
+  },
+  "target_fn_ntz_session_into_ntz": {
+   "kind": "TARGET",
+   "source": "VALUES (0, to_timestamp_ltz('2024-06-01 12:00:00')), (1, TIMESTAMP_NTZ '2024-03-10 02:30:00')",
+   "spark": [
+    [
+     0,
+     "timestamp_ntz",
+     "2024-06-01 12:00:00"
+    ],
+    [
+     1,
+     "timestamp_ntz",
+     "2024-03-10 03:30:00"
+    ]
+   ],
+   "target": "NTZ",
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "America/New_York"
+  },
+  "target_if_ltz_session": {
+   "kind": "TARGET",
+   "source": "VALUES (0, IF(1 = 1, CAST('2024-06-01 12:00:00' AS TIMESTAMP_LTZ), NULL)), (1, TIMESTAMP_NTZ '2024-03-10 02:30:00')",
+   "spark": [
+    [
+     0,
+     "timestamp_ntz",
+     "2024-06-01 12:00:00"
+    ],
+    [
+     1,
+     "timestamp_ntz",
+     "2024-03-10 03:30:00"
+    ]
+   ],
+   "target": "NTZ",
+   "timestamp_type": "TIMESTAMP_LTZ",
+   "zone": "America/New_York"
+  }
+ },
+ "oracle": "PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, local[2], ANSI off"
+}

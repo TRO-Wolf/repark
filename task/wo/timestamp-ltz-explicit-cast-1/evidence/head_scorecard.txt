@@ -1,0 +1,24 @@
+cells 25588 main=spark 18454
+cancel	KNOWN_DIVERGENCE	cancel-bare-kernel	4	head: closed=0 moved=0 other=0
+cancel	PROTECTED	cancel	9	head: closed=0 moved=0 other=0
+cancel	PROTECTED	cancel-bare-kernel	2	head: closed=0 moved=0 other=0
+cancel	TARGET	cancel	3	head: closed=1 moved=0 other=0
+dflt	PROTECTED	iceberg-default	2	head: closed=0 moved=0 other=0
+grid	PROTECTED	KERNEL-CANCEL	736	head: closed=0 moved=0 other=0
+grid	PROTECTED	equal	15888	head: closed=0 moved=0 other=0
+grid	TARGET	TARGET-A	1452	head: closed=540 moved=0 other=0
+grid	TARGET	TARGET-B	3510	head: closed=270 moved=0 other=0
+grid	TARGET	TARGET-C	1094	head: closed=474 moved=0 other=0
+notnull	PROTECTED	notnull	1	head: closed=0 moved=0 other=0
+notnull	TARGET	notnull	7	head: closed=5 moved=0 other=0
+wv	KNOWN_DIVERGENCE	wv-ins_union	170	head: closed=0 moved=0 other=0
+wv	PROTECTED	wv-ctas	189	head: closed=0 moved=0 other=0
+wv	PROTECTED	wv-ins_union	550	head: closed=0 moved=0 other=0
+wv	PROTECTED	wv-ins_values	510	head: closed=0 moved=0 other=0
+wv	PROTECTED	wv-merge	378	head: closed=0 moved=0 other=0
+wv	PROTECTED	wv-parquet	189	head: closed=0 moved=0 other=0
+wv	TARGET	wv-ctas	171	head: closed=27 moved=0 other=0
+wv	TARGET	wv-ins_values	210	head: closed=58 moved=0 other=0
+wv	TARGET	wv-merge	342	head: closed=54 moved=0 other=0
+wv	TARGET	wv-parquet	171	head: closed=27 moved=0 other=0
+head: regressed=0 new_wrong_store=0

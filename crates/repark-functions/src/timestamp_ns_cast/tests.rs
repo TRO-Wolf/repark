@@ -381,3 +381,137 @@ fn an_encoded_source_gets_the_verdict_and_the_value_of_its_value_type() {
         .to_string();
     assert!(error.contains("CAST_WITHOUT_SUGGESTION"), "{error}");
 }
+
+fn instant_type() -> DataType {
+    crate::instant_ts::ltz_timestamp_type()
+}
+
+fn wall_type() -> DataType {
+    DataType::Timestamp(TimeUnit::Microsecond, None)
+}
+
+fn gap_wall() -> Expr {
+    lit(ScalarValue::TimestampMicrosecond(
+        Some(1_710_037_800_000_000),
+        None,
+    ))
+}
+
+fn null_instant() -> Expr {
+    lit(ScalarValue::TimestampMicrosecond(
+        None,
+        Some(Arc::from("UTC")),
+    ))
+}
+
+fn ltz_string_cast() -> Expr {
+    Expr::Cast(Cast::new(
+        Box::new(lit("2024-06-01 12:00:00")),
+        instant_type(),
+    ))
+}
+
+fn ltz_call() -> Expr {
+    crate::timestamp_ltz_ntz::to_timestamp_ltz_udf().call(vec![lit("2024-06-01 12:00:00")])
+}
+
+fn one_column(declared: DataType, cells: Vec<Expr>) -> LogicalPlan {
+    let schema = DFSchema::try_from(datafusion::arrow::datatypes::Schema::new(vec![Field::new(
+        "v", declared, true,
+    )]))
+    .unwrap();
+    LogicalPlan::Values(Values {
+        schema: Arc::new(schema),
+        values: cells.into_iter().map(|cell| vec![cell]).collect(),
+    })
+}
+
+fn widened(plan: LogicalPlan, ntz_default: bool) -> Values {
+    let LogicalPlan::Values(values) =
+        widen_mixed_values_timestamps(plan, &|cell: Expr| Ok(cell), ntz_default).unwrap()
+    else {
+        panic!("values stay values");
+    };
+    values
+}
+
+fn is_localized(cell: &Expr) -> bool {
+    matches!(
+        cell,
+        Expr::ScalarFunction(function)
+            if function.func.name() == crate::instant_ts::to_timestamp_udf().name()
+    )
+}
+
+#[test]
+fn wrapped_ltz_casts_widen_a_mixed_values_column() {
+    let twice_cast_null = Expr::Cast(Cast::new(
+        Box::new(Expr::Cast(Cast::new(
+            Box::new(lit(ScalarValue::Null)),
+            wall_type(),
+        ))),
+        instant_type(),
+    ));
+    let wrapped = [
+        datafusion::functions::core::expr_fn::coalesce(vec![ltz_string_cast(), null_instant()]),
+        datafusion::functions::core::expr_fn::coalesce(vec![ltz_call(), twice_cast_null]),
+        datafusion::logical_expr::when(lit(true), ltz_string_cast())
+            .end()
+            .unwrap(),
+    ];
+    for cell in wrapped {
+        let values = widened(one_column(wall_type(), vec![cell, gap_wall()]), false);
+        assert_eq!(values.schema.field(0).data_type(), &instant_type());
+        assert!(
+            matches!(&values.values[1][0], Expr::Cast(cast) if cast.field.data_type() == &instant_type())
+        );
+    }
+    let wrapped_wall =
+        datafusion::functions::core::expr_fn::coalesce(vec![gap_wall(), lit(ScalarValue::Null)]);
+    assert!(!is_values_wall_cell(&wrapped_wall));
+}
+
+#[test]
+fn named_instants_widen_with_and_without_interval_arithmetic() {
+    let shifted = ltz_call()
+        + lit(ScalarValue::IntervalMonthDayNano(Some(
+            datafusion::arrow::datatypes::IntervalMonthDayNano::new(0, 0, 0),
+        )));
+    for cell in [ltz_call(), shifted] {
+        let values = widened(one_column(wall_type(), vec![cell, gap_wall()]), false);
+        assert_eq!(values.schema.field(0).data_type(), &instant_type());
+    }
+}
+
+#[test]
+fn ntz_sessions_read_the_target_cast_and_localize_the_walls() {
+    let targeted = Expr::Cast(Cast::new(Box::new(ltz_call()), wall_type()));
+    let values = widened(one_column(wall_type(), vec![targeted, gap_wall()]), true);
+    assert_eq!(values.schema.field(0).data_type(), &wall_type());
+    let walled = |cell: &Expr| match cell {
+        Expr::ScalarFunction(function)
+            if function.func.name() == crate::timestamp_ntz_cast::TIMESTAMP_NTZ_CAST_NAME =>
+        {
+            function.args[0].clone()
+        }
+        other => panic!("not walled: {other}"),
+    };
+    assert_eq!(walled(&values.values[0][0]), ltz_call());
+    assert!(is_localized(&walled(&values.values[1][0])));
+    let declared = widened(
+        one_column(instant_type(), vec![ltz_call(), gap_wall()]),
+        true,
+    );
+    assert!(is_localized(&declared.values[1][0]));
+    let null_wall = Expr::Cast(Cast::new(Box::new(lit(ScalarValue::Null)), wall_type()));
+    let nulls = widened(
+        one_column(instant_type(), vec![ltz_call(), null_wall.clone()]),
+        true,
+    );
+    assert_eq!(nulls.values[1][0], null_wall);
+    let ltz_session = widened(
+        one_column(instant_type(), vec![ltz_call(), gap_wall()]),
+        false,
+    );
+    assert_eq!(ltz_session.values[1][0], gap_wall());
+}
