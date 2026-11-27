@@ -676,7 +676,7 @@ fn widen_values(
         .iter()
         .enumerate()
         .filter_map(|(column, field)| {
-            if field.data_type() == &wall {
+            if field.data_type() == &wall || (ntz_default && field.data_type() == &instant) {
                 Some((column, false))
             } else if field.data_type() == &wall_ns {
                 Some((column, true))
@@ -709,9 +709,19 @@ fn widen_values(
         if counts.others > 0 {
             continue;
         }
-        if counts.instants > 0 && counts.walls > 0 && !declared_ns {
+        let declared_instant = fields[column].1.data_type() == &instant;
+        if counts.instants > 0
+            && counts.walls > 0
+            && !declared_ns
+            && (!declared_instant || counts.walls > counts.null_walls)
+        {
             for (row, (cell, found)) in rows.iter_mut().zip(cells.into_iter().zip(types)) {
-                row[column] = if found == wall {
+                row[column] = if found == wall && ntz_default {
+                    Expr::ScalarFunction(ScalarFunction::new_udf(
+                        crate::instant_ts::to_timestamp_udf(),
+                        vec![cell],
+                    ))
+                } else if found == wall {
                     Expr::Cast(Cast::new(Box::new(cell), instant.clone()))
                 } else {
                     cell
@@ -720,7 +730,11 @@ fn widen_values(
             let field = &mut fields[column].1;
             *field = Arc::new(field.as_ref().clone().with_data_type(instant.clone()));
             changed = true;
-        } else if counts.instants == 0 && counts.dates > 0 && counts.walls > counts.null_walls {
+        } else if !declared_instant
+            && counts.instants == 0
+            && counts.dates > 0
+            && counts.walls > counts.null_walls
+        {
             let Ok(fresh) = pres
                 .iter()
                 .map(|cell| values_cell_to_naive(cell.clone(), &empty, &wall))
@@ -780,7 +794,7 @@ fn classify_values_column(
 ) -> Option<(ValuesColumnCounts, Vec<Expr>, Vec<DataType>)> {
     let cells = pres
         .iter()
-        .map(|cell| rewrite(cell.clone()))
+        .map(|cell| rewrite(instant_cell_source(cell, ntz_default).clone()))
         .collect::<Result<Vec<Expr>>>()
         .ok()?;
     let types = cells
@@ -834,12 +848,27 @@ fn values_cell_class(
     }
 }
 
+fn instant_cell_source(pre: &Expr, ntz_default: bool) -> &Expr {
+    if !ntz_default || values_evidence::values_cell_evidence(pre) != Evidence::NamedInstant {
+        return pre;
+    }
+    match strip_values_wrappers(pre) {
+        Expr::Cast(cast)
+            if cast.field.data_type() == &DataType::Timestamp(TimeUnit::Microsecond, None) =>
+        {
+            &cast.expr
+        }
+        _ => pre,
+    }
+}
+
 fn strip_values_wrappers(mut expr: &Expr) -> &Expr {
     loop {
         match expr {
             Expr::Alias(alias) => expr = alias.expr.as_ref(),
             Expr::ScalarFunction(function)
-                if function.func.name() == crate::decimal_cast::SPARK_NONNULL_NAME
+                if (function.func.name() == crate::decimal_cast::SPARK_NONNULL_NAME
+                    || function.func.name() == crate::decimal_cast::DECIMAL_CAST_NULLABLE_NAME)
                     && function.args.len() == 1 =>
             {
                 expr = &function.args[0];

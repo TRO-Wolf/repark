@@ -5,7 +5,8 @@ use datafusion::logical_expr::{Expr, ExprSchemable, Operator};
 use super::strip_values_wrappers;
 
 const NAMED_WALLS: [&str; 3] = ["to_timestamp_ntz", "make_timestamp_ntz", "localtimestamp"];
-const NAMED_INSTANTS: [&str; 2] = ["from_utc_timestamp", "to_utc_timestamp"];
+const NAMED_INSTANTS: [&str; 3] = ["from_utc_timestamp", "to_utc_timestamp", "to_timestamp_ltz"];
+const NULL_FALLBACKS: [&str; 3] = ["coalesce", "nvl", "ifnull"];
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(super) enum Evidence {
@@ -16,20 +17,24 @@ pub(super) enum Evidence {
 }
 
 pub(super) fn values_cell_evidence(pre: &Expr) -> Evidence {
+    cell_evidence(pre, true)
+}
+
+fn cell_evidence(pre: &Expr, branches: bool) -> Evidence {
     let core = strip_values_wrappers(pre);
-    let evidence = core_evidence(core);
+    let evidence = core_evidence(core, branches);
     if evidence != Evidence::None {
         return evidence;
     }
     match core {
         Expr::Cast(cast) if matches!(cast.field.data_type(), DataType::Timestamp(_, None)) => {
-            core_evidence(strip_values_wrappers(&cast.expr))
+            core_evidence(strip_values_wrappers(&cast.expr), branches)
         }
         _ => Evidence::None,
     }
 }
 
-fn core_evidence(expr: &Expr) -> Evidence {
+fn core_evidence(expr: &Expr, branches: bool) -> Evidence {
     let (base, shifted) = peel_interval_arithmetic(expr);
     match base {
         Expr::ScalarFunction(function) => {
@@ -41,6 +46,8 @@ fn core_evidence(expr: &Expr) -> Evidence {
                     | crate::timestamp_ntz_cast::TRY_TIMESTAMP_NTZ_CAST_NAME
             ) {
                 Evidence::Wall
+            } else if NAMED_INSTANTS.contains(&name) {
+                Evidence::NamedInstant
             } else if shifted {
                 Evidence::None
             } else if NAMED_WALLS.contains(&name)
@@ -50,12 +57,20 @@ fn core_evidence(expr: &Expr) -> Evidence {
                 )
             {
                 Evidence::Wall
-            } else if NAMED_INSTANTS.contains(&name) {
-                Evidence::NamedInstant
+            } else if branches && NULL_FALLBACKS.contains(&name) {
+                instant_branch_evidence(&function.args)
+            } else if branches && name == "if" && function.args.len() == 3 {
+                instant_branch_evidence(&function.args[1..])
             } else {
                 Evidence::None
             }
         }
+        Expr::Case(case) if branches && !shifted => instant_branch_evidence(
+            case.when_then_expr
+                .iter()
+                .map(|(_, then)| then.as_ref())
+                .chain(case.else_expr.as_deref()),
+        ),
         Expr::Literal(ScalarValue::TimestampMicrosecond(_, None), _) => Evidence::Wall,
         Expr::TryCast(cast) if is_written_timestamp(cast.field.data_type()) && !shifted => {
             Evidence::Timestamp
@@ -77,6 +92,23 @@ fn core_evidence(expr: &Expr) -> Evidence {
         }
         _ => Evidence::None,
     }
+}
+
+fn instant_branch_evidence<'a>(branches: impl IntoIterator<Item = &'a Expr>) -> Evidence {
+    let mut found = Evidence::None;
+    for branch in branches {
+        if super::is_values_null_cell(branch) {
+            continue;
+        }
+        let evidence = cell_evidence(branch, false);
+        if !matches!(evidence, Evidence::Timestamp | Evidence::NamedInstant)
+            || (found != Evidence::None && found != evidence)
+        {
+            return Evidence::None;
+        }
+        found = evidence;
+    }
+    found
 }
 
 fn peel_interval_arithmetic(mut expr: &Expr) -> (&Expr, bool) {
