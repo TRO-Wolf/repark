@@ -19,10 +19,12 @@ lowering it calls first.
   `TimestampNsCastLower::post_visit_expr` and `TimestampNsCastProbe`.
   **FEXPR-TIMESTAMP-NTZ-1 narrow (2026-11-26), fragment door only:** `lower_fragment_timestamp_ntz_cast`
   lowers the same casts for `F.expr` and wraps a lowered non-`TRY` string-literal cast in
-  `__repark_decimal_cast_nullable__` (outside, so a folded `'bad'` stays nullable under ANSI off); `bare_timestamp_types_as_ntz`
+  `__repark_decimal_cast_nullable__` (outside, so a folded `'bad'` stays nullable under ANSI off). A string literal is
+  lowered only where `timestamp_type::fragment_lowers_ntz_string_cast` holds; otherwise the cast keeps main's route
+  (delta 1: the kernel cannot read year 1 or `2024-1-1`, and Spark answers them). `bare_timestamp_types_as_ntz`
   respells a bare `TIMESTAMP` as `TIMESTAMP_NTZ` where it names a type (a `CAST` / `TRY_CAST` target, a `::`
   target, or a typed literal whose text parses with no zone and is not time-only), for a fragment built under
-  `spark.sql.timestampType=TIMESTAMP_NTZ`. A zoned literal stays an instant, as Spark's parser keeps it. A pre-1970 literal is respelled `CAST('…' AS TIMESTAMP_NTZ)`, since main's `TIMESTAMP_NTZ '…'` rewrite cannot plan a negative wall. The
+  `spark.sql.timestampType=TIMESTAMP_NTZ`. A zoned literal stays an instant, as Spark's parser keeps it. A literal whose wall fits Int32 is respelled `CAST('…' AS TIMESTAMP_NTZ)`: main's `TIMESTAMP_NTZ '…'` rewrite emits `__repark_timestamp_ntz__(<wall>)`, the fragment door's `spark_integral_literal` narrows that argument to Int32 exactly when `i32::try_from` holds, and the wall UDF refuses an Int32 (delta 1; the edges `1969-12-31 23:24:12.516352` and `1970-01-01 00:35:47.483647` are pinned). The
   SQL door never calls either. Its cuts map token line and column to bytes by character (`spark_rewrites::byte_offset`),
   pinned over non-ASCII text, multi-line fragments, tabs and CRLF.
 - `ltz_values_cast.rs` — **WO NTZ-STORE-DOORS-1 second re-verify fold (2026-09-29,

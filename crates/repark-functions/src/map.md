@@ -563,10 +563,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **TIMESTAMP_LTZ**). Parsed from the builder map in `SparkExtension::configure`.
   Missing carrier also defaults LTZ. Invalid value
   fail-louds naming `TIMESTAMP_LTZ` and `TIMESTAMP_NTZ`. Ledger:
-  `task/q10-timestamptype-ledger.md`. **FEXPR-TIMESTAMP-NTZ-1 narrow (2026-11-26):**
-  `typed_literal_resolves_ntz` is Spark's rule for a bare `TIMESTAMP '…'` under `TIMESTAMP_NTZ`: the text parses,
-  carries no zone, is not time-only, and has a non-negative NTZ wall (`parse_timestamp_ntz_wall` refuses `hh:mm`, and a pre-1970
-  `TIMESTAMP_NTZ` literal fails to plan on main); the fragment door's respelling reads it.
+  `task/q10-timestamptype-ledger.md`. **FEXPR-TIMESTAMP-NTZ-1 narrow (2026-11-26, delta 1 2026-11-27):**
+  `typed_literal_ntz_wall` is Spark's rule for a bare `TIMESTAMP '…'` under `TIMESTAMP_NTZ`: the text parses,
+  carries no zone, is not time-only, and `parse_timestamp_ntz_wall` reads its wall (it refuses `hh:mm`); the fragment
+  door's respelling reads it. `fragment_lowers_ntz_string_cast` lets the fragment door lower a string-literal NTZ cast to
+  `__repark_cast_timestamp_ntz__` only where the kernel's own parse reads the text (`string_to_datetime` after
+  `wall_without_zone`, untrimmed, 1677-09-21 to 2262-04-11) or Spark's cast answers no wall (grammar refusal, time-only,
+  bad date, unknown zone); other years, `hh:mm`, single-digit fields and padded text keep main's route.
+  `typed_literal_resolves_ntz` was removed in delta 1: only its own test called it.
 - `ansi.rs` — **U5 / Q10=A:** Spark-door `spark.sql.ansi.enabled` carrier; `decimal_legacy.rs` (DECIMAL-COMMON-TYPE-1) carries the decimal legacy flag alike
   (`SparkAnsiConfig`, `PREFIX = repark.ansi`, default **TRUE**) + the embedded
   `__repark_ansi_nonzero_divisor__` raise kernel. Parsed from the builder map in

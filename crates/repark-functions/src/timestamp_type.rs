@@ -158,8 +158,35 @@ pub fn typed_literal_ntz_wall(text: &str) -> Option<i64> {
 }
 
 #[must_use]
-pub fn typed_literal_resolves_ntz(text: &str) -> bool {
-    typed_literal_ntz_wall(text).is_some_and(|wall| wall >= 0)
+pub fn fragment_lowers_ntz_string_cast(text: &str) -> bool {
+    ntz_cast_kernel_parses(text) || !spark_ntz_cast_has_wall(text)
+}
+
+fn ntz_cast_kernel_parses(text: &str) -> bool {
+    arrow::compute::kernels::cast_utils::string_to_datetime(
+        &chrono::Utc,
+        crate::timestamp_ltz_ntz::wall_without_zone(text),
+    )
+    .is_ok_and(|parsed| parsed.timestamp_nanos_opt().is_some())
+}
+
+fn spark_ntz_cast_has_wall(text: &str) -> bool {
+    use crate::spark_string_timestamp::{grammar, instant, zone};
+    let Some(parsed) = grammar::parse_timestamp_string(text) else {
+        return false;
+    };
+    !parsed.just_time
+        && parsed
+            .zone
+            .is_none_or(|id| zone::spark_zone_id(id).is_some())
+        && chrono::FixedOffset::east_opt(0).is_some_and(|utc| {
+            instant::instant_micros(
+                &parsed,
+                zone::SparkZone::Offset(utc),
+                chrono::DateTime::UNIX_EPOCH,
+            )
+            .is_some()
+        })
 }
 
 #[cfg(test)]
@@ -236,14 +263,16 @@ mod tests {
     }
 
     #[test]
-    fn typed_literal_is_ntz_only_for_a_zoneless_date_time() {
-        for ntz in [
-            "2024-01-01 02:00:00",
-            "2024-03-10 02:30:00.5",
-            "2024-01-01",
-            " 2024-01-01T02:00:00 ",
+    fn typed_literal_has_an_ntz_wall_only_for_a_zoneless_date_time() {
+        for (ntz, wall) in [
+            ("2024-01-01 02:00:00", 1_704_074_400_000_000),
+            ("2024-01-01", 1_704_067_200_000_000),
+            (" 2024-01-01T02:00:00 ", 1_704_074_400_000_000),
+            ("1970-01-01 00:35:47.483647", i64::from(i32::MAX)),
+            ("1969-12-31 23:24:12.516352", i64::from(i32::MIN)),
+            ("1969-12-31 23:59:59.123456", -876_544),
         ] {
-            assert!(typed_literal_resolves_ntz(ntz), "{ntz}");
+            assert_eq!(typed_literal_ntz_wall(ntz), Some(wall), "{ntz}");
         }
         for ltz_or_invalid in [
             "2024-01-01 02:00:00Z",
@@ -253,14 +282,44 @@ mod tests {
             "02:00:00",
             "T02:00:00",
             "2024-01-01 02:00",
-            "1969-12-31 23:59:59.123456",
+            "0001-01-01 00:00:00.000001",
             "bad",
             "",
         ] {
-            assert!(
-                !typed_literal_resolves_ntz(ltz_or_invalid),
+            assert_eq!(
+                typed_literal_ntz_wall(ltz_or_invalid),
+                None,
                 "{ltz_or_invalid}"
             );
+        }
+    }
+
+    #[test]
+    fn fragment_lowers_a_string_ntz_cast_only_where_the_kernel_answers_as_spark() {
+        for lowered in [
+            "2024-01-01 02:00:00",
+            "2024-01-01T02:00:00+05:30",
+            "1677-09-21 00:12:44",
+            "2262-04-11 23:47:16",
+            "bad",
+            "02:00:00",
+            "2024-02-30 00:00:00",
+            "2024-01-01 02:00:00 Nowhere/Zone",
+            "",
+        ] {
+            assert!(fragment_lowers_ntz_string_cast(lowered), "{lowered}");
+        }
+        for kept in [
+            "0001-01-01 00:00:00.000001",
+            "1000-06-15 12:00:00.123456",
+            "1677-06-15 12:00:00",
+            "2262-06-15 12:00:00",
+            "9999-12-31 23:59:59",
+            "2024-01-01 02:00",
+            "2024-1-1 2:0:0",
+            " 2024-01-01 02:00:00 ",
+        ] {
+            assert!(!fragment_lowers_ntz_string_cast(kept), "{kept}");
         }
     }
 }
