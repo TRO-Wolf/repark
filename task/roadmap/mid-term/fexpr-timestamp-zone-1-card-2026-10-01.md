@@ -101,21 +101,46 @@ modes. The counts are machine-emitted under
   and main answer true. The column holds unit 2's gap shift, and main was right only because both sides shifted
   alike.
 
-**Beyond the named 60 (fix round, 2026-11-27).** The prior corpora, replayed against fresh Spark recordings, move
-102 more cells. They are listed by id in
-[`moved-beyond-60.tsv`](../../wo/fexpr-timestamp-ntz-1-narrow/evidence/moved-beyond-60.tsv):
-- 27 `date_trunc` type cells (unit 2). `date_trunc` over an NTZ fragment stays `timestamp_ntz`, so CTAS and Parquet
-  store an NTZ wall where Spark and main store an instant.
-- 26 R2 refusals, plus 6 `insert_fexpr_lit_ltz` inserts that store nothing.
-- 9 nullability-only cells.
-- 8 EXPLAIN texts.
-- 1 build-time-binding cell.
-- 25 cells with no Spark analogue.
+**Beyond the named 60 (delta 1, 2026-11-27, merged with main at `9df269acb`).** The prior corpora, run on head and
+main the same day, and the verifier's probes move 167 more cells. Each is listed by id, family and cause in
+[`moved-beyond-60.tsv`](../../wo/fexpr-timestamp-ntz-1-narrow/evidence/moved-beyond-60.tsv).
+- **Excepted by family (owner, 2026-11-27):**
+  - 51 R2 refusals;
+  - 15 nullability-only cells (R3-like);
+  - 8 EXPLAIN texts;
+  - 26 cells with no Spark answer.
+- **Not excepted; NTZ-LTZ-WIDENING-1 fixes them before this unit lands:**
+  - 37 `date_trunc` type cells. `date_trunc` over an NTZ fragment stays `timestamp_ntz`, so CTAS and Parquet store
+    an NTZ wall where Spark and main store an instant.
+  - 22 union-widening cells (F3). A DataFrame `union` of an NTZ fragment with an LTZ column widens the NTZ side as
+    UTC, not through the session zone. In New York `TIMESTAMP '2024-03-10 02:30:00'` is stored at
+    `1710037800000000`, where Spark and main store `1710055800000000`.
+- **Other:**
+  - 6 `insert_fexpr_lit_ltz` inserts store nothing. This is the R2 refusal, read back as an empty table.
+  - 1 build-time-binding cell, carded below.
+  - 1 R4 comparison beyond the 60 (`vexpr`, runtime NTZ). The ruling names no R4 family.
+- The 198 time-only corpus cells were measured on head and main on the same day. They move onto Spark: NULL with ANSI
+  off, `CAST_INVALID_INPUT` with ANSI on. In total, 1,108 corpus cells move onto Spark.
 
-This round fixed two of this unit's own cells:
-- an unparsable `CAST('bad' AS TIMESTAMP_NTZ)` under ANSI off now answers NULL;
-- a pre-1970 bare literal is respelled `CAST('…' AS TIMESTAMP_NTZ)`. Main's `TIMESTAMP_NTZ '1969-…'` fails to plan on
-  both doors, which is a card line for unit 2.
+**Fixed in this unit's own rounds.**
+- **Fix round:**
+  - an unparsable `CAST('bad' AS TIMESTAMP_NTZ)` under ANSI off answers NULL;
+  - a pre-1970 bare literal no longer fails to plan.
+- **Delta 1:**
+  - **Int32 walls (F1).** A bare `TIMESTAMP '…'` whose NTZ wall fits Int32 is respelled
+    `CAST('…' AS TIMESTAMP_NTZ)`. That range runs from `1969-12-31 23:24:12.516352` to
+    `1970-01-01 00:35:47.483647`.
+    - Main's `TIMESTAMP_NTZ '…'` rewrite passes the wall as an integer argument. On the fragment door that integer
+      is narrowed to Int32, and the wall function refuses an Int32.
+    - Before delta 1, `TIMESTAMP '1970-01-01'` failed to plan here. It now answers, and it is stored as Spark
+      stores it.
+    - Both edges are pinned.
+  - **String casts the kernel cannot read (F2).** The fragment door lowers a string-literal NTZ cast only where
+    the NTZ kernel reads the text, or where Spark's cast answers no value.
+    - The kernel reads only 1677-09-21 to 2262-04-11. It does not read `hh:mm`, single-digit fields or padded
+      text.
+    - Any other literal keeps main's route. So `CAST('0001-01-01 00:00:00.000001' AS TIMESTAMP_NTZ)` stores the
+      wall again, where the fix round stored NULL or raised `CAST_INVALID_INPUT`.
 
 **Still unlike Spark, by owner.**
 - **Unit 2:**
@@ -127,6 +152,8 @@ This round fixed two of this unit's own cells:
   - `selectExpr`, which runs on the SQL door;
   - the SQL door's own explicit-LTZ and zoned-literal gaps.
 - **This card:**
+  - under an NTZ-built session, a string NTZ cast the kernel cannot read keeps main's route, and main's stored
+    wall, shifted by the zone or local mean time;
   - an `F.expr` built before a runtime `spark.conf.set("spark.sql.timestampType", …)` keeps the type in force when
     it was built, while Spark binds at use;
   - `unix_timestamp`, `make_timestamp_ntz` and `hour` over NTZ keep their nullability as on `spark.sql`.
