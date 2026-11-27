@@ -27,6 +27,7 @@ Part of FACADE-TESTS-LAYOUT-1 (2026-10-19); rules live in [../map.md](../map.md)
 - [test_ntz_7_verify.py](test_ntz_7_verify.py) — WO NTZ-1 verifier fold: from_utc_timestamp and to_utc_timestamp keep Spark's TIMESTAMP.
 - [test_ntz_8_verify.py](test_ntz_8_verify.py) — WO NTZ-1 verifier fold part 2: zone-shift calls inside DML keep Spark's instant.
 - [test_ntz_9_verify.py](test_ntz_9_verify.py) — WO NTZ-1 re-verify fold: VALUES cells computed in LTZ store the session wall.
+- [test_timestamp_ltz_explicit_cast_1.py](test_timestamp_ltz_explicit_cast_1.py), [oracle](timestamp_ltz_explicit_cast_1_spark_oracle.json), [recorder](_record_timestamp_ltz_explicit_cast_1.py) — TIMESTAMP-LTZ-EXPLICIT-CAST-1 pins (19 Spark cells).
 - [test_ntz_store_doors_1.py](test_ntz_store_doors_1.py) — NTZ-STORE-DOORS-1: every write door stores Spark's TIMESTAMP_NTZ value, partitions included; the six `ow_part` cells pin the partition path's own refusal text (WS2-28).
 - [test_runtime_zone_spellings_1.py](test_runtime_zone_spellings_1.py) — Zone spellings against the batch-17 oracle — SET-ANSI-RUNTIME-1 review follow-up.
 - [test_session_timezone_parity.py](test_session_timezone_parity.py) — Session-timezone differential rows (gap G1) + temporal edges (gap G16) — H-1a split A.
@@ -125,19 +126,19 @@ path expression repointed in the same unit and no other line changed:
 
 | file | change |
 |---|---|
-| `_record_cast_ts_string_1.py` | names its own or a sibling's new path in a docstring or recorded string. |
-| `_record_ice_tsns_coercion_1_pins.py` | names its own or a sibling's new path in a docstring or recorded string; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `_record_cast_ts_string_1.py` | names its own or a sibling's new path. |
+| `_record_ice_tsns_coercion_1_pins.py` | names its own or a sibling's new path; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
 | `_record_ice_tsns_sql_1_oracle.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `_record_ntz_1_spark_table.py` | names its own or a sibling's new path in a docstring or recorded string; reads the root `fixtures/` one level up. |
-| `_record_session_timezone_goldens.py` | names its own or a sibling's new path in a docstring or recorded string. |
-| `_record_sql_epoch_constructors_1.py` | names its own or a sibling's new path in a docstring or recorded string. |
-| `_record_timestamp_cast_goldens.py` | names its own or a sibling's new path in a docstring or recorded string. |
-| `_record_zone_horizon_render_1.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `_record_ntz_1_spark_table.py` | names its own or a sibling's new path; reads the root `fixtures/` one level up. |
+| `_record_session_timezone_goldens.py` | names its own or a sibling's new path. |
+| `_record_sql_epoch_constructors_1.py` | names its own or a sibling's new path. |
+| `_record_timestamp_cast_goldens.py` | names its own or a sibling's new path. |
+| `_record_zone_horizon_render_1.py` | names its own or a sibling's new path. |
 | `test_ice_tsns_coercion_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
 | `test_ntz_1.py` | reads the root `fixtures/` one level up. |
-| `test_session_timezone_parity.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `test_session_timezone_parity.py` | names its own or a sibling's new path. |
 | `test_text_write_timestamp_zone_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_timestamp_cast_parity.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `test_timestamp_cast_parity.py` | names its own or a sibling's new path. |
 | `test_u9_types_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
 
 ## ZONE-ORACLE-1 (2026-10-20)

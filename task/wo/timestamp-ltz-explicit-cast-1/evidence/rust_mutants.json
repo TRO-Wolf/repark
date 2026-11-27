@@ -1,0 +1,44 @@
+[
+ {
+  "mutant": "M1_drop_wrapper_arms",
+  "applied": true,
+  "killed_by": [
+   "timestamp_ns_cast::tests::wrapped_ltz_casts_widen_a_mixed_values_column"
+  ],
+  "result": "test result: FAILED. 18 passed; 1 failed; 0 ignored; 0 measured; 1099 filtered out; finished in 0.00s"
+ },
+ {
+  "mutant": "M2_drop_interval_shift",
+  "applied": true,
+  "killed_by": [
+   "timestamp_ns_cast::tests::named_instants_widen_with_and_without_interval_arithmetic"
+  ],
+  "result": "test result: FAILED. 18 passed; 1 failed; 0 ignored; 0 measured; 1099 filtered out; finished in 0.00s"
+ },
+ {
+  "mutant": "M3_drop_to_timestamp_ltz",
+  "applied": true,
+  "killed_by": [
+   "timestamp_ns_cast::tests::named_instants_widen_with_and_without_interval_arithmetic",
+   "timestamp_ns_cast::tests::ntz_sessions_read_the_target_cast_and_localize_the_walls",
+   "timestamp_ns_cast::tests::wrapped_ltz_casts_widen_a_mixed_values_column"
+  ],
+  "result": "test result: FAILED. 16 passed; 3 failed; 0 ignored; 0 measured; 1099 filtered out; finished in 0.00s"
+ },
+ {
+  "mutant": "M4_drop_target_cast_reading",
+  "applied": true,
+  "killed_by": [
+   "timestamp_ns_cast::tests::ntz_sessions_read_the_target_cast_and_localize_the_walls"
+  ],
+  "result": "test result: FAILED. 18 passed; 1 failed; 0 ignored; 0 measured; 1099 filtered out; finished in 0.00s"
+ },
+ {
+  "mutant": "M5_drop_localization",
+  "applied": true,
+  "killed_by": [
+   "timestamp_ns_cast::tests::ntz_sessions_read_the_target_cast_and_localize_the_walls"
+  ],
+  "result": "test result: FAILED. 18 passed; 1 failed; 0 ignored; 0 measured; 1099 filtered out; finished in 0.00s"
+ }
+]

@@ -1,6 +1,6 @@
 # task/wo/ — work orders, by grade
 The orders an engine builds from. [TEMPLATE.md](TEMPLATE.md) defines the three grades (A self-directed, B guided,
-C clerk) and the skeleton every order follows; the engine band table (which grade an engine runs) is owner-gated, outside the repo. Since 2026-10-01 orders are committed here, not in a `/tmp` directory.
+C clerk) and the skeleton every order follows; the engine band table is owner-gated, outside the repo. Since 2026-10-01 orders are committed here, not in a `/tmp` directory.
 
 The full rows as of 2026-11-20 and 2026-11-27 are in [docs/history/task-wo/](../../docs/history/task-wo/map.md).
 
@@ -73,6 +73,7 @@ The full rows as of 2026-11-20 and 2026-11-27 are in [docs/history/task-wo/](../
 - [parquet-partition-discovery-1/](parquet-partition-discovery-1/) — **PARQUET-PARTITION-DISCOVERY-1 (S1, 2026-11-24):** step 0, 719 cells ([evidence/](parquet-partition-discovery-1/evidence/)).
 - [spark-door-over-accept-syntax-1/](spark-door-over-accept-syntax-1/) — **SPARK-DOOR-OVER-ACCEPT-SYNTAX-1 (S3, 2026-11-24):** step 0, 876 door cells ([evidence/](spark-door-over-accept-syntax-1/evidence/)).
 - [insert-overwrite-const-cast-1-narrow/](insert-overwrite-const-cast-1-narrow/) — **INSERT-OVERWRITE-CONST-CAST-1 (S2):** step 0 and decision table ([evidence/](insert-overwrite-const-cast-1-narrow/evidence/)).
+- [timestamp-ltz-explicit-cast-1/](timestamp-ltz-explicit-cast-1/) — S1.
 - [file-extension-filter-1/](file-extension-filter-1/) — **FILE-EXTENSION-FILTER-1 (S1, 2026-11-25):** step 0 and delta 1 cells ([evidence/](file-extension-filter-1/evidence/)).
 - [csv-json-partition-discovery-1/](csv-json-partition-discovery-1/) — **CSV-JSON-PARTITION-DISCOVERY-1 (S1, 2026-11-26):** 1146-cell Step 0, #1430 corpora replay, pin recorder ([evidence/](csv-json-partition-discovery-1/evidence/)).
 - [try-cast-nonnull-field-1/](try-cast-nonnull-field-1/) — **TRY-CAST-NONNULL-FIELD-1 (S2, 2026-11-24):** 542-cell nullability sweep and delta 1 cells ([evidence/](try-cast-nonnull-field-1/evidence/)).

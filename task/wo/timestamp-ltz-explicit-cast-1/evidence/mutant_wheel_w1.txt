@@ -1,0 +1,3 @@
+mutant W1 (the widening fires in an LTZ session on a wrapped NTZ cell): pins on the mutant wheel
+FAILED python/repark/tests/timestamps/test_timestamp_ltz_explicit_cast_1.py::test_explicit_ltz_values_store_sparks_value[protected_wrapped_ntz_ltz_session]
+1 failed, 18 passed in 0.83s

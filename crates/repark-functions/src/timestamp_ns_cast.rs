@@ -668,23 +668,8 @@ fn widen_values(
     ntz_default: bool,
 ) -> Result<(LogicalPlan, bool)> {
     let wall = DataType::Timestamp(TimeUnit::Microsecond, None);
-    let wall_ns = DataType::Timestamp(TimeUnit::Nanosecond, None);
     let instant = crate::instant_ts::ltz_timestamp_type();
-    let columns: Vec<(usize, bool)> = values
-        .schema
-        .fields()
-        .iter()
-        .enumerate()
-        .filter_map(|(column, field)| {
-            if field.data_type() == &wall {
-                Some((column, false))
-            } else if field.data_type() == &wall_ns {
-                Some((column, true))
-            } else {
-                None
-            }
-        })
-        .collect();
+    let columns = values_evidence::widen_columns(&values.schema, ntz_default);
     if columns.is_empty() {
         return Ok((LogicalPlan::Values(values), false));
     }
@@ -697,7 +682,10 @@ fn widen_values(
         .collect();
     let mut changed = false;
     for (column, declared_ns) in columns {
-        let pres: Vec<Expr> = rows.iter().map(|row| row[column].clone()).collect();
+        let pres: Vec<Expr> = rows
+            .iter()
+            .map(|row| values_evidence::instant_cell_source(&row[column], ntz_default).clone())
+            .collect();
         if !values_column_needs_rewrite(&pres) {
             continue;
         }
@@ -709,18 +697,40 @@ fn widen_values(
         if counts.others > 0 {
             continue;
         }
-        if counts.instants > 0 && counts.walls > 0 && !declared_ns {
+        let declared_instant = fields[column].1.data_type() == &instant;
+        if counts.instants > 0
+            && counts.walls > 0
+            && !declared_ns
+            && (!declared_instant || counts.walls > counts.null_walls)
+        {
+            let keep_wall = ntz_default && !declared_instant;
             for (row, (cell, found)) in rows.iter_mut().zip(cells.into_iter().zip(types)) {
-                row[column] = if found == wall {
+                let widened = if found == wall && ntz_default {
+                    Expr::ScalarFunction(ScalarFunction::new_udf(
+                        crate::instant_ts::to_timestamp_udf(),
+                        vec![cell],
+                    ))
+                } else if found == wall {
                     Expr::Cast(Cast::new(Box::new(cell), instant.clone()))
                 } else {
                     cell
                 };
+                row[column] = if keep_wall {
+                    crate::timestamp_ntz_cast::timestamp_ntz_cast_expr(widened, false)
+                } else {
+                    widened
+                };
             }
-            let field = &mut fields[column].1;
-            *field = Arc::new(field.as_ref().clone().with_data_type(instant.clone()));
+            if !keep_wall {
+                let field = &mut fields[column].1;
+                *field = Arc::new(field.as_ref().clone().with_data_type(instant.clone()));
+            }
             changed = true;
-        } else if counts.instants == 0 && counts.dates > 0 && counts.walls > counts.null_walls {
+        } else if !declared_instant
+            && counts.instants == 0
+            && counts.dates > 0
+            && counts.walls > counts.null_walls
+        {
             let Ok(fresh) = pres
                 .iter()
                 .map(|cell| values_cell_to_naive(cell.clone(), &empty, &wall))
@@ -839,7 +849,8 @@ fn strip_values_wrappers(mut expr: &Expr) -> &Expr {
         match expr {
             Expr::Alias(alias) => expr = alias.expr.as_ref(),
             Expr::ScalarFunction(function)
-                if function.func.name() == crate::decimal_cast::SPARK_NONNULL_NAME
+                if (function.func.name() == crate::decimal_cast::SPARK_NONNULL_NAME
+                    || function.func.name() == crate::decimal_cast::DECIMAL_CAST_NULLABLE_NAME)
                     && function.args.len() == 1 =>
             {
                 expr = &function.args[0];

@@ -1,0 +1,6 @@
+head_v.json cells 108 differ 0 []
+rb_head_v.json cells 72 differ 0 []
+head_w.json cells 329 differ 3 ['America/New_York|LTZ|false|values|v_case|NTZ', 'America/New_York|LTZ|true|values|v_case|NTZ', 'America/New_York|NTZ|false|values|v_case|NTZ']
+rb_head_w.json cells 241 differ 3 ['America/New_York|LTZ|false|values|v_case|NTZ', 'America/New_York|LTZ|true|values|v_case|NTZ', 'America/New_York|NTZ|false|values|v_case|NTZ']
+f1_head.json cells 18 differ 0 []
+TOTAL cells 768 differ 6

@@ -125,28 +125,28 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [STAMP-2-R5P6-2](stamp-2-r5p6-2-card-2026-10-07.md) — **card (2026-10-07, filed, not scheduled):** the remaining r5p6 construction cost after #980 (family 1.135 on the met 1.0812 gate record): native join doors when attribute-exact, shared field-metadata maps, binding only if a hot spot is measured.
 - [ATTR-ID-1 release note](attr-id-1-release-note-2026-10-03.md) — **(2026-10-03, SJ-6):** the user-visible tightening shipping with the ATTR-ID-1 stack, not v1.5.2: the `s.join(d).select(d.v)` 1182 refusal, the `failAmbiguousSelfJoin=false` escape hatch, the free-name `AMBIGUOUS_REFERENCE` tightening and the alias fix; fresh attribute ids on each read of a SQL temp view (ATTR-VIEW-SEMANTICS-1 item (a)); the SM-1, SM-2 and SM-2d folds.
 - [FEXPR-OPERATOR-PAREN-1](fexpr-operator-paren-1-card-2026-10-01.md) — **card FEXPR-OPERATOR-PAREN-1
-  (2026-10-01, HIGH, from the overnight owner-items backlog, #890 re-verify 3 VE4-1):** an `F.expr`
+  (2026-10-01, HIGH, overnight owner-items backlog, #890 re-verify 3 VE4-1):** an `F.expr`
   fragment without spaces around a binary operator is composed without parentheses, so
   `cube(F.expr('a-b')*2)` and `F.expr('(a) - (b)')` give wrong cube/rollup grouping keys
   (RePark -1/-16/3, Spark -14/0/10/4); cause `python/repark/src/repark/spark/functions.py:326-329,338`.
 - [CONCAT-NESTED-MEMORY-1](concat-nested-memory-1-card-2026-10-01.md) — **card
-  CONCAT-NESTED-MEMORY-1 (2026-10-01, HIGH, from the overnight owner-items backlog, #892 lane):**
+  CONCAT-NESTED-MEMORY-1 (2026-10-01, HIGH, overnight owner-items backlog, #892 lane):**
   300 nested `F.concat(e, F.lit('x'))` over a 50-row frame grew a debug process to 90+ GB over
   4.5 h (119 GB in another run); the `/tmp/concat.py` probe is gone (evidence not retained), so the
   repro is rebuilt inline and runs must be memory-capped (`ulimit -v 67108864`, about 240 s).
 - [STRING-TO-DATE-TRUNCATE-1](string-to-date-truncate-1-card-2026-10-01.md) — **card
-  STRING-TO-DATE-TRUNCATE-1 (2026-10-01, from the overnight owner-items backlog, VN6-4 S3):**
+  STRING-TO-DATE-TRUNCATE-1 (2026-10-01, overnight owner-items backlog, VN6-4 S3):**
   `string_to_date` (`crates/repark-functions/src/cast_map/leaf.rs:562-576`) rejects
   `'2024-01-01 junk'` and `'2024-01-01Tjunk'` where Spark truncates to the date; ANSI-off
   `nullif(DATE '2024-01-01', '2024-01-01 junk')` returns the date where Spark returns NULL.
-- [S3A-OVERWRITE-COMMIT-1](s3a-overwrite-commit-1-card-2026-10-01.md) — **card (2026-10-01, from the overnight owner-items backlog, #889 rollback fold
+- [S3A-OVERWRITE-COMMIT-1](s3a-overwrite-commit-1-card-2026-10-01.md) — **card (2026-10-01, overnight owner-items backlog, #889 rollback fold
   on moto):** an s3a `mode("overwrite")` text write deletes the destination's existing objects
   BEFORE the COPY, so a failed overwrite leaves the destination empty; Spark's commit protocol
   keeps the old data until commit; same on `3d4f2030` and on base.
-- [COALESCE-SHUFFLE-FLAKE-1](coalesce-shuffle-flake-1-card-2026-10-01.md) — **card (2026-10-01, from the overnight owner-items backlog, #888 re-verify 7):**
+- [COALESCE-SHUFFLE-FLAKE-1](coalesce-shuffle-flake-1-card-2026-10-01.md) — **card (2026-10-01, overnight owner-items backlog, #888 re-verify 7):**
   an attack3 coalesce/shuffle wrong-result flake, reproduced on base; evidence
   `/tmp/oc-worker/direct/wo/reverify7-nvl/` (evidence location, retained).
-- [JSON-NTZ-NULL-INFERENCE-1](json-ntz-null-inference-1-card-2026-10-01.md) — **card (2026-10-01, from the overnight owner-items backlog, #889 fold):** a
+- [JSON-NTZ-NULL-INFERENCE-1](json-ntz-null-inference-1-card-2026-10-01.md) — **card (2026-10-01, overnight owner-items backlog, #889 fold):** a
   mostly-null NTZ column drops out of JSON read-back key inference, so appending such a frame to
   its own seed fails append validation.
 - [VIEW-ANSI-CAPTURE-1](view-ansi-capture-1-card-2026-10-01.md) — **card (2026-10-01, #888 re-verify 8
@@ -158,33 +158,33 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   `cardinality_nullif.rs`) with a ceiling check on DataFusion's ExprSimplifier/ConstEvaluator
   output; includes the line-67 unknown-versus-NULL defect (`nullif(101,
   coalesce(CAST('0' AS INT), 101))` proves a false equality) as a known instance.
-- [VERBATIM-CTAS-ESCAPE-1](verbatim-ctas-escape-1-card-2026-10-01.md) — **card (2026-10-01, from the overnight owner-items backlog, #890 re-verify
+- [VERBATIM-CTAS-ESCAPE-1](verbatim-ctas-escape-1-card-2026-10-01.md) — **card (2026-10-01, overnight owner-items backlog, #890 re-verify
   VE2-3):** in verbatim mode (`spark.sql.parser.escapedStringLiterals=true`), CTAS and INSERT
   OVERWRITE with a `\'` literal fail with a parse error, while Spark accepts them.
-- [CTE-TEMP-VIEW-PRECEDENCE-1](cte-temp-view-precedence-1-card-2026-10-01.md) — **card (2026-10-01, from the overnight owner-items backlog, one card covering
+- [CTE-TEMP-VIEW-PRECEDENCE-1](cte-temp-view-precedence-1-card-2026-10-01.md) — **card (2026-10-01, overnight owner-items backlog, one card covering
   lines 69, 77 and 81):** CTE-versus-temp-view precedence gives silent wrong data on column-list
   INSERT, static-partition OVERWRITE and CTAS (a CTE should shadow a same-named temp view); the
   facade region walker expands CTE references on the column-list door; VT4-2 (quoted-case CTE name)
   and VT4-3 (`PARTITION (p)` / `PARTITION (p='v')` doors).
 - [merge-update-ts-widening-1-card-2026-10-01.md](merge-update-ts-widening-1-card-2026-10-01.md) — **card
-  MERGE-UPDATE-TS-WIDENING-1 (2026-10-01, from the overnight owner-items backlog, #894 re-verify
+  MERGE-UPDATE-TS-WIDENING-1 (2026-10-01, overnight owner-items backlog, #894 re-verify
   2, pre-existing on base):** MERGE and UPDATE refuse the STRING-plus-TIMESTAMP widening that
   Spark stores.
 - [fexpr-timestamp-zone-1-card-2026-10-01.md](fexpr-timestamp-zone-1-card-2026-10-01.md) — **card
-  FEXPR-TIMESTAMP-ZONE-1 (2026-10-01, from the overnight owner-items backlog, #888 re-verify
+  FEXPR-TIMESTAMP-ZONE-1 (2026-10-01, overnight owner-items backlog, #888 re-verify
   10):** `F.expr` TIMESTAMP literals resolved in UTC; fixed by #1420 (2026-11-24). Open: `F.expr`
-  still types an NTZ cast or `timestampType=TIMESTAMP_NTZ` literal as `timestamp` (S2 proposed).
+  still types an NTZ cast or `timestampType=TIMESTAMP_NTZ` literal as `timestamp` (S2 proposed). Unit 3 of #1432: [timestamp-ltz-explicit-cast-1-card-2026-11-27.md](timestamp-ltz-explicit-cast-1-card-2026-11-27.md) (S1).
 - [ml-cv-fold-test-strength-1-card-2026-10-01.md](ml-cv-fold-test-strength-1-card-2026-10-01.md) — **card
-  ML-CV-FOLD-TEST-STRENGTH-1 (2026-10-01, from the overnight owner-items backlog, VE4-2):**
+  ML-CV-FOLD-TEST-STRENGTH-1 (2026-10-01, overnight owner-items backlog, VE4-2):**
   `test_ml_boost_oracle.py::test_cross_validator_materializes_fold_labels` cannot tell folds that
   ignore the materialized view from folds that use it, because the fold-count query reads the view anyway.
 - [unpivot-perf-flake-1-card-2026-10-01.md](unpivot-perf-flake-1-card-2026-10-01.md) — **card
-  UNPIVOT-PERF-FLAKE-1 (2026-10-01, from the overnight owner-items backlog, CI flake):**
+  UNPIVOT-PERF-FLAKE-1 (2026-10-01, overnight owner-items backlog, CI flake):**
   `python/repark/tests/perf/test_perf_unpivot_1.py::test_stack_is_linear_in_columns` is timing-based
   and fails on shared CI runners with no product cause (hit #891 at exponent 1.224 and #892 at
   1.120); needs a noise-robust bound.
 - [spark-string-ts-functions-1-card-2026-10-01.md](spark-string-ts-functions-1-card-2026-10-01.md) — **card
-  SPARK-STRING-TS-FUNCTIONS-1 (2026-10-01, from the overnight owner-items backlog, #894 fold 4):**
+  SPARK-STRING-TS-FUNCTIONS-1 (2026-10-01, overnight owner-items backlog, #894 fold 4):**
   RePark registers no Spark `string()`, `timestamp()` or `current_user()` function
   (datafusion-spark 54.1 ships none); `SELECT string(1)` raises `UNRESOLVED_ROUTINE` where Spark answers.
 - [string-numeric-parse-perf-1-card-2026-10-01.md](string-numeric-parse-perf-1-card-2026-10-01.md) — **unit
