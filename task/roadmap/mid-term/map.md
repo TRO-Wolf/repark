@@ -170,6 +170,10 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   MERGE-UPDATE-TS-WIDENING-1 (2026-10-01, from the overnight owner-items backlog, #894 re-verify
   2, pre-existing on base):** MERGE and UPDATE refuse the STRING-plus-TIMESTAMP widening that
   Spark stores.
+- [timestamp-ltz-explicit-cast-1-card-2026-11-27.md](timestamp-ltz-explicit-cast-1-card-2026-11-27.md) — **card
+  TIMESTAMP-LTZ-EXPLICIT-CAST-1 (2026-11-27, S1, unit 3 of #1432's split):** explicit LTZ instants
+  (wrapped casts, `to_timestamp_ltz`, `± INTERVAL`) widen a mixed `VALUES` column and, under NTZ, store
+  Spark's value; the NTZ-session explicit cast forms, `NVL` and `UNION ALL` stay unlike (card list).
 - [fexpr-timestamp-zone-1-card-2026-10-01.md](fexpr-timestamp-zone-1-card-2026-10-01.md) — **card
   FEXPR-TIMESTAMP-ZONE-1 (2026-10-01, from the overnight owner-items backlog, #888 re-verify
   10):** `F.expr` TIMESTAMP literals resolved in UTC; fixed by #1420 (2026-11-24). Open: `F.expr`
