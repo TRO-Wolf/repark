@@ -64,6 +64,9 @@ See [../../.claude/map.md](../../.claude/map.md).
   PySpark oracle and classify every divergence (product bug / disposed / stale) before repairing.
   Mandatory first step of a parity-live nightly-red triage; required sweep in any PR that flips a
   Spark-visible default or error contract; periodic pre-release pass.
+- [spark-door-scoreboard/](spark-door-scoreboard/map.md) — replay a package against the recorded
+  Spark 4.1.2 answers of the 2026-11-21 audit corpus, score every cell by class, and compare two
+  scoreboards cell by cell (moved onto Spark, moved off it). The whole-door measurement.
 
 ## I want to...
 
