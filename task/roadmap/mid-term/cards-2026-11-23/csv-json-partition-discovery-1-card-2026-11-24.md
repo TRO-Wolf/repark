@@ -47,7 +47,8 @@ Measured on live Spark 4.1.2 and on main `514281bd4`. #1430 does not change thes
 
 - **A stray file in a partition:** a file without the reader's suffix (`.csv`, `.json`, or the compressed suffix) is
   not read; Spark reads every non-hidden file. Main's listing suffix is kept, as on a flat directory; a follow-up in
-  the shape of FILE-EXTENSION-FILTER-1.
+  the shape of FILE-EXTENSION-FILTER-1. An unreadable root file without the suffix (`root.crc`): Spark opens it and
+  refuses; main and head skip it and answer.
 - **CSV with a user schema** (`spark.read.schema(...).csv(dir)`) and **CSV with `nullValue`:** main's read, so the
   partition columns are missing. The positional text path and the facade's `nullValue` mapping do not yet know the
   partition columns.
@@ -62,7 +63,10 @@ Measured on live Spark 4.1.2 and on main `514281bd4`. #1430 does not change thes
   type (`p=01` as `STRING` is `01`) and raises `INVALID_PARTITION_VALUE` where the cast fails (a timestamp directory
   as `INT`, `abc` as `DOUBLE`). Delta 1 took main's answer: the first round cast the inferred value (`01` became `1`,
   `2` became `2.0`) and refused a `DATE` schema over non-date directories with ANSI off, where Spark and main answer
-  NULL. Spark's rule needs the user schema on the discovery seat.
+  NULL. Spark's rule needs the user schema on the discovery seat. Over an unreadable root file, where main refuses,
+  head answers with that column NULL, because a user schema opens no root file (`D2/json_usp`, 44 cells).
+- **`format("json").load(path, schema=...)`:** the schema reaches the reader as an option, not a user schema, so head
+  refuses with main over an unreadable root file where Spark answers.
 - **CSV `inferSchema=true` in a case-sensitive session:** partition names compare case-insensitively.
 - **Root files beside partitions on Parquet:** `inputFiles` leaves out a file at the root of a partitioned Parquet
   directory (`part-0.parquet` beside `p=1/`), where Spark lists it. CSV and JSON list it since delta 1; Parquet is
@@ -79,13 +83,18 @@ Measured on live Spark 4.1.2 and on main `514281bd4`. #1430 does not change thes
     unreadable root file smaller than the partition files that the local listing returns first. Spark answers; main
     and head refuse. Which file comes first is the directory's order.
   - **`inferSchema` CSV over a 0-byte unreadable root file:** Spark answers (no split, never opened); main and head
-    refuse in the UTF-8 schema pass.
+    refuse in the UTF-8 schema pass. So do an unreadable hidden root file (`_x.csv`, `.x.csv`) and a dangling root
+    symlink, where Spark answers.
+  - **JSON `multiLine` with no schema over a 0-byte unreadable root file:** Spark refuses (its whole-file reader opens
+    0-byte files); main answers without `p`; head answers with `p`.
 - **Unreadable root files Spark opens, beyond delta 2's rule** (N3's waiver, owner 2026-11-26):
   - **Files above 4 MB, CSV without `inferSchema`:** Spark opens the first split of its packing, ordered by
     `min(size, maxSplitBytes)` with `maxSplitBytes = max(4 MB, totalBytes / defaultParallelism)`, so the answer
     depends on the cluster's cores. A 5 MB unreadable root beside a 6 MB partition file: Spark answers at `local[2]`,
     refuses at `local[16]`; main refuses; head answers. A 6 MB root beside a 5 MB file: Spark refuses at both; main
-    refuses; head answers. Cells: `D2B/cores=16/csvh/r5_p6`, `D2B/cores={2,16}/csvh/r6_p5`.
+    refuses; head answers. Cells: `D2B/cores=16/csvh/r5_p6`, `D2B/cores={2,16}/csvh/r6_p5`. When the unreadable root
+    file is the largest file and above 4 MB, beside small partition files, it is the first split at every core count:
+    Spark refuses, main refuses, head answers (the delta 2 re-check's `e4m1` cells).
   - **Two equal largest root files, one unreadable, CSV without `inferSchema`:** Spark opens the one its file-system
     listing returns first (`root-b` before `root-a` on ext4, whatever the creation order), so it refuses or answers by
     directory order; main refuses; head answers. Cells:
