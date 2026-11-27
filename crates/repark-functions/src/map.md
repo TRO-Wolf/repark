@@ -572,7 +572,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **TIMESTAMP_LTZ**). Parsed from the builder map in `SparkExtension::configure`.
   Missing carrier also defaults LTZ. Invalid value
   fail-louds naming `TIMESTAMP_LTZ` and `TIMESTAMP_NTZ`. Ledger:
-  `task/q10-timestamptype-ledger.md`.
+  `task/q10-timestamptype-ledger.md`. Fragment-door readers: [keyword_lower/map.md](../../repark-spark/src/keyword_lower/map.md).
 - `ansi.rs` — **U5 / Q10=A:** Spark-door `spark.sql.ansi.enabled` carrier; `decimal_legacy.rs` (DECIMAL-COMMON-TYPE-1) carries the decimal legacy flag alike
   (`SparkAnsiConfig`, `PREFIX = repark.ansi`, default **TRUE**) + the embedded
   `__repark_ansi_nonzero_divisor__` raise kernel. Parsed from the builder map in

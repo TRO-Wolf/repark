@@ -76,6 +76,7 @@ The full rows as of 2026-11-20 and 2026-11-27 are in [docs/history/task-wo/](../
 - [timestamp-ltz-explicit-cast-1/](timestamp-ltz-explicit-cast-1/) — S1.
 - [file-extension-filter-1/](file-extension-filter-1/) — **FILE-EXTENSION-FILTER-1 (S1, 2026-11-25):** step 0 and delta 1 cells ([evidence/](file-extension-filter-1/evidence/)).
 - [csv-json-partition-discovery-1/](csv-json-partition-discovery-1/) — **CSV-JSON-PARTITION-DISCOVERY-1 (S1, 2026-11-26):** 1146-cell Step 0, #1430 corpora replay, pin recorder ([evidence/](csv-json-partition-discovery-1/evidence/)).
+- [fexpr-timestamp-ntz-1-narrow/](fexpr-timestamp-ntz-1-narrow/) — **FEXPR-TIMESTAMP-NTZ-1 narrow (S1, 2026-11-27):** step 0 counts, the 60 named moved cells and the cells moved beyond them ([evidence/](fexpr-timestamp-ntz-1-narrow/evidence/)).
 - [try-cast-nonnull-field-1/](try-cast-nonnull-field-1/) — **TRY-CAST-NONNULL-FIELD-1 (S2, 2026-11-24):** 542-cell nullability sweep and delta 1 cells ([evidence/](try-cast-nonnull-field-1/evidence/)).
 - [make-dt-interval-overflow-1/](make-dt-interval-overflow-1/) — **MAKE-DT-INTERVAL-OVERFLOW-1 (S1, 2026-11-25):** 1434 `make_dt_interval` cells on five doors and four sources vs Spark 4.1.2 and main, both ANSI modes ([evidence/](make-dt-interval-overflow-1/evidence/summary.md)).
 - [partitionby-null-write-1/](partitionby-null-write-1/) — **PARTITIONBY-NULL-WRITE-1 (S1, 2026-11-25):** 230-cell step 0 ([evidence/](partitionby-null-write-1/evidence/)).

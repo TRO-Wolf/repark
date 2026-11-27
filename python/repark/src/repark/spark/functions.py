@@ -320,7 +320,7 @@ def expr(sql: str) -> Column:
     Projection display matches live PySpark 4.1.2 for bare arithmetic fragments: ``1 + 1`` is
     shown as ``(1 + 1)`` (analyzer paren). Already-parenthesized or non-infix SQL is left as given.
     """
-    from repark.spark.functions_session import _active_verbatim_flag
+    from repark.spark.functions_session import _active_verbatim_flag, _fragment_native_sql
 
     stripped = sql.strip()
     infix_tokens = (" + ", " - ", " * ", " / ", " % ", " <=> ")
@@ -331,7 +331,7 @@ def expr(sql: str) -> Column:
         display = stripped
     verbatim = _active_verbatim_flag()
     return Column(
-        _native.PyColumn.sql(sql, verbatim),
+        _native.PyColumn.sql(_fragment_native_sql(sql), verbatim),
         spark_display=display,
         projection_name=display,
         stable_name=False,

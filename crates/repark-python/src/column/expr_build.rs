@@ -18,8 +18,11 @@ use datafusion::scalar::ScalarValue;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
+mod py_functions;
 use super::PyColumn;
-use crate::fence::fenced;
+#[cfg(test)]
+pub(crate) use py_functions::grouping_id_column;
+pub(crate) use py_functions::register;
 
 /// Preserve Spark's `±Inf` result at an exact zero reciprocal-trig divisor.
 pub(super) fn reciprocal_trig_or_inf(divisor: Expr) -> Expr {
@@ -362,6 +365,11 @@ pub(super) fn build_expr_context() -> datafusion::error::Result<SessionContext> 
     context.register_udf(repark_spark::spark_as_udf().as_ref().clone());
     context.register_udf(repark_spark::suffix_literal_udf().as_ref().clone());
     context.register_udf(
+        repark_functions::decimal_cast::spark_decimal_cast_nullable_udf()
+            .as_ref()
+            .clone(),
+    );
+    context.register_udf(
         repark_spark::values_marker::values_cell_udf()
             .as_ref()
             .clone(),
@@ -578,21 +586,6 @@ impl PyColumn {
             else_expr: None,
         }))
     }
-}
-
-pub(crate) fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
-    module.add_function(wrap_pyfunction!(grouping_id_column, module)?)
-}
-
-#[pyfunction]
-pub(crate) fn grouping_id_column(args: Vec<PyColumn>) -> PyResult<PyColumn> {
-    fenced!("grouping_id_column", {
-        let exprs = args.iter().map(PyColumn::expr).collect::<Vec<_>>();
-        Ok(PyColumn::combine_surveyed(
-            PyColumn::grouping_id_call(exprs)?,
-            &args,
-        ))
-    })
 }
 
 pub(super) fn cast_unsigned_count_to_signed(udaf: &AggregateUDF, arity: usize, expr: Expr) -> Expr {
