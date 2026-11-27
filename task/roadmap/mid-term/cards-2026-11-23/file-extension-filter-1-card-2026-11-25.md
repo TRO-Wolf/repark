@@ -91,6 +91,9 @@ Measured on head, both ANSI modes:
 - **Append schema checks:** RePark refuses an append beside a visible file of another schema (Spark writes it), and
   an append into a directory whose `_temporary/` holds a non-Parquet `part-*.parquet` now succeeds where Spark's
   committer fails and removes the directory (main refused the append).
+- **`file://localhost/<abs>/tbl`:** Spark refuses with `Wrong FS: …, expected: file:///`; RePark reads the rows
+  with `p` on the reader and `format("parquet").load`, as before delta 2 (the delta 2 re-check's C5). The fix, if
+  wanted, is to refuse a `file://` path with a non-empty host on these doors.
 - **Neighbours, not fixed (a different seat, `crates/repark-core/src/read_options.rs:56,86`):** CSV and JSON reads
   drop `b`, `b.CSV`/`b.JSON` and `b.bin` (rows lost silently) and read `_b.csv`, `.b.csv`, `_b.json` and `.b.json`,
   which Spark skips. Text and ORC (their own listing, `text_glob.rs:5`) read `b.txt._COPYING_` and `b.orc._COPYING_`,

@@ -72,9 +72,9 @@ The full list with cell counts is in the evidence summary. The shapes that touch
 
 The widening made `DataFrame.schema` hand out `DayTimeIntervalType`, which RePark's own type parser refused, so
 `StructType.fromJson(json.loads(df.schema.json())) == df.schema` raised where main and Spark answer `True`. Delta 1:
-- the native DDL parser and Python's atomic token parser read Spark's ANSI interval spellings (`interval day to second`,
-  `interval hour to minute`, `interval second`, `interval year to month`), so `fromJson`, `fromDDL` and `simpleString`
-  round trips parse;
+- the native DDL parser and Python's atomic token parser (the latter until delta 3) read Spark's ANSI interval
+  spellings (`interval day to second`, `interval hour to minute`, `interval second`, `interval year to month`), so
+  `fromJson`, `fromDDL` and `simpleString` round trips parse;
 - `Column.cast` and `try_cast` to `DayTimeIntervalType` or its spellings cast a duration or NULL and raise
   `DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION` for any other type (Spark refuses `timestamp` and `double`);
 - `repark_type_to_arrow(DayTimeIntervalType())` is `duration[us]`, as PySpark's `to_arrow_type`;
@@ -137,6 +137,12 @@ Still unlike Spark there:
   the text, so a field named `` `interval day` `` still parses, as on main.
 - Still unlike Spark, as on main: the JSON door parses a complex type string with no interval (`array<int>`,
   `` struct<`interval day`:int> ``), which Spark refuses.
+- Still unlike Spark, as on main (the delta 3 re-check's C1, S3): two DDL paths reach the complex-string parser, which
+  no longer takes intervals, and refuse an interval with main's `ValueError`. They are the Python DDL fallback
+  `_parse_datatype_string_python` (a DDL string with a tab, a newline or an overflowing number) and the duck-typed
+  `simpleString` branch of `StructType.add`. Example: `DataType.fromDDL("id int,\n x interval day to second")`;
+  Spark answers `struct<id:int,x:interval day to second>`. The fix, if wanted, lets the DDL-only paths parse a
+  canonical interval leaf behind a flag the JSON door does not set.
 - Pins: six more tests in `python/repark/tests/types/test_make_dt_interval_ddl_schema.py`.
 
 Up: [map.md](map.md).

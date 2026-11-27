@@ -548,7 +548,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   `to_arrow_batches` / `to_arrow` call for minutes instead of one second, alone once and under contention often (step A:
   3 of 30, 2 of 14, 1 of 10, 0 of 14 whole-suite repeats; stress, 200 processes per pool: 18, 10, 1, 1 at 64M, 72M, 80M,
   96M), falling with the pool and not reaching zero at 72M; Python stacks only, no native stack yet. Step 0 for an Opus 5.5
-  agent: `gdb` stacks and the CPU-versus-blocked state of a stuck process. May be the stall of FACADE-HANG-98-1. No fix proposed.
+  agent: `gdb` stacks and the CPU-versus-blocked state of a stuck process. May be the stall of FACADE-HANG-98-1. No fix proposed; CI stalls logged.
 - [update-subquery-store-1-card-2026-10-15.md](update-subquery-store-1-card-2026-10-15.md) — **card
   UPDATE-SUBQUERY-STORE-1 (2026-10-15, open, not scheduled):** store Spark's value for
   `UPDATE … SET col = (SELECT …)` where the identity path does not run (`WHERE true`, an `IN`
