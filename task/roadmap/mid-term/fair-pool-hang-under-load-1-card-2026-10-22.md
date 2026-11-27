@@ -91,3 +91,8 @@ hang is not established. See the [live-run record](../../wo/ice-integrity-pins-1
 **2026-10-24, 05:33 UTC:** run 5's retry failed both cross-read deadlines; run 6 reached the
 job cap without an acceptance result and received its own single retry. See the
 [live-run record](../../wo/ice-integrity-pins-1/live-runs-2026-10-23.md). No shared cause is established.
+
+**2026-11-27, 01:56 UTC:** on PR #1441's records-only commit (run 45919752481), facade shard 1 stopped printing
+at 99% at 01:18 UTC with no failed or errored test and was cancelled at its 45-minute cap; the other six shards
+passed. The orchestrator re-ran the failed jobs once under the 2026-10-22 rule and kept the stalled log; shard 1
+then passed 10,464 tests in 4 min 50 s. No cause is established.
