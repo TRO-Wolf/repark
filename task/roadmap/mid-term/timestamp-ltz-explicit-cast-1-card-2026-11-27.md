@@ -53,6 +53,17 @@ not localize. New York, Iceberg, read back by Spark:
    Spark gives `timestamp`; `CAST(dbl AS TIMESTAMP_LTZ)` is not nullable where Spark says nullable;
    `to_timestamp_ntz(ltz)` is nullable where Spark says not nullable; `to_timestamp(<format>)` and `to_timestamp(d)`
    nullability under LTZ; `to_timestamp_ltz(<non-null ntz>)` is nullable under LTZ sessions too.
+7. **Built NTZ, three more shapes store wrong values, unchanged from main** (New York, Iceberg, read back by Spark;
+   found by #1445's verifier):
+   - a named instant beside a wrapped NTZ wall, such as `coalesce(TIMESTAMP_NTZ '2024-11-03 01:30:00', NULL)`: into
+     an NTZ column the instant stores its UTC wall (`16:00`, Spark `12:00`), and into an LTZ column the wall stores
+     as UTC (`2024-11-02 21:30`, Spark `01:30`); CTAS, Parquet and `MERGE` too. A wrapped wall answers no evidence;
+   - a named instant beside a `DATE` cell: into NTZ `16:00`; into LTZ, and in `SELECT`, the date is UTC midnight
+     (`2024-03-09 19:00`, Spark `2024-03-10 00:00`);
+   - `current_timestamp()` or `now()` beside an NTZ gap wall: the wall stores `02:30` into NTZ and `2024-03-09 21:30`
+     into LTZ, where Spark stores `03:30`.
+
+   They go to the same follow-up unit as cause 6.
 
 ## Out of scope, byte-identical to main
 
@@ -66,7 +77,8 @@ runtime keep main's answers in the grid).
 
 `python/repark/tests/timestamps/test_timestamp_ltz_explicit_cast_1.py` replays 19 Spark-recorded cells
 (`_record_timestamp_ltz_explicit_cast_1.py`): 11 TARGET (red on main), 7 PROTECTED and 1 Spark-or-refuse.
-`crates/repark-functions/src/timestamp_ns_cast/tests.rs`: one test per cause; each cause's mutant turns one red.
+`crates/repark-functions/src/timestamp_ns_cast/tests.rs`: three tests cover the five causes; each cause's mutant
+turns at least one red (M3 turns three, and M4 and M5 share one).
 
 ## Pointers
 
