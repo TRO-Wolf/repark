@@ -1,5 +1,465 @@
 {
  "cells": {
+  "delta1|F1|ntz_built|false|epoch_1us|iceberg": {
+   "ansi": "false",
+   "class": "TARGET",
+   "expr": "TIMESTAMP '1970-01-01 00:00:00.000001'",
+   "kind": "write",
+   "session": "ntz_built",
+   "sink": "iceberg",
+   "stored": "1970-01-01 00:00:00.000001",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F1|ntz_built|false|epoch_date|iceberg": {
+   "ansi": "false",
+   "class": "TARGET",
+   "expr": "TIMESTAMP '1970-01-01'",
+   "kind": "write",
+   "session": "ntz_built",
+   "sink": "iceberg",
+   "stored": "1970-01-01 00:00:00",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F1|ntz_built|false|i32max_1|iceberg": {
+   "ansi": "false",
+   "class": "TARGET",
+   "expr": "TIMESTAMP '1970-01-01 00:35:47.483648'",
+   "kind": "write",
+   "session": "ntz_built",
+   "sink": "iceberg",
+   "stored": "1970-01-01 00:35:47.483648",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F1|ntz_built|false|i32max|iceberg": {
+   "ansi": "false",
+   "class": "TARGET",
+   "expr": "TIMESTAMP '1970-01-01 00:35:47.483647'",
+   "kind": "write",
+   "session": "ntz_built",
+   "sink": "iceberg",
+   "stored": "1970-01-01 00:35:47.483647",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F1|ntz_built|false|i32min_1|iceberg": {
+   "ansi": "false",
+   "class": "TARGET",
+   "expr": "TIMESTAMP '1969-12-31 23:24:12.516351'",
+   "kind": "write",
+   "session": "ntz_built",
+   "sink": "iceberg",
+   "stored": "1969-12-31 23:24:12.516351",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F1|ntz_built|false|i32min|iceberg": {
+   "ansi": "false",
+   "class": "TARGET",
+   "expr": "TIMESTAMP '1969-12-31 23:24:12.516352'",
+   "kind": "write",
+   "session": "ntz_built",
+   "sink": "iceberg",
+   "stored": "1969-12-31 23:24:12.516352",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F1|ntz_built|true|epoch_1us|iceberg": {
+   "ansi": "true",
+   "class": "TARGET",
+   "expr": "TIMESTAMP '1970-01-01 00:00:00.000001'",
+   "kind": "write",
+   "session": "ntz_built",
+   "sink": "iceberg",
+   "stored": "1970-01-01 00:00:00.000001",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F1|ntz_built|true|epoch_date|iceberg": {
+   "ansi": "true",
+   "class": "TARGET",
+   "expr": "TIMESTAMP '1970-01-01'",
+   "kind": "write",
+   "session": "ntz_built",
+   "sink": "iceberg",
+   "stored": "1970-01-01 00:00:00",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F1|ntz_built|true|i32max_1|iceberg": {
+   "ansi": "true",
+   "class": "TARGET",
+   "expr": "TIMESTAMP '1970-01-01 00:35:47.483648'",
+   "kind": "write",
+   "session": "ntz_built",
+   "sink": "iceberg",
+   "stored": "1970-01-01 00:35:47.483648",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F1|ntz_built|true|i32max|iceberg": {
+   "ansi": "true",
+   "class": "TARGET",
+   "expr": "TIMESTAMP '1970-01-01 00:35:47.483647'",
+   "kind": "write",
+   "session": "ntz_built",
+   "sink": "iceberg",
+   "stored": "1970-01-01 00:35:47.483647",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F1|ntz_built|true|i32min_1|iceberg": {
+   "ansi": "true",
+   "class": "TARGET",
+   "expr": "TIMESTAMP '1969-12-31 23:24:12.516351'",
+   "kind": "write",
+   "session": "ntz_built",
+   "sink": "iceberg",
+   "stored": "1969-12-31 23:24:12.516351",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F1|ntz_built|true|i32min|iceberg": {
+   "ansi": "true",
+   "class": "TARGET",
+   "expr": "TIMESTAMP '1969-12-31 23:24:12.516352'",
+   "kind": "write",
+   "session": "ntz_built",
+   "sink": "iceberg",
+   "stored": "1969-12-31 23:24:12.516352",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F1|rt_after|false|epoch_1us|iceberg": {
+   "ansi": "false",
+   "class": "PROTECTED",
+   "expr": "TIMESTAMP '1970-01-01 00:00:00.000001'",
+   "kind": "write",
+   "session": "rt_after",
+   "sink": "iceberg",
+   "stored": "1970-01-01 00:00:00.000001",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F1|rt_after|false|epoch_date|iceberg": {
+   "ansi": "false",
+   "class": "PROTECTED",
+   "expr": "TIMESTAMP '1970-01-01'",
+   "kind": "write",
+   "session": "rt_after",
+   "sink": "iceberg",
+   "stored": "1970-01-01 00:00:00",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F1|rt_after|false|i32max_1|iceberg": {
+   "ansi": "false",
+   "class": "PROTECTED",
+   "expr": "TIMESTAMP '1970-01-01 00:35:47.483648'",
+   "kind": "write",
+   "session": "rt_after",
+   "sink": "iceberg",
+   "stored": "1970-01-01 00:35:47.483648",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F1|rt_after|false|i32max|iceberg": {
+   "ansi": "false",
+   "class": "PROTECTED",
+   "expr": "TIMESTAMP '1970-01-01 00:35:47.483647'",
+   "kind": "write",
+   "session": "rt_after",
+   "sink": "iceberg",
+   "stored": "1970-01-01 00:35:47.483647",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F1|rt_after|false|i32min_1|iceberg": {
+   "ansi": "false",
+   "class": "PROTECTED",
+   "expr": "TIMESTAMP '1969-12-31 23:24:12.516351'",
+   "kind": "write",
+   "session": "rt_after",
+   "sink": "iceberg",
+   "stored": "1969-12-31 23:24:12.516351",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F1|rt_after|false|i32min|iceberg": {
+   "ansi": "false",
+   "class": "PROTECTED",
+   "expr": "TIMESTAMP '1969-12-31 23:24:12.516352'",
+   "kind": "write",
+   "session": "rt_after",
+   "sink": "iceberg",
+   "stored": "1969-12-31 23:24:12.516352",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F1|rt_after|true|epoch_1us|iceberg": {
+   "ansi": "true",
+   "class": "PROTECTED",
+   "expr": "TIMESTAMP '1970-01-01 00:00:00.000001'",
+   "kind": "write",
+   "session": "rt_after",
+   "sink": "iceberg",
+   "stored": "1970-01-01 00:00:00.000001",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F1|rt_after|true|epoch_date|iceberg": {
+   "ansi": "true",
+   "class": "PROTECTED",
+   "expr": "TIMESTAMP '1970-01-01'",
+   "kind": "write",
+   "session": "rt_after",
+   "sink": "iceberg",
+   "stored": "1970-01-01 00:00:00",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F1|rt_after|true|i32max_1|iceberg": {
+   "ansi": "true",
+   "class": "PROTECTED",
+   "expr": "TIMESTAMP '1970-01-01 00:35:47.483648'",
+   "kind": "write",
+   "session": "rt_after",
+   "sink": "iceberg",
+   "stored": "1970-01-01 00:35:47.483648",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F1|rt_after|true|i32max|iceberg": {
+   "ansi": "true",
+   "class": "PROTECTED",
+   "expr": "TIMESTAMP '1970-01-01 00:35:47.483647'",
+   "kind": "write",
+   "session": "rt_after",
+   "sink": "iceberg",
+   "stored": "1970-01-01 00:35:47.483647",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F1|rt_after|true|i32min_1|iceberg": {
+   "ansi": "true",
+   "class": "PROTECTED",
+   "expr": "TIMESTAMP '1969-12-31 23:24:12.516351'",
+   "kind": "write",
+   "session": "rt_after",
+   "sink": "iceberg",
+   "stored": "1969-12-31 23:24:12.516351",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F1|rt_after|true|i32min|iceberg": {
+   "ansi": "true",
+   "class": "PROTECTED",
+   "expr": "TIMESTAMP '1969-12-31 23:24:12.516352'",
+   "kind": "write",
+   "session": "rt_after",
+   "sink": "iceberg",
+   "stored": "1969-12-31 23:24:12.516352",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F2|ltz_built|false|colon_y1600|iceberg": {
+   "ansi": "false",
+   "class": "PROTECTED",
+   "expr": "'1600-06-15 12:00:00'::timestamp_ntz",
+   "kind": "write",
+   "session": "ltz_built",
+   "sink": "iceberg",
+   "stored": "1600-06-15 12:00:00",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F2|ltz_built|false|hhmm|iceberg": {
+   "ansi": "false",
+   "class": "PROTECTED",
+   "expr": "CAST('2024-01-01 02:00' AS TIMESTAMP_NTZ)",
+   "kind": "write",
+   "session": "ltz_built",
+   "sink": "iceberg",
+   "stored": "2024-01-01 02:00:00",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F2|ltz_built|false|padded|iceberg": {
+   "ansi": "false",
+   "class": "PROTECTED",
+   "expr": "CAST(' 2024-01-01 02:00:00 ' AS TIMESTAMP_NTZ)",
+   "kind": "write",
+   "session": "ltz_built",
+   "sink": "iceberg",
+   "stored": "2024-01-01 02:00:00",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F2|ltz_built|false|single_digit|iceberg": {
+   "ansi": "false",
+   "class": "PROTECTED",
+   "expr": "CAST('2024-1-1 2:0:0' AS TIMESTAMP_NTZ)",
+   "kind": "write",
+   "session": "ltz_built",
+   "sink": "iceberg",
+   "stored": "2024-01-01 02:00:00",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F2|ltz_built|false|try_y1|iceberg": {
+   "ansi": "false",
+   "class": "PROTECTED",
+   "expr": "TRY_CAST('0001-01-01 00:00:00.000001' AS TIMESTAMP_NTZ)",
+   "kind": "write",
+   "session": "ltz_built",
+   "sink": "iceberg",
+   "stored": "0001-01-01 00:00:00.000001",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F2|ltz_built|false|y1000|iceberg": {
+   "ansi": "false",
+   "class": "PROTECTED",
+   "expr": "CAST('1000-06-15 12:00:00.123456' AS TIMESTAMP_NTZ)",
+   "kind": "write",
+   "session": "ltz_built",
+   "sink": "iceberg",
+   "stored": "1000-06-15 12:00:00.123456",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F2|ltz_built|false|y1582|iceberg": {
+   "ansi": "false",
+   "class": "PROTECTED",
+   "expr": "CAST('1582-06-15 12:00:00' AS TIMESTAMP_NTZ)",
+   "kind": "write",
+   "session": "ltz_built",
+   "sink": "iceberg",
+   "stored": "1582-06-15 12:00:00",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F2|ltz_built|false|y1677|iceberg": {
+   "ansi": "false",
+   "class": "PROTECTED",
+   "expr": "CAST('1677-06-15 12:00:00' AS TIMESTAMP_NTZ)",
+   "kind": "write",
+   "session": "ltz_built",
+   "sink": "iceberg",
+   "stored": "1677-06-15 12:00:00",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F2|ltz_built|false|y1|iceberg": {
+   "ansi": "false",
+   "class": "PROTECTED",
+   "expr": "CAST('0001-01-01 00:00:00.000001' AS TIMESTAMP_NTZ)",
+   "kind": "write",
+   "session": "ltz_built",
+   "sink": "iceberg",
+   "stored": "0001-01-01 00:00:00.000001",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F2|ltz_built|false|y2262|iceberg": {
+   "ansi": "false",
+   "class": "PROTECTED",
+   "expr": "CAST('2262-06-15 12:00:00' AS TIMESTAMP_NTZ)",
+   "kind": "write",
+   "session": "ltz_built",
+   "sink": "iceberg",
+   "stored": "2262-06-15 12:00:00",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F2|ltz_built|false|y9999|iceberg": {
+   "ansi": "false",
+   "class": "PROTECTED",
+   "expr": "CAST('9999-12-31 23:59:59' AS TIMESTAMP_NTZ)",
+   "kind": "write",
+   "session": "ltz_built",
+   "sink": "iceberg",
+   "stored": "9999-12-31 23:59:59",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F2|ltz_built|true|colon_y1600|iceberg": {
+   "ansi": "true",
+   "class": "PROTECTED",
+   "expr": "'1600-06-15 12:00:00'::timestamp_ntz",
+   "kind": "write",
+   "session": "ltz_built",
+   "sink": "iceberg",
+   "stored": "1600-06-15 12:00:00",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F2|ltz_built|true|hhmm|iceberg": {
+   "ansi": "true",
+   "class": "PROTECTED",
+   "expr": "CAST('2024-01-01 02:00' AS TIMESTAMP_NTZ)",
+   "kind": "write",
+   "session": "ltz_built",
+   "sink": "iceberg",
+   "stored": "2024-01-01 02:00:00",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F2|ltz_built|true|padded|iceberg": {
+   "ansi": "true",
+   "class": "PROTECTED",
+   "expr": "CAST(' 2024-01-01 02:00:00 ' AS TIMESTAMP_NTZ)",
+   "kind": "write",
+   "session": "ltz_built",
+   "sink": "iceberg",
+   "stored": "2024-01-01 02:00:00",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F2|ltz_built|true|single_digit|iceberg": {
+   "ansi": "true",
+   "class": "PROTECTED",
+   "expr": "CAST('2024-1-1 2:0:0' AS TIMESTAMP_NTZ)",
+   "kind": "write",
+   "session": "ltz_built",
+   "sink": "iceberg",
+   "stored": "2024-01-01 02:00:00",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F2|ltz_built|true|try_y1|iceberg": {
+   "ansi": "true",
+   "class": "PROTECTED",
+   "expr": "TRY_CAST('0001-01-01 00:00:00.000001' AS TIMESTAMP_NTZ)",
+   "kind": "write",
+   "session": "ltz_built",
+   "sink": "iceberg",
+   "stored": "0001-01-01 00:00:00.000001",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F2|ltz_built|true|y1000|iceberg": {
+   "ansi": "true",
+   "class": "PROTECTED",
+   "expr": "CAST('1000-06-15 12:00:00.123456' AS TIMESTAMP_NTZ)",
+   "kind": "write",
+   "session": "ltz_built",
+   "sink": "iceberg",
+   "stored": "1000-06-15 12:00:00.123456",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F2|ltz_built|true|y1582|iceberg": {
+   "ansi": "true",
+   "class": "PROTECTED",
+   "expr": "CAST('1582-06-15 12:00:00' AS TIMESTAMP_NTZ)",
+   "kind": "write",
+   "session": "ltz_built",
+   "sink": "iceberg",
+   "stored": "1582-06-15 12:00:00",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F2|ltz_built|true|y1677|iceberg": {
+   "ansi": "true",
+   "class": "PROTECTED",
+   "expr": "CAST('1677-06-15 12:00:00' AS TIMESTAMP_NTZ)",
+   "kind": "write",
+   "session": "ltz_built",
+   "sink": "iceberg",
+   "stored": "1677-06-15 12:00:00",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F2|ltz_built|true|y1|iceberg": {
+   "ansi": "true",
+   "class": "PROTECTED",
+   "expr": "CAST('0001-01-01 00:00:00.000001' AS TIMESTAMP_NTZ)",
+   "kind": "write",
+   "session": "ltz_built",
+   "sink": "iceberg",
+   "stored": "0001-01-01 00:00:00.000001",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F2|ltz_built|true|y2262|iceberg": {
+   "ansi": "true",
+   "class": "PROTECTED",
+   "expr": "CAST('2262-06-15 12:00:00' AS TIMESTAMP_NTZ)",
+   "kind": "write",
+   "session": "ltz_built",
+   "sink": "iceberg",
+   "stored": "2262-06-15 12:00:00",
+   "type": "timestamp_ntz"
+  },
+  "delta1|F2|ltz_built|true|y9999|iceberg": {
+   "ansi": "true",
+   "class": "PROTECTED",
+   "expr": "CAST('9999-12-31 23:59:59' AS TIMESTAMP_NTZ)",
+   "kind": "write",
+   "session": "ltz_built",
+   "sink": "iceberg",
+   "stored": "9999-12-31 23:59:59",
+   "type": "timestamp_ntz"
+  },
   "extra|ltz_built|false|CAST('bad' AS TIMESTAMP_NTZ)": {
    "ansi": "false",
    "class": "TARGET",
