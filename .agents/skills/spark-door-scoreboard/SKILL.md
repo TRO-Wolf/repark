@@ -343,17 +343,23 @@ surface, a scoreboard that stays flat while known families close):
 - **Spark driver memory.** Each driver is `local[1]` with a 2 GiB heap. Keep `SCOREBOARD_SPARK_DRIVERS`
   within the box's JVM budget and the memory floor above a driver's need; a starved JVM fails a batch
   rather than a cell.
-- **Cores shared with other work.** Give `--cpus` only granted cores. CPU contention does not change
-  answers, but some stored writes differ in `physical_write.part_files` between builds; the classifier
-  does not read `physical_write`, so a part-count change is an observation, never a class change.
+- **Cores shared with other work.** Give `--cpus` only granted cores. Contention and the core count
+  did not change any answer on 2026-11-27. Five stored writes (`aggs-api.grouping.plain.*`,
+  `frames-bounds.stat.crosstab.*`, `frames-followup.stat.crosstab.1`) answer other
+  `physical_write.part_files` counts than the audit recorded, on every build and core count tried; the
+  classifier does not read `physical_write`, so a part-count change is an observation, never a class
+  change. Six `card-writes` Spark answers were recorded before the INT96 microsecond cold read, so a
+  fresh recording differs from them in the physical schema text only.
 - **A facade that does not match its extension.** The engine prints `repark._native.__file__`, fails
   when the binary is not under the given package, and records the binary's SHA-256 in every answer and
   in `meta.native_sha256`. Build a wheel and install it; a `.so` copied into an older facade answers
   from neither revision.
 - **Build profile.** The `ci` profile inherits the dev profile's Rust overflow checks; `release` and
-  `release-fast` wrap. On 12 `nested-pairs` cells (`pair.array.on.timestamp.date` and its siblings) the
-  audit's `ci` package refused with a caught overflow where a release build answers a wrapped
-  timestamp. Compare two scoreboards built at the same profile, and score what users run (release).
+  `release-fast` wrap. On 12 `nested-pairs` cells (`pair.array.on.timestamp.date` and its siblings) a
+  `ci` build of `dac2af61` refuses with a caught overflow and a `release-fast` build of the same
+  revision answers a wrapped timestamp (measured 2026-11-27). The 2026-11-21 baseline is a `ci` build;
+  later scoreboards are `release-fast`. Compare two scoreboards built at the same profile where you can,
+  and score what users run (release).
 - **Never `-I`.** It ignores `PYTHONPATH`, so the engine imports an installed RePark instead of the
   package, and the harness instead of this checkout.
 - **Never overwrite recorded answers.** Destinations are always new; `ingest --replace` re-records a

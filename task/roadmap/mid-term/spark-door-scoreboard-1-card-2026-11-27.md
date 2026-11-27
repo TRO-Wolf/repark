@@ -28,13 +28,15 @@ release-fast package, three times (two batch sizes): 0 flaky cells. The
 [comparison](../../../python/repark-parity/src/repark_parity/scoreboard/data/reports/2026-11-27-dac2af61-to-9df269ac.md):
 454 cells moved onto Spark, **4 moved off**, 62 changed but still unlike.
 
-**Reproduction check.** The audit's revision was built (`release-fast`) and the whole comparable corpus replayed
-through the port: 16,628 of 16,645 cells reproduce the audit's recorded RePark answers field for field (outcome,
-value, schema, error class, SQLSTATE, stored write). Five differ only in `physical_write.part_files`, which the
-classifier does not read; twelve `nested-pairs` cells differ because the audit built with the `ci` profile, whose
-Rust overflow checks turn a timestamp overflow into a caught refusal where a release build wraps. Replaying the
-audit revision at release-fast gives 0 moved and exactly those 12 changed against the baseline, so 12 of the 62
-"changed" are the profile, not a code change. The controls lane passes `--strict` on the audit package.
+**Reproduction check.** The audit's revision was rebuilt twice and the whole comparable corpus replayed through
+the port on each build. With the audit's own `ci` profile, 16,640 of 16,645 cells reproduce its recorded RePark
+answers field for field (outcome, value, schema, error class, SQLSTATE, stored write), and every class reproduces.
+The other five differ only in `physical_write.part_files` (the same counts on every build and core count tried;
+cause not established), which the classifier does not read. With `release-fast`, twelve more `nested-pairs`
+cells differ: the `ci` profile keeps Rust overflow checks, so a timestamp overflow is a caught refusal there and a
+wrapped value in a release build. So 12 of the 62 "changed" cells in the comparison are the build profile, not a
+code change; against a `release-fast` replay of `dac2af61`, main moved 454 on, 4 off and changed 50. The controls
+lane passes `--strict` on the audit package.
 
 ## Moved off Spark (each needs its own card; none fixed here)
 

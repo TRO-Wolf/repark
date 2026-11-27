@@ -41,7 +41,7 @@ Committed: [the 2026-11-21 baseline](scoreboards/2026-11-21-dac2af61.md),
   and one excluded `value` (`setting.read.spark.sql.warehouse.dir`) held machine paths. The classifier
   never reads `message`, and the excluded cell is not compared, so each path prefix became
   `<spark-site-packages>/`, `<run-tmp>/` or `<tmp>/`. No cell definition held a path. Two
-  `refute-time.dates-13.prior-card-ny-*` cells set the New York zone as a test parameter; kept.
+  `refute-time.dates-13.prior-card-*` cells set a fourth IANA zone as a test parameter; kept.
 - **Generators dropped.** Each lane's `generate.py` imported audit-root paths and carried module
   docstrings, so none passes the repository gates. Their source revisions are below.
 
