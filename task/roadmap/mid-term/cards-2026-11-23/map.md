@@ -36,20 +36,20 @@ awaits the owner's rating. Each card row records its own status.
 - [INSERT-OVERWRITE-CONST-CAST-1](insert-overwrite-const-cast-1-card-2026-11-24.md) (S2) — **card:** an empty
   `INSERT OVERWRITE` with an invalid constant cast wipes the table where Spark refuses. Narrow fix built 2026-11-25
   (replaces parked #1431); delta 2 (2026-11-26) stands the guard down while any cache is live in the process; the card
-  lists what stays unlike Spark, including a collected cache that Spark releases by plan.
+  lists what stays unlike Spark, including a collected cache that Spark releases by plan. Merged as #1440 (2026-11-26).
 - [SPARK-DOOR-OVER-ACCEPT-SYNTAX-1](spark-door-over-accept-syntax-1-card-2026-11-24.md) (S3) — **card:** `1e2foo`,
   `named_struct(…).a` with a bad sibling, `* EXCLUDE` and `DELETE` without `FROM` answer where Spark refuses.
-  **Fixed on branch** for four seats (2026-11-24, PR #1434); the struct seat stays as on main (delta 1).
+  **Merged** as #1434 (2026-11-25) for four seats; the struct seat stays as on main (delta 1).
 - [CSV-JSON-PARTITION-DISCOVERY-1](csv-json-partition-discovery-1-card-2026-11-24.md) (S1) — **card:** CSV and JSON
-  reads of a `key=value/` directory drop the partition columns. Fixed on its branch (2026-11-26), with the list of
+  reads of a `key=value/` directory drop the partition columns. Merged as #1441 (2026-11-27), with the list of
   what is still unlike Spark; delta 2 refuses an unreadable root file where Spark opens it (N3) and names the
   follow-up CSV-JSON-ROOT-FILE-SCHEMA-1.
 - [MAKE-DT-INTERVAL-OVERFLOW-1](make-dt-interval-overflow-1-card-2026-11-25.md) (S1) — **card:** `make_dt_interval`
   answers NULL on overflow, where Spark raises or answers, and types its result as a string. Built on
-  `fix/make-dt-interval-overflow-1` through delta 3, not merged.
-- [FILE-EXTENSION-FILTER-1](file-extension-filter-1-card-2026-11-25.md) (S1) — **built** on
-  `fix/file-extension-filter-1`, not merged: Parquet path reads list every name Spark lists and skip Spark's hidden
-  names; delta 1: append validation skips the same names; integrated with #1430's discovery listing.
+  `fix/make-dt-interval-overflow-1` through delta 3; merged as #1435 (2026-11-26).
+- [FILE-EXTENSION-FILTER-1](file-extension-filter-1-card-2026-11-25.md) (S1) — **merged** as #1437 (2026-11-25):
+  Parquet path reads list every name Spark lists and skip Spark's hidden names; delta 1: append validation skips the
+  same names; integrated with #1430's discovery listing.
 - [CAST-STRING-GRAMMAR-1](cast-string-grammar-1-card-2026-11-25.md) (S2 proposed) — **card:** string casts to `DATE`,
   `TIMESTAMP_NTZ`, `DOUBLE` and `DECIMAL` refuse text Spark accepts.
 - [TRY-CAST-PUSHED-PROJECTION-1](try-cast-pushed-projection-1-card-2026-11-25.md) (S2 proposed) — **card:** a shared
@@ -62,6 +62,6 @@ awaits the owner's rating. Each card row records its own status.
   ANSI, a Parquet read raises an error from a row its `WHERE` removes.
 - [PARTITIONBY-NULL-WRITE-1](partitionby-null-write-1-card-2026-11-25.md) (S1, owner 2026-11-25) — **card:** a
   partitioned Parquet, CSV or JSON path write stored a NULL partition as the type's default (`p=0`); fixed on its
-  branch, PR open; #1430 is parked on it.
+  branch and merged as #1438 (2026-11-25), before #1430.
 
 Up: [../map.md](../map.md).
