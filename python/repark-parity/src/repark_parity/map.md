@@ -16,6 +16,8 @@ The `repark_parity` package — the parity comparison core. See [../../map.md](.
   path accepts nested list/struct/map columns via total canonical row keys + map entry
   normalization; flat schemas keep the historical `sort_by` path (no golden re-record).
 - `sql.py` — dependency-free, quote-only SQL escaping for standalone parity benchmarks.
+- [scoreboard/](scoreboard/map.md) — the Spark-door scoreboard harness (2026-11-27): replay a package
+  against the recorded Spark 4.1.2 answers of the 2026-11-21 audit corpus, score and compare.
 - `__init__.py` — public exports, plus a checkout-only `__path__` graft: when a `fixtures/`
   directory exists beside `src/`, it joins the package path so `repark_parity.torture`
   resolves to [../../fixtures/torture/map.md](../../fixtures/torture/map.md). The
