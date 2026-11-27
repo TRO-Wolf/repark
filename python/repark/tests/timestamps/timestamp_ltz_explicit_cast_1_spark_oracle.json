@@ -38,6 +38,25 @@
    "timestamp_type": "TIMESTAMP_LTZ",
    "zone": "America/New_York"
   },
+  "protected_fn_utc_ntz_session": {
+   "kind": "PROTECTED",
+   "source": "VALUES (0, to_timestamp_ltz('2024-06-01 12:00:00')), (1, TIMESTAMP_NTZ '2024-03-10 02:30:00')",
+   "spark": [
+    [
+     0,
+     "timestamp_ntz",
+     "2024-06-01 12:00:00"
+    ],
+    [
+     1,
+     "timestamp_ntz",
+     "2024-03-10 02:30:00"
+    ]
+   ],
+   "target": "NTZ",
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "UTC"
+  },
   "protected_kernel_cancel_coalesce": {
    "kind": "PROTECTED",
    "source": "VALUES (0, COALESCE(CAST('2024-06-01 12:00:00' AS TIMESTAMP_LTZ), NULL)), (1, CAST('2024-03-10 02:30:00' AS TIMESTAMP_NTZ))",
@@ -74,6 +93,44 @@
    ],
    "target": "NTZ",
    "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "America/New_York"
+  },
+  "protected_ntz_only_ntz_session": {
+   "kind": "PROTECTED",
+   "source": "VALUES (0, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (1, TIMESTAMP_NTZ '2024-06-01 09:00:00')",
+   "spark": [
+    [
+     0,
+     "timestamp_ntz",
+     "2024-03-10 02:30:00"
+    ],
+    [
+     1,
+     "timestamp_ntz",
+     "2024-06-01 09:00:00"
+    ]
+   ],
+   "target": "NTZ",
+   "timestamp_type": "TIMESTAMP_NTZ",
+   "zone": "America/New_York"
+  },
+  "protected_wrapped_ntz_ltz_session": {
+   "kind": "PROTECTED",
+   "source": "VALUES (0, COALESCE(TIMESTAMP_NTZ '2024-03-10 02:30:00', NULL)), (1, TIMESTAMP_NTZ '2024-03-10 02:30:00')",
+   "spark": [
+    [
+     0,
+     "timestamp_ntz",
+     "2024-03-10 02:30:00"
+    ],
+    [
+     1,
+     "timestamp_ntz",
+     "2024-03-10 02:30:00"
+    ]
+   ],
+   "target": "NTZ",
+   "timestamp_type": "TIMESTAMP_LTZ",
    "zone": "America/New_York"
   },
   "refuse_or_spark_cast_ntz_session_into_ltz": {

@@ -697,7 +697,10 @@ fn widen_values(
         .collect();
     let mut changed = false;
     for (column, declared_ns) in columns {
-        let pres: Vec<Expr> = rows.iter().map(|row| row[column].clone()).collect();
+        let pres: Vec<Expr> = rows
+            .iter()
+            .map(|row| values_evidence::instant_cell_source(&row[column], ntz_default).clone())
+            .collect();
         if !values_column_needs_rewrite(&pres) {
             continue;
         }
@@ -802,7 +805,7 @@ fn classify_values_column(
 ) -> Option<(ValuesColumnCounts, Vec<Expr>, Vec<DataType>)> {
     let cells = pres
         .iter()
-        .map(|cell| rewrite(values_evidence::instant_cell_source(cell, ntz_default).clone()))
+        .map(|cell| rewrite(cell.clone()))
         .collect::<Result<Vec<Expr>>>()
         .ok()?;
     let types = cells

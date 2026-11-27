@@ -51,6 +51,13 @@ CELLS = {
     "protected_kernel_cancel_coalesce": (
         "PROTECTED", NY, "TIMESTAMP_LTZ", "NTZ", f"VALUES (0, COALESCE({LTZ_CAST}, NULL)), (1, {NTZ_CAST})",
     ),
+    "protected_wrapped_ntz_ltz_session": (
+        "PROTECTED", NY, "TIMESTAMP_LTZ", "NTZ", f"VALUES (0, COALESCE({NTZ_LIT}, NULL)), (1, {NTZ_LIT})",
+    ),
+    "protected_ntz_only_ntz_session": ("PROTECTED", NY, "TIMESTAMP_NTZ", "NTZ", f"VALUES (0, {NTZ_LIT}), (1, TIMESTAMP_NTZ {PLAIN})"),
+    "protected_fn_utc_ntz_session": (
+        "PROTECTED", "UTC", "TIMESTAMP_NTZ", "NTZ", f"VALUES (0, {FN}), (1, {NTZ_LIT})",
+    ),
     "refuse_or_spark_cast_ntz_session_into_ltz": (
         "TARGET_OR_REFUSE", NY, "TIMESTAMP_NTZ", "LTZ", f"VALUES (0, {LTZ_CAST}), (1, {NTZ_LIT})",
     ),

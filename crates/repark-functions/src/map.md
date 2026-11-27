@@ -362,9 +362,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   NULL struct to NULL); non-struct arguments refuse loud. Remediation 16a
   reuses the batched timestamp kernels; behavior unchanged.
 - `timestamp_ns_cast.rs` — **TIMESTAMP-LTZ-EXPLICIT-CAST-1 (2026-11-27):** under `timestampType=TIMESTAMP_NTZ`
-  the `VALUES` widening reads a named-instant cell under the insert's own naive target cast as the instant
-  (`instant_cell_source`), widens a column declared as an instant as well as a naive one, and localizes each
-  wall cell with `to_timestamp` instead of a plain `Cast`, which the NTZ rewrite turns back into a wall.
+  `widen_values` reads a named-instant cell under the insert's own naive target cast as the instant
+  (`values_evidence::instant_cell_source`), widens a column declared as an instant as well as a naive one,
+  and localizes each wall cell with `to_timestamp` instead of a plain `Cast`, which the NTZ rewrite turns
+  back into a wall. A naive-declared column stays naive there: each widened cell is stored through
+  `__repark_cast_timestamp_ntz__` (the session wall), because under NTZ the analyzer does not retarget the
+  DML store cast and an instant column into a `TIMESTAMP_NTZ` table failed at execution.
   `strip_values_wrappers` also peels `__repark_decimal_cast_nullable__`. Details in
   [timestamp_ns_cast/map.md](timestamp_ns_cast/map.md).
 - `timestamp_ns_cast.rs`, `registration.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** the narrowing kernel name re-exports from `repark_common::udf_names`, and `narrow_timestamp_ns_udf()` is added beside the wall kernel (WS2-13). `registration.rs` registers the zone seam (`zone_seam_udf(false)`, WS2-12) and the narrowing kernel by name on the Spark session builder.
