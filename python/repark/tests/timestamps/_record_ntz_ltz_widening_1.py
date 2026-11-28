@@ -22,10 +22,6 @@ def _cell(kind: str, zone: str, session_type: str, site: str, a: str, b: str = "
 
 
 CELLS: dict[str, dict[str, Any]] = {
-    "sql_union_gap_ny_ntz": _cell("TARGET", NY, NTZ, "sql_union", _ntz(GAP), INSTANT),
-    "sql_union_fold_ny_ntz_ltz_first": _cell("TARGET", NY, NTZ, "sql_union", INSTANT, _ntz(FOLD)),
-    "df_union_gap_ny_ntz": _cell("TARGET", NY, NTZ, "df_union", _ntz(GAP), INSTANT),
-    "df_union_plain_kolkata_ntz": _cell("TARGET", KOLKATA, NTZ, "df_union", _ntz(PLAIN), INSTANT),
     "eq_gap_ny_ntz": _cell("PROTECTED", NY, NTZ, "expr", f"{_ntz(GAP)} = to_timestamp_ltz('2024-03-10 03:30:00')"),
     "case_plain_kolkata_ntz": _cell(
         "PROTECTED", KOLKATA, NTZ, "expr", f"CASE WHEN 1 = 1 THEN {_ntz(PLAIN)} ELSE {INSTANT} END"

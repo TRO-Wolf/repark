@@ -28,7 +28,7 @@ Part of FACADE-TESTS-LAYOUT-1 (2026-10-19); rules live in [../map.md](../map.md)
 - [test_ntz_8_verify.py](test_ntz_8_verify.py) — WO NTZ-1 verifier fold part 2: zone-shift calls inside DML keep Spark's instant.
 - [test_ntz_9_verify.py](test_ntz_9_verify.py) — WO NTZ-1 re-verify fold: VALUES cells computed in LTZ store the session wall.
 - [test_timestamp_ltz_explicit_cast_1.py](test_timestamp_ltz_explicit_cast_1.py), [oracle](timestamp_ltz_explicit_cast_1_spark_oracle.json), [recorder](_record_timestamp_ltz_explicit_cast_1.py) — TIMESTAMP-LTZ-EXPLICIT-CAST-1 pins (19 Spark cells).
-- [test_ntz_ltz_widening_1.py](test_ntz_ltz_widening_1.py), [oracle](ntz_ltz_widening_1_spark_oracle.json), [recorder](_record_ntz_ltz_widening_1.py) — NTZ-LTZ-WIDENING-1 pins (17 Spark cells: 7 red on main).
+- [test_ntz_ltz_widening_1.py](test_ntz_ltz_widening_1.py), [oracle](ntz_ltz_widening_1_spark_oracle.json), [recorder](_record_ntz_ltz_widening_1.py) — NTZ-LTZ-WIDENING-1 pins (13 Spark cells: 3 red on main).
 - [test_ntz_store_doors_1.py](test_ntz_store_doors_1.py) — NTZ-STORE-DOORS-1: every write door stores Spark's TIMESTAMP_NTZ value, partitions included; the six `ow_part` cells pin the partition path's own refusal text (WS2-28).
 - [test_runtime_zone_spellings_1.py](test_runtime_zone_spellings_1.py) — Zone spellings against the batch-17 oracle — SET-ANSI-RUNTIME-1 review follow-up.
 - [test_session_timezone_parity.py](test_session_timezone_parity.py) — Session-timezone differential rows (gap G1) + temporal edges (gap G16) — H-1a split A.

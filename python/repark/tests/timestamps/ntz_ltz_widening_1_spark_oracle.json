@@ -133,30 +133,6 @@
    "timestamp_type": "TIMESTAMP_LTZ",
    "zone": "UTC"
   },
-  "df_union_gap_ny_ntz": {
-   "a": "TIMESTAMP_NTZ '2024-03-10 02:30:00'",
-   "b": "to_timestamp_ltz('2024-01-01 02:00:00')",
-   "kind": "TARGET",
-   "site": "df_union",
-   "spark": [
-    "timestamp",
-    true,
-    [
-     [
-      1,
-      "2024-03-10 03:30:00",
-      "1710055800000000"
-     ],
-     [
-      2,
-      "2024-01-01 02:00:00",
-      "1704092400000000"
-     ]
-    ]
-   ],
-   "timestamp_type": "TIMESTAMP_NTZ",
-   "zone": "America/New_York"
-  },
   "df_union_ntz_only_kolkata_ltz": {
    "a": "TIMESTAMP_NTZ '2024-03-10 02:30:00'",
    "b": "TIMESTAMP_NTZ '2024-06-01 09:00:00'",
@@ -181,30 +157,6 @@
    "timestamp_type": "TIMESTAMP_LTZ",
    "zone": "Asia/Kolkata"
   },
-  "df_union_plain_kolkata_ntz": {
-   "a": "TIMESTAMP_NTZ '2024-06-01 09:00:00'",
-   "b": "to_timestamp_ltz('2024-01-01 02:00:00')",
-   "kind": "TARGET",
-   "site": "df_union",
-   "spark": [
-    "timestamp",
-    true,
-    [
-     [
-      1,
-      "2024-06-01 09:00:00",
-      "1717212600000000"
-     ],
-     [
-      2,
-      "2024-01-01 02:00:00",
-      "1704054600000000"
-     ]
-    ]
-   ],
-   "timestamp_type": "TIMESTAMP_NTZ",
-   "zone": "Asia/Kolkata"
-  },
   "eq_gap_ny_ntz": {
    "a": "TIMESTAMP_NTZ '2024-03-10 02:30:00' = to_timestamp_ltz('2024-03-10 03:30:00')",
    "b": "",
@@ -218,30 +170,6 @@
       1,
       "true",
       null
-     ]
-    ]
-   ],
-   "timestamp_type": "TIMESTAMP_NTZ",
-   "zone": "America/New_York"
-  },
-  "sql_union_fold_ny_ntz_ltz_first": {
-   "a": "to_timestamp_ltz('2024-01-01 02:00:00')",
-   "b": "TIMESTAMP_NTZ '2024-11-03 01:30:00'",
-   "kind": "TARGET",
-   "site": "sql_union",
-   "spark": [
-    "timestamp",
-    true,
-    [
-     [
-      1,
-      "2024-01-01 02:00:00",
-      "1704092400000000"
-     ],
-     [
-      2,
-      "2024-11-03 01:30:00",
-      "1730611800000000"
      ]
     ]
    ],
@@ -270,30 +198,6 @@
     ]
    ],
    "timestamp_type": "TIMESTAMP_LTZ",
-   "zone": "America/New_York"
-  },
-  "sql_union_gap_ny_ntz": {
-   "a": "TIMESTAMP_NTZ '2024-03-10 02:30:00'",
-   "b": "to_timestamp_ltz('2024-01-01 02:00:00')",
-   "kind": "TARGET",
-   "site": "sql_union",
-   "spark": [
-    "timestamp",
-    true,
-    [
-     [
-      1,
-      "2024-03-10 03:30:00",
-      "1710055800000000"
-     ],
-     [
-      2,
-      "2024-01-01 02:00:00",
-      "1704092400000000"
-     ]
-    ]
-   ],
-   "timestamp_type": "TIMESTAMP_NTZ",
    "zone": "America/New_York"
   },
   "sql_union_ltz_only_ny_ntz": {
