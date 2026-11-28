@@ -11,6 +11,7 @@ from repark_parity.scoreboard.corpus import select_cells, stage
 from repark_parity.scoreboard.launch import (
     BATCH_SIZE,
     check_batch,
+    require_engine_settings,
     run_engine,
     run_half,
     split_batches,
@@ -84,12 +85,13 @@ def replay(
     batch_size: int = BATCH_SIZE,
 ) -> Path:
     """Replay the RePark half against the recorded Spark answers in a new destination."""
+    require_engine_settings("repark", settings)
     package = check_package(settings)
     target = check_destination(destination, settings)
     folders = stage(target, select_cells(lanes, cells))
     built_from = package / "BUILT_FROM"
     record = {
-        "selection": "cells" if cells else "lanes" if lanes else "comparable",
+        "selection": "cells" if cells is not None else "lanes" if lanes else "comparable",
         "lanes": [folder.name for folder in folders],
         "built_from": built_from.read_text().strip() if built_from.exists() else None,
     }
@@ -100,6 +102,9 @@ def replay(
 
 def record_spark(settings: Settings, cases: Path, destination: Path, with_repark: bool) -> Path:
     """Record fresh Spark answers for a case file in a new destination, and optionally pair them."""
+    require_engine_settings("spark", settings)
+    if with_repark:
+        require_engine_settings("repark", settings)
     target = check_destination(destination, settings)
     if with_repark:
         check_package(settings)

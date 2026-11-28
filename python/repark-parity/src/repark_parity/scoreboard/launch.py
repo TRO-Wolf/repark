@@ -83,6 +83,26 @@ def engine_python(engine: str, settings: Settings) -> Path:
     return Path(chosen) if chosen else Path(settings.require("repark_python"))
 
 
+ENGINE_SETTINGS = {
+    "repark": ("cpus", "memory_floor_mib", "output_root", "package"),
+    "spark": (
+        "cpus",
+        "memory_floor_mib",
+        "output_root",
+        "spark_python",
+        "java_home",
+        "spark_drivers",
+    ),
+}
+
+
+def require_engine_settings(engine: str, settings: Settings) -> None:
+    """Fail before any work unless every setting one engine's runs read is given."""
+    for name in ENGINE_SETTINGS[engine]:
+        settings.require(name)
+    engine_python(engine, settings)
+
+
 def import_path(engine: str, settings: Settings) -> str:
     """Return the engine's PYTHONPATH: package and dependencies first for RePark."""
     entries = []

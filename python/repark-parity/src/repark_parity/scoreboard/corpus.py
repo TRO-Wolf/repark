@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import hashlib
+import json
+import re
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -11,6 +14,11 @@ CELLS = "cells"
 CASES_SUFFIX = ".cases.jsonl.gz"
 SPARK_SUFFIX = ".spark.jsonl.gz"
 EXCLUSIONS = "exclusions.jsonl.gz"
+MANIFEST = "checksums.json"
+LANE_NAME = re.compile(r"[a-z0-9-]+")
+MACHINE_PATH = re.compile(
+    r"(?<![\w.<>-])(?:file:)?/(?:home|tmp|Users|root|private|mnt|srv|opt|usr|var|etc|data|run|media)/"
+)
 SPARK_VERSION = "4.1.2"
 PROVIDER_LANE = "local-statements"
 
@@ -52,10 +60,44 @@ def check_lane(lane: str, cases: dict, spark: dict) -> None:
     versions = {answer["version"] for answer in spark.values()}
     if versions - {SPARK_VERSION}:
         raise CorpusError(f"{lane}: Spark answers from {sorted(versions)}, not {SPARK_VERSION}")
+    for key, cell in cases.items():
+        if MACHINE_PATH.search(json.dumps(cell)) or MACHINE_PATH.search(json.dumps(spark[key])):
+            raise CorpusError(f"{lane}: {key} holds a machine path; scrub it to a placeholder")
+
+
+def file_sha256(path: Path) -> str:
+    """Return the SHA-256 of one stored file's bytes."""
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def stored_files(data_dir: Path = DATA_DIR) -> dict[str, str]:
+    """Return each stored corpus file, relative to the data directory, with its SHA-256."""
+    paths = [data_dir / EXCLUSIONS, *sorted((data_dir / CELLS).glob("*.gz"))]
+    return {
+        path.relative_to(data_dir).as_posix(): file_sha256(path) for path in paths if path.exists()
+    }
+
+
+def write_manifest(entries: dict[str, str], data_dir: Path = DATA_DIR) -> None:
+    """Record the stored files' SHA-256s in the manifest."""
+    (data_dir / MANIFEST).write_text(json.dumps(dict(sorted(entries.items())), indent=1) + "\n")
+
+
+def check_manifest(data_dir: Path = DATA_DIR) -> None:
+    """Fail unless every stored file matches its recorded SHA-256 and none is unlisted."""
+    manifest = data_dir / MANIFEST
+    recorded = json.loads(manifest.read_text()) if manifest.exists() else {}
+    found = stored_files(data_dir)
+    differ = sorted(
+        name for name in recorded.keys() | found.keys() if recorded.get(name) != found.get(name)
+    )
+    if differ:
+        raise CorpusError(f"stored files differ from {MANIFEST}: {differ[:5]}")
 
 
 def check_corpus(data_dir: Path = DATA_DIR) -> dict[str, int]:
     """Check every stored lane and the exclusions; return the cell count per lane."""
+    check_manifest(data_dir)
     counts: dict[str, int] = {}
     seen: dict[str, str] = {}
     for lane in lane_names(data_dir):
@@ -80,7 +122,7 @@ def select_cells(
     """Choose cells: every comparable cell by default, whole lanes, or listed ids."""
     exclusions = load_exclusions(data_dir)
     wanted_lanes = set(lanes) if lanes else None
-    wanted_cells = set(cells) if cells else None
+    wanted_cells = set(cells) if cells is not None else None
     chosen: dict[str, list[tuple[dict, dict]]] = {}
     for lane in lane_names(data_dir):
         if wanted_lanes is not None and lane not in wanted_lanes:
@@ -120,6 +162,9 @@ def ingest(
     lane: str, cases_path: Path, spark_path: Path, replace: bool, data_dir: Path = DATA_DIR
 ) -> int:
     """Store a lane recorded live; refuse to overwrite a stored lane unless replace is set."""
+    if not LANE_NAME.fullmatch(lane):
+        raise CorpusError(f"a lane name is lowercase letters, digits and hyphens, not {lane!r}")
+    check_manifest(data_dir)
     cases, spark = read_records(cases_path), read_records(spark_path)
     check_lane(lane, cases, spark)
     folder = data_dir / CELLS
@@ -134,4 +179,5 @@ def ingest(
             raise CorpusError(f"{lane} reuses ids stored in {other}: {clash[:5]}")
     write_lines(target, cases.values())
     write_lines(folder / (lane + SPARK_SUFFIX), spark.values())
+    write_manifest(stored_files(data_dir), data_dir)
     return len(cases)

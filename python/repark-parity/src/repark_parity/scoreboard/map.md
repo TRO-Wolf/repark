@@ -22,7 +22,7 @@ any Python 3.12 with pyarrow and pydantic. Engine processes start their own inte
 | `classify.py` | `classify_pair` and `diff_rows`: equal id sets, digest and engine tag per answer, then the class |
 | `engine.py` | one engine process over one case file: settings per cell, setup, operation, `store` write and cold read, observation, refusal capture |
 | `launch.py` | the engine environment, CPU pin, nice 19, memory floor, Spark driver slots, batches of 192 |
-| `corpus.py` | read the stored lanes and exclusions, choose cells, stage a replay, ingest a lane |
+| `corpus.py` | read the stored lanes and exclusions, choose cells, stage a replay, ingest a lane; the `checksums.json` manifest and the lane-name and machine-path refusals |
 | `replay.py` | the RePark half over a staged corpus on a process pool; the Spark half for a case file |
 | `controls.py` | the controls lane check, six classifier mutations, float edges |
 | `summary.py` | scoreboard, comparison, flaky detection, Markdown tables |
@@ -41,13 +41,16 @@ any Python 3.12 with pyarrow and pydantic. Engine processes start their own inte
   re-matched by position.
 - **Never overwrite answers.** `replay` and `record` need a new destination inside the output root;
   answers go to `.partial` or `.incomplete` and are renamed only when whole; `ingest` refuses a
-  stored lane without `--replace`.
+  stored lane without `--replace`. `replay` and `record` check every engine setting before they
+  stage, so a missing one never leaves a half-made destination.
 - **Rendered timestamps.** A top-level timestamp column also carries its SQL text. Text counts only
   when both engines rendered the same columns; otherwise only the Arrow values (nanoseconds on the
   Arrow timeline; for NTZ the wall timeline) compare.
 - **`store: true`.** The result is written to fresh Parquet, read back through the engine, and every
   committed part is cold-read with PyArrow into `physical_write`. `physical_write` is an
-  observation: the classifier does not read it, and its `part_files` count differs between builds.
+  observation: the classifier does not read it. Its `part_files` count is the same on the `ci`,
+release-fast and main builds and differs from the audit's recorded answers, which came from the
+audit's own build.
 - **Exclusions.** `EXCLUDED` at run (setup failure, observation conversion, settings read-back) and
   the frozen recorded exclusions both leave the comparable count; a flaky cell leaves it too.
 - **The engine imports no pydantic.** The Spark interpreter has none; only `settings.py` uses it.

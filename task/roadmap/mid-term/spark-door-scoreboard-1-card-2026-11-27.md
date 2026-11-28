@@ -56,6 +56,23 @@ from `NULLABILITY-ONLY` to `WRONG-VALUE` (4 more). Rank S1 until a stored-write 
   sibling, `BOTH-REFUSED` to `ACCEPTED-WHERE-SPARK-REFUSED` under ANSI; `error.cast.0`,
   `REFUSED-WHERE-SPARK-ANSWERS` to `WRONG-TYPE`.
 
+## Review round 1: the seven minor findings (2026-11-28)
+
+The fresh verifier passed the unit with 0 class (a), 0 class (b) and 7 class (c) findings. Each fix
+has a test that turns red on its mutant; the scoreboard tests went from 32 to 37.
+
+- **c1.** An empty `--cells` list selects no cell. It used to replay all 16,645.
+- **c2.** `replay` and `record` check every engine setting before they create the destination.
+- **c3.** `ingest` refuses a lane name outside lowercase letters, digits and hyphens.
+- **c4.** `ingest` and `check-corpus` refuse a cell or answer that holds a machine path, and skill
+  section 7 names the scrub.
+- **c5.** Kept as recorded: two messages end mid-path at the audit's 800-character cut, which
+  names nothing.
+- **c6.** `data/checksums.json` holds the SHA-256 of every stored file; `check-corpus` fails on any
+  difference, and `ingest` rewrites it.
+- **c7.** The `part_files` wording is fixed. The two meanings of `definitions` are explained in skill
+  section 4.4 rather than changed, so the committed scoreboards stay byte-identical.
+
 ## Follow-ups (named, not opened)
 
 - A card for the four moved-off `unix_timestamp` NTZ cells and the two ANSI `ACCEPTED` transitions above.

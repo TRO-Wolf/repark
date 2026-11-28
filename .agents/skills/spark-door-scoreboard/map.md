@@ -14,7 +14,8 @@ classification into a fix, a pin or a registry entry is
   the settings; getting a package; the sequence (corpus check, controls, two
   full replays and the flaky rule, per-lane replay, scoreboard, comparison,
   branch check, filing); each class with a corpus example; regressions and the
-  S1 rule; new cases, the digest rule and re-recording; a fresh whole-door
+  S1 rule; new cases, the digest rule, the path scrub, the checksum manifest
+  and re-recording; a fresh whole-door
   audit; pitfalls; reporting; Iceberg.
 
 ## I want to...

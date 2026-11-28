@@ -128,8 +128,10 @@ revisions with packages of the same profile (section 9, build profile).
 
 ## 4. The sequence
 
-**4.0 Corpus check.** `$SB check-corpus` reads every stored lane, checks each Spark answer's digest
-and engine tag, and refuses a duplicate id across lanes. Expected: `{"lanes": 51, "cells": 17264}`.
+**4.0 Corpus check.** `$SB check-corpus` checks every stored file against the SHA-256s in
+`data/checksums.json`, reads every stored lane, checks each Spark answer's digest and engine tag,
+refuses a duplicate id across lanes, and refuses a cell or answer that holds a machine path.
+Expected: `{"lanes": 51, "cells": 17264}`.
 
 **4.1 Controls.** Replay the controls lane and check it.
 
@@ -153,7 +155,8 @@ $SB flaky $OUT/<name>-run1 $OUT/<name>-run2 --output $OUT/<name>-flaky.json
 ```
 
 The second run uses another batch size, so a cell that depends on what ran before it in the same
-session also shows. Re-run any cell `flaky` lists, then pass every run to `flaky` again:
+session also shows. When `flaky` lists no cell, skip the rerun. Otherwise re-run the cells it lists,
+then pass every run to `flaky` again:
 
 ```bash
 python3 -c "import json; print('\n'.join(json.load(open('$OUT/<name>-flaky.json'))['flaky']))" > $OUT/ids.txt
@@ -166,7 +169,9 @@ Measured 2026-11-27 on 16 cores: a full replay of 16,645 cells takes about 40 se
 
 **4.3 Per-lane replay.** `--lane <lane>` (repeatable) replays every stored cell of a lane,
 recorded exclusions included, except the `local-statements` table probes bound to different
-default catalog providers. `--cells <file>` replays listed ids. Each lane directory holds
+default catalog providers. `--cells <file>` replays exactly the listed ids; an empty file replays
+none. `replay` and `record` check every setting their engines need before they create the
+destination. Each lane directory holds
 `cases.jsonl`, `spark.jsonl`, `repark.jsonl`, `repark.log` and `diff.jsonl`.
 
 **4.4 Scoreboard.**
@@ -181,6 +186,10 @@ The JSON holds `meta` (label, revision, date, Spark version, the native SHA-256)
 (definitions, comparable, EQUAL, EQUAL share, recorded exclusions, excluded at run, flaky, classes),
 `ansi` (classes with ANSI on and off), `lanes`, `families` (from the cell fields `rule_id`, `card`,
 `record_ids` and `variant`) and `cells` (id to lane, class, ANSI). It holds no path.
+`definitions` counts the cells in the replay directory. A full replay skips the 619 frozen
+exclusions, so a head scoreboard shows 16,645 definitions and 0 recorded exclusions, while the
+baseline, rebuilt from the audit's own diff files, shows 17,264 and 619. Compare `comparable`, not
+`definitions`, across the two.
 
 **4.5 Comparison with the last committed scoreboard.**
 
@@ -284,7 +293,14 @@ $SB ingest <lane> $OUT/<lane>-record/cases.jsonl $OUT/<lane>-record/spark.jsonl
 
 `record` refuses an existing destination and checks the Spark version is 4.1.2. `ingest` checks
 ids, digests, the engine tag and the version, refuses an id another lane holds, and refuses a stored
-lane unless `--replace` is given. Then run `check-corpus` and add the lane's counts to
+lane unless `--replace` is given. A lane name is lowercase letters, digits and hyphens.
+
+`record` keeps Spark's refusal messages as Spark wrote them, so a lane recorded on this box can hold
+its paths. Before `ingest`, replace each path prefix in the recorded `spark.jsonl` with
+`<spark-site-packages>/`, `<run-tmp>/` or `<tmp>/`, as the stored corpus does. `ingest` and
+`check-corpus` refuse a cell or an answer that still holds one. `ingest` checks the stored files
+against `data/checksums.json` first and rewrites it after it stores the lane, so a hand edit to a
+stored file fails `check-corpus`. Then run `check-corpus` and add the lane's counts to
 [data/map.md](../../../python/repark-parity/src/repark_parity/scoreboard/data/map.md).
 
 **The digest rule.** Each answer carries the SHA-256 of its cell's sorted-key ASCII JSON line. Edit a

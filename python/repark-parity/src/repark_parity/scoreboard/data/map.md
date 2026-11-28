@@ -17,6 +17,7 @@ replaces it whole, with its own provenance here.
 | `cells/<lane>.cases.jsonl.gz` | one cell definition per line, sorted-key ASCII JSON; the answer digest binds to these bytes |
 | `cells/<lane>.spark.jsonl.gz` | the recorded Spark 4.1.2 answer per cell, with `input_sha256` and `engine: spark` |
 | `exclusions.jsonl.gz` | the 619 adjudicated exclusions (`id`, `lane`, `reason`), frozen |
+| `checksums.json` | the SHA-256 of every file above; `check-corpus` fails on any difference, and `ingest` rewrites it |
 | `scoreboards/<date>-<sha8>.json.gz` | one scoreboard: totals, ANSI split, lanes, families, every cell's class |
 | `scoreboards/<date>-<sha8>.md` | its short Markdown table |
 | `reports/<date>-<base8>-to-<head8>.json.gz` + `.md` | one comparison: moved on, moved off, changed, by lane and id |
@@ -41,6 +42,8 @@ Committed: [the 2026-11-21 baseline](scoreboards/2026-11-21-dac2af61.md),
   and one excluded `value` (`setting.read.spark.sql.warehouse.dir`) held machine paths. The classifier
   never reads `message`, and the excluded cell is not compared, so each path prefix became
   `<spark-site-packages>/`, `<run-tmp>/` or `<tmp>/`. No cell definition held a path. Two
+  `settings-residual` messages end mid-path at the audit's 800-character cut; kept as
+  recorded, since it names nothing. Two
   `refute-time.dates-13.prior-card-*` cells set a fourth IANA zone as a test parameter; kept.
 - **Generators dropped.** Each lane's `generate.py` imported audit-root paths and carried module
   docstrings, so none passes the repository gates. Their source revisions are below.
