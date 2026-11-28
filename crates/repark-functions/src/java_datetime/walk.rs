@@ -85,26 +85,10 @@ fn crosses_digit_run(tokens: &[JavaToken]) -> bool {
     for token in tokens {
         match token {
             JavaToken::Open(_) | JavaToken::Close => crossed |= greedy,
-            JavaToken::MonthName { .. }
-            | JavaToken::AmPm
-            | JavaToken::Literal(_)
-            | JavaToken::Unsupported => {
-                greedy = false;
-                crossed = false;
-            }
-            JavaToken::Year { .. }
-            | JavaToken::MonthNumber { .. }
-            | JavaToken::Day { .. }
-            | JavaToken::Hour24 { .. }
-            | JavaToken::Hour12 { .. }
-            | JavaToken::Minute { .. }
-            | JavaToken::Second { .. }
-            | JavaToken::Fraction { .. } => {
-                if crossed {
-                    return true;
-                }
-                greedy |= unbounded(token);
-            }
+            JavaToken::MonthName { .. } => (greedy, crossed) = (false, false),
+            _ if field_bit(token) == 0 => (greedy, crossed) = (false, false),
+            _ if crossed => return true,
+            _ => greedy |= unbounded(token),
         }
     }
     false
@@ -126,19 +110,12 @@ fn unbounded(token: &JavaToken) -> bool {
 pub(super) fn walk<'text>(
     text: &'text str,
     pattern: &ParsedPattern,
+    wall: Wall,
 ) -> Result<Cursor<'text>, WallFailure> {
     let mut cursor = Cursor {
         rest: text,
         consumed: 0,
-        wall: Wall {
-            year: 1970,
-            month: 1,
-            day: 1,
-            hour: 0,
-            minute: 0,
-            second: 0,
-            nano: 0,
-        },
+        wall,
         afternoon: None,
         seen: 0,
     };
@@ -159,9 +136,10 @@ pub(super) fn walk<'text>(
                 continue;
             }
             _ => {
-                let before = cursor.clone();
+                let start = cursor.consumed;
+                let prior = (!saved.is_empty()).then(|| cursor.wall.clone());
                 let outcome = take_token(token, &mut cursor, pattern.exact)
-                    .and_then(|()| settle(token, &before, &mut cursor, !saved.is_empty()));
+                    .and_then(|()| settle(token, prior.as_ref(), start, &mut cursor));
                 match outcome {
                     Ok(()) => continue,
                     Err(failure) => failure,
@@ -181,40 +159,26 @@ pub(super) fn walk<'text>(
 
 fn settle(
     token: &JavaToken,
-    before: &Cursor<'_>,
+    prior: Option<&Wall>,
+    start: usize,
     cursor: &mut Cursor<'_>,
-    sectioned: bool,
 ) -> Result<(), WallFailure> {
-    let Some((bit, value)) = field(token, &cursor.wall) else {
-        return Ok(());
-    };
-    let clash = sectioned
-        && before.seen & bit != 0
-        && field(token, &before.wall).map(|(_, prior)| prior) != Some(value);
+    let bit = field_bit(token);
+    let clash = cursor.seen & bit != 0 && prior.is_some_and(|wall| *wall != cursor.wall);
     cursor.seen |= bit;
-    if clash {
-        Err(at(before.consumed))
-    } else {
-        Ok(())
-    }
+    if clash { Err(at(start)) } else { Ok(()) }
 }
 
-fn field(token: &JavaToken, wall: &Wall) -> Option<(u8, i64)> {
+fn field_bit(token: &JavaToken) -> u8 {
     match token {
-        JavaToken::Year { .. } => Some((1, i64::from(wall.year))),
-        JavaToken::MonthNumber { .. } | JavaToken::MonthName { .. } => {
-            Some((2, i64::from(wall.month)))
-        }
-        JavaToken::Day { .. } => Some((4, i64::from(wall.day))),
-        JavaToken::Hour24 { .. } | JavaToken::Hour12 { .. } => Some((8, i64::from(wall.hour))),
-        JavaToken::Minute { .. } => Some((16, i64::from(wall.minute))),
-        JavaToken::Second { .. } => Some((32, i64::from(wall.second))),
-        JavaToken::Fraction { .. } => Some((64, i64::from(wall.nano))),
-        JavaToken::AmPm
-        | JavaToken::Literal(_)
-        | JavaToken::Unsupported
-        | JavaToken::Open(_)
-        | JavaToken::Close => None,
+        JavaToken::Year { .. } => 1,
+        JavaToken::MonthNumber { .. } | JavaToken::MonthName { .. } => 2,
+        JavaToken::Day { .. } => 4,
+        JavaToken::Hour24 { .. } | JavaToken::Hour12 { .. } => 8,
+        JavaToken::Minute { .. } => 16,
+        JavaToken::Second { .. } => 32,
+        JavaToken::Fraction { .. } => 64,
+        _ => 0,
     }
 }
 

@@ -50,7 +50,7 @@ impl ParsedPattern {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Wall {
     pub(crate) year: i32,
     pub(crate) month: u32,
@@ -186,8 +186,17 @@ pub(crate) fn plan_format_column(formats: &StringArray) -> Result<FormatPlan> {
 }
 
 pub(crate) fn parse_wall_text(text: &str, pattern: &ParsedPattern) -> Result<Wall, WallFailure> {
-    let walked = walk::walk(text, pattern)?;
-    let mut wall = walked.wall;
+    let mut wall = Wall {
+        year: 1970,
+        month: 1,
+        day: 1,
+        hour: 0,
+        minute: 0,
+        second: 0,
+        nano: 0,
+    };
+    let walked = walk::walk(text, pattern, wall)?;
+    wall = walked.wall;
     if !walked.rest.is_empty() {
         return Err(at(walked.consumed));
     }

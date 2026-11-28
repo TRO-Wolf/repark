@@ -18,7 +18,10 @@ out because the parent sits at its 1000-line ceiling.
     the index after its `]`). Sections nest; an unclosed `[` runs to the pattern end; a `[`
     inside quotes stays a literal; an empty `[]` is a no-op. A stray `]` refuses with
     `[INCONSISTENT_BEHAVIOR_CROSS_VERSION.DATETIME_PATTERN_RECOGNITION]`, `try_` forms
-    included. `walk` saves the cursor at each `[`, commits it at `]`, and on a position
+    included, on the first non-NULL row (`ParsedPattern::refusal`, raised by
+    `parse_wall_or_null`): Spark builds the formatter only for a non-NULL input, so a NULL row
+    or an all-NULL column answers NULL. The CSV/JSON options read a refusing pattern as a
+    failed parse. `walk` saves the cursor at each `[`, commits it at `]`, and on a position
     failure inside a section restores it and resumes after the section, as Java's optional
     `CompositePrinterParser` does; a committed section is never re-entered. A field-range
     failure (`Invalid value for …`) is not rolled back.
@@ -32,6 +35,7 @@ out because the parent sits at its 1000-line ceiling.
     parsing does not reach into a section, so Spark's greedy field there takes the section's
     digits and fails a text this walk would accept.
   - `try_dates_with_format` is `try_to_date`'s two-argument arm: `to_date_with_format` with ANSI
-    off, so a time-bearing pattern parses its time and returns the date, and a pattern error
-    still raises.
+    off, so a time-bearing pattern parses its time and returns the date, a year-less pattern
+    defaults to 1970, and a pattern error still raises. An all-NULL input answers NULL without
+    compiling the pattern, as Spark does.
   - Pins: `java_datetime::walk::tests::*`, `python/repark/tests/test_datetime_pattern_parse.py`.
