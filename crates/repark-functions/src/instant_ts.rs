@@ -729,7 +729,8 @@ fn rewrite_cast_as_ntz(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
                 return wrap_as_ntz(*cast.expr.clone(), schema);
             }
             if targeting_timestamp && !targeting_ns && is_wall_clock_cast_source(&source) {
-                return wrap_as_ntz(*cast.expr.clone(), schema);
+                let instant = spark_string_literal(&cast.expr, None);
+                return wrap_as_ntz(instant.unwrap_or_else(|| *cast.expr.clone()), schema);
             }
             let source_is_int_or_null = source.is_integer() || matches!(source, DataType::Null);
             if targeting_seconds && source_is_int_or_null {

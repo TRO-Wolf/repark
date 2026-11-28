@@ -4,11 +4,13 @@ use datafusion::arrow::datatypes::{DataType, TimeUnit};
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
 use datafusion::common::{DFSchema, Result};
+use datafusion::logical_expr::expr::Alias;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
-use datafusion::logical_expr::{Expr, ExprSchemable, LogicalPlan};
+use datafusion::logical_expr::{DmlStatement, Expr, ExprSchemable, LogicalPlan, Projection};
 use datafusion::optimizer::AnalyzerRule;
 
-use crate::instant_ts::is_ltz_timestamp;
+use crate::instant_ts::{is_ltz_timestamp, ntz_timestamp_type};
+use crate::timestamp_type::spark_timestamp_type_from_options;
 
 #[derive(Debug, Default)]
 pub struct SparkNtzLtzWiden;
@@ -19,8 +21,12 @@ pub fn ntz_ltz_widen_rule() -> Arc<dyn AnalyzerRule + Send + Sync> {
 }
 
 impl AnalyzerRule for SparkNtzLtzWiden {
-    fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
-        plan.transform_up_with_subqueries(localize_node).data()
+    fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
+        let plan = plan.transform_up_with_subqueries(localize_node).data()?;
+        if !spark_timestamp_type_from_options(config).is_ntz() {
+            return Ok(plan);
+        }
+        plan.transform_up_with_subqueries(store_walls).data()
     }
 
     fn name(&self) -> &'static str {
@@ -67,6 +73,14 @@ fn localize_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     if widens_a_wall(&source, cast.field.data_type()) != Some(true) {
         return Transformed::no(expr);
     }
+    if let Expr::Cast(wall) = cast.expr.as_ref()
+        && wall
+            .expr
+            .get_type(schema)
+            .is_ok_and(|instant| &instant == cast.field.data_type())
+    {
+        return Transformed::yes(*wall.expr.clone());
+    }
     match crate::zone_seam::seam_call(*cast.expr.clone(), cast.field.data_type(), false) {
         Some(localized) => Transformed::yes(localized),
         None => Transformed::no(expr),
@@ -94,6 +108,58 @@ fn localize_node(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     }
 }
 
+fn wall_of_instant(item: &Expr, schema: &DFSchema) -> Option<Expr> {
+    match item {
+        Expr::Alias(alias) => wall_of_instant(&alias.expr, schema).map(|inner| {
+            Expr::Alias(Alias {
+                expr: Box::new(inner),
+                ..alias.clone()
+            })
+        }),
+        Expr::Cast(cast)
+            if cast.field.data_type() == &ntz_timestamp_type()
+                && cast
+                    .expr
+                    .get_type(schema)
+                    .is_ok_and(|data_type| is_ltz_timestamp(&data_type)) =>
+        {
+            crate::zone_seam::seam_call(*cast.expr.clone(), &ntz_timestamp_type(), false)
+        }
+        _ => None,
+    }
+}
+
+fn store_walls(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+    let LogicalPlan::Dml(statement) = plan else {
+        return Ok(Transformed::no(plan));
+    };
+    let LogicalPlan::Projection(projection) = statement.input.as_ref() else {
+        return Ok(Transformed::no(LogicalPlan::Dml(statement)));
+    };
+    let targets = statement.target.schema();
+    if projection.expr.len() != targets.fields().len() {
+        return Ok(Transformed::no(LogicalPlan::Dml(statement)));
+    }
+    let schema = projection.input.schema();
+    let mut changed = false;
+    let mut expr = Vec::with_capacity(projection.expr.len());
+    for (item, field) in projection.expr.iter().zip(targets.fields()) {
+        let stored = (field.data_type() == &ntz_timestamp_type())
+            .then(|| wall_of_instant(item, schema))
+            .flatten();
+        changed |= stored.is_some();
+        expr.push(stored.unwrap_or_else(|| item.clone()));
+    }
+    if !changed {
+        return Ok(Transformed::no(LogicalPlan::Dml(statement)));
+    }
+    let rebuilt = Projection::try_new(expr, Arc::clone(&projection.input))?;
+    Ok(Transformed::yes(LogicalPlan::Dml(DmlStatement {
+        input: Arc::new(LogicalPlan::Projection(rebuilt)),
+        ..statement
+    })))
+}
+
 #[cfg(test)]
 mod tests {
     use datafusion::arrow::array::{AsArray, RecordBatch, TimestampMicrosecondArray};
@@ -108,6 +174,8 @@ mod tests {
     const GAP_IN_NEW_YORK: i64 = 1_710_055_800_000_000;
     const GAP_HOUR_IN_NEW_YORK: i64 = 1_710_054_000_000_000;
     const INSTANT: i64 = 1_704_092_400_000_000;
+    const INSTANT_WALL_IN_NEW_YORK: i64 = 1_704_074_400_000_000;
+    const GAP_LOCALIZED_WALL: i64 = 1_710_041_400_000_000;
 
     fn context(zone: &str, session_type: SparkTimestampType) -> SessionContext {
         let config = crate::session_time_zone::with_session_time_zone(SessionConfig::new(), zone);
@@ -198,6 +266,49 @@ mod tests {
         assert_eq!(
             answers(&ctx, "SELECT l AS v FROM t UNION ALL SELECT l FROM t").await,
             (ltz_timestamp_type(), vec![INSTANT, INSTANT])
+        );
+    }
+
+    #[tokio::test]
+    async fn a_zoned_literal_beside_an_instant_compares_as_its_instant() {
+        let ctx = context("America/New_York", SparkTimestampType::Ntz);
+        let sql = "SELECT CAST(l = TIMESTAMP '2024-01-01 07:00:00Z' AS INT) AS v FROM t";
+        let batches = ctx.sql(sql).await.expect(sql).collect().await.expect(sql);
+        assert_eq!(
+            batches[0]
+                .column(0)
+                .as_primitive::<datafusion::arrow::datatypes::Int32Type>()
+                .value(0),
+            1
+        );
+    }
+
+    #[tokio::test]
+    async fn an_instant_stored_into_a_wall_column_keeps_the_session_wall() {
+        let ctx = context("America/New_York", SparkTimestampType::Ntz);
+        ctx.sql("CREATE TABLE w (v TIMESTAMP_NTZ)")
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap();
+        for source in [
+            "SELECT l FROM t",
+            "SELECT l FROM t UNION ALL SELECT n FROM t",
+        ] {
+            ctx.sql(&format!("INSERT INTO w {source}"))
+                .await
+                .expect(source)
+                .collect()
+                .await
+                .expect(source);
+        }
+        assert_eq!(
+            answers(&ctx, "SELECT v FROM w").await,
+            (
+                ntz_timestamp_type(),
+                vec![INSTANT_WALL_IN_NEW_YORK, INSTANT_WALL_IN_NEW_YORK, GAP_LOCALIZED_WALL]
+            )
         );
     }
 
