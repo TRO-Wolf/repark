@@ -17,31 +17,52 @@ def _ntz(wall: str) -> str:
     return f"TIMESTAMP_NTZ '{wall}'"
 
 
-def _cell(kind: str, zone: str, session_type: str, site: str, a: str, b: str = "") -> dict[str, Any]:
-    return {"kind": kind, "zone": zone, "timestamp_type": session_type, "site": site, "a": a, "b": b}
+def _cell(
+    kind: str, zone: str, session_type: str, site: str, a: str, b: str = ""
+) -> dict[str, Any]:
+    return {
+        "kind": kind,
+        "zone": zone,
+        "timestamp_type": session_type,
+        "site": site,
+        "a": a,
+        "b": b,
+    }
 
 
 CELLS: dict[str, dict[str, Any]] = {
-    "eq_gap_ny_ntz": _cell("PROTECTED", NY, NTZ, "expr", f"{_ntz(GAP)} = to_timestamp_ltz('2024-03-10 03:30:00')"),
+    "eq_gap_ny_ntz": _cell(
+        "PROTECTED", NY, NTZ, "expr", f"{_ntz(GAP)} = to_timestamp_ltz('2024-03-10 03:30:00')"
+    ),
     "case_plain_kolkata_ntz": _cell(
         "PROTECTED", KOLKATA, NTZ, "expr", f"CASE WHEN 1 = 1 THEN {_ntz(PLAIN)} ELSE {INSTANT} END"
     ),
-    "date_trunc_hour_gap_ny_ltz": _cell("TARGET", NY, LTZ, "expr", f"date_trunc('HOUR', {_ntz(GAP)})"),
+    "date_trunc_hour_gap_ny_ltz": _cell(
+        "TARGET", NY, LTZ, "expr", f"date_trunc('HOUR', {_ntz(GAP)})"
+    ),
     "date_trunc_day_plain_kolkata_ntz": _cell(
         "TARGET", KOLKATA, NTZ, "expr", f"date_trunc('DAY', {_ntz(PLAIN)})"
     ),
-    "date_trunc_hour_plain_utc_ltz": _cell("TARGET", UTC, LTZ, "expr", f"date_trunc('HOUR', {_ntz(PLAIN)})"),
+    "date_trunc_hour_plain_utc_ltz": _cell(
+        "TARGET", UTC, LTZ, "expr", f"date_trunc('HOUR', {_ntz(PLAIN)})"
+    ),
     "sql_union_ntz_only_ny_ntz": _cell("PROTECTED", NY, NTZ, "sql_union", _ntz(GAP), _ntz(PLAIN)),
     "sql_union_ltz_only_ny_ntz": _cell(
         "PROTECTED", NY, NTZ, "sql_union", INSTANT, "to_timestamp_ltz('2024-03-10 03:30:00')"
     ),
-    "df_union_ntz_only_kolkata_ltz": _cell("PROTECTED", KOLKATA, LTZ, "df_union", _ntz(GAP), _ntz(PLAIN)),
+    "df_union_ntz_only_kolkata_ltz": _cell(
+        "PROTECTED", KOLKATA, LTZ, "df_union", _ntz(GAP), _ntz(PLAIN)
+    ),
     "sql_union_gap_ny_ltz": _cell("PROTECTED", NY, LTZ, "sql_union", _ntz(GAP), INSTANT),
-    "coalesce_ntz_only_ny_ntz": _cell("PROTECTED", NY, NTZ, "expr", f"coalesce({_ntz(GAP)}, {_ntz(PLAIN)})"),
+    "coalesce_ntz_only_ny_ntz": _cell(
+        "PROTECTED", NY, NTZ, "expr", f"coalesce({_ntz(GAP)}, {_ntz(PLAIN)})"
+    ),
     "date_trunc_hour_ltz_gap_ny_ntz": _cell(
         "PROTECTED", NY, NTZ, "expr", "date_trunc('HOUR', to_timestamp_ltz('2024-03-10 03:30:00'))"
     ),
-    "date_trunc_day_date_ny_ltz": _cell("PROTECTED", NY, LTZ, "expr", "date_trunc('DAY', DATE '2024-03-10')"),
+    "date_trunc_day_date_ny_ltz": _cell(
+        "PROTECTED", NY, LTZ, "expr", "date_trunc('DAY', DATE '2024-03-10')"
+    ),
 }
 
 
@@ -66,8 +87,7 @@ def measure(session: Any, functions: Any, cell: dict[str, Any]) -> list[Any]:
 
 
 def main() -> int:
-    from pyspark.sql import SparkSession
-    from pyspark.sql import functions
+    from pyspark.sql import SparkSession, functions
 
     spark = (
         SparkSession.builder.master("local[1]")
@@ -85,11 +105,19 @@ def main() -> int:
     recorded = {"spark_version": spark.version, "cells": cells}
     spark.stop()
     if "--rewrite" in sys.argv:
-        ORACLE_PATH.write_text(json.dumps(recorded, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+        ORACLE_PATH.write_text(
+            json.dumps(recorded, indent=1, sort_keys=True) + "\n", encoding="utf-8"
+        )
         return 0
     stored = json.loads(ORACLE_PATH.read_text(encoding="utf-8"))
-    drift = [name for name in cells if stored["cells"].get(name, {}).get("spark") != cells[name]["spark"]]
-    print(json.dumps({"drift": drift, "cells": len(cells), "java_home": bool(os.environ.get("JAVA_HOME"))}))
+    drift = [
+        name for name in cells if stored["cells"].get(name, {}).get("spark") != cells[name]["spark"]
+    ]
+    print(
+        json.dumps(
+            {"drift": drift, "cells": len(cells), "java_home": bool(os.environ.get("JAVA_HOME"))}
+        )
+    )
     return 1 if drift else 0
 
 

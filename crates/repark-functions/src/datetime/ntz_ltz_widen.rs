@@ -12,10 +12,10 @@ use datafusion::optimizer::AnalyzerRule;
 use crate::instant_ts::is_ltz_timestamp;
 
 #[derive(Debug, Default)]
-pub struct SparkNtzLtzWiden;
+pub(crate) struct SparkNtzLtzWiden;
 
 #[must_use]
-pub fn ntz_ltz_widen_rule() -> Arc<dyn AnalyzerRule + Send + Sync> {
+pub(crate) fn ntz_ltz_widen_rule() -> Arc<dyn AnalyzerRule + Send + Sync> {
     Arc::new(SparkNtzLtzWiden)
 }
 
@@ -26,6 +26,17 @@ impl AnalyzerRule for SparkNtzLtzWiden {
 
     fn name(&self) -> &'static str {
         "spark_ntz_ltz_widen"
+    }
+}
+
+pub(super) fn date_trunc_input(timestamp: &DataType) -> Option<DataType> {
+    match timestamp {
+        DataType::Timestamp(TimeUnit::Microsecond, None) => Some(DataType::Timestamp(
+            super::TIMESTAMP_UNIT,
+            Some(super::INSTANT_ZONE.into()),
+        )),
+        DataType::Timestamp(TimeUnit::Nanosecond, None) => Some(timestamp.clone()),
+        other => super::coerce_to_timestamp_micros(other),
     }
 }
 
@@ -165,5 +176,4 @@ mod tests {
             (ltz_timestamp_type(), vec![INSTANT, INSTANT])
         );
     }
-
 }

@@ -18,6 +18,7 @@ use datafusion::logical_expr::{
     ColumnarValue, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Volatility,
 };
 
+pub(crate) mod ntz_ltz_widen;
 mod session_wall;
 pub mod spark_date_part;
 
@@ -816,22 +817,13 @@ impl ScalarUDFImpl for DateTrunc {
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
-        let [format, timestamp] = arg_types else {
+        let [_, timestamp] = arg_types else {
             return Err(DataFusionError::Plan(format!(
                 "'date_trunc' expects (format, timestamp), got {} argument(s)",
                 arg_types.len()
             )));
         };
-        let _ = format;
-        let timestamp = match timestamp {
-            DataType::Timestamp(TimeUnit::Microsecond, None) => Some(DataType::Timestamp(
-                TIMESTAMP_UNIT,
-                Some(INSTANT_ZONE.into()),
-            )),
-            DataType::Timestamp(TimeUnit::Nanosecond, None) => Some(timestamp.clone()),
-            other => coerce_to_timestamp_micros(other),
-        }
-        .ok_or_else(|| {
+        let timestamp = ntz_ltz_widen::date_trunc_input(timestamp).ok_or_else(|| {
             DataFusionError::Plan(format!(
                 "'date_trunc' cannot accept a timestamp of type {timestamp}"
             ))

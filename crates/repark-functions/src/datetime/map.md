@@ -27,6 +27,12 @@ past its ratcheted size.
   argument (`DATE`, `TIMESTAMP_NTZ`, `TIME`) runs Arrow without zone conversion.
   Not routed here because they are not in this workspace: `datafusion-spark`'s `from_utc_timestamp`
   / `to_utc_timestamp` (ledger R-1, R-2).
+- `ntz_ltz_widen.rs` — **NTZ-LTZ-WIDENING-1 (2026-11-28, split to `date_trunc` alone):**
+  `date_trunc_input` coerces a µs `timestamp_ntz` argument to the instant and keeps a `timestamp_ns` wall a wall,
+  so a second analysis does not widen it. `SparkNtzLtzWiden`, pushed after the second `type_coercion` in
+  `registration::analyzer_rules`, turns the wall-to-instant `Cast` on `date_trunc`'s timestamp argument into
+  `zone_seam::seam_call` (a UTC round trip collapses), so the wall localizes in the session zone under either
+  session type.
 - `spark_date_part.rs` — **DATE-PART-SESSION-ZONE-1 (2026-11-23, delta 1 part 2):** owns Spark's
   `date_part` / `datepart` scalar UDF (`SparkDatePart`, `date_part_udf` for SQL and
   `facade_date_part_udf` for typed `F.date_part`/`F.datepart`/`F.extract` and SQL `EXTRACT` on
