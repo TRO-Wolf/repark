@@ -221,7 +221,7 @@ fn refusal(try_cast: bool, source: &DataType, target: &DataType) -> DataFusionEr
     ))
 }
 
-fn seam_call(value: Expr, target: &DataType, try_cast: bool) -> Option<Expr> {
+pub(crate) fn seam_call(value: Expr, target: &DataType, try_cast: bool) -> Option<Expr> {
     let carrier = ScalarValue::try_new_null(target).ok()?;
     Some(Expr::ScalarFunction(ScalarFunction::new_udf(
         zone_seam_udf(try_cast),

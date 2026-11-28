@@ -703,14 +703,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (`SparkExtension::configure` installs it seeded `spark_catalog` / `default`; `USE`
   mirrors it), falling back to planner `default_catalog` / `default_schema` on
   carrier-less contexts.
-- `datetime.rs` — session-zone semantics are type-driven (`coerce_date_arg` /
-  `coerce_to_timestamp_micros` /
-  `coerce_to_date32`: `Timestamp(_, Some(_))` is an LTZ instant; `Timestamp(_, None)` is NTZ
-  and stays naive; `Date32`/`Time`/string keep zone-free types; every arm is a fixed point because
-  DataFusion re-analyzes at physical planning. Zoneless LTZ inputs are localized by `instant_ts.rs`.
-  `LocalSource` distinguishes instants from wall clocks at invoke; `date_trunc`/`date_format` use
-  `invoke_local_micros`, while `trunc`/`add_months` use `invoke_local_dates`. Overlaps prefer the
-  source instant's offset; gaps use the bounded `offset_before_gap` resolver.
+- `datetime.rs` — session-zone semantics are type-driven (`coerce_date_arg` / `coerce_to_timestamp_micros` /
+  `coerce_to_date32`): `Timestamp(_, Some(_))` is an LTZ instant, `Timestamp(_, None)` NTZ, date/time/string
+  zone-free; each arm is a fixed point (DataFusion re-analyzes at physical planning). NTZ-LTZ-WIDENING-1: only
+  `date_trunc` coerces a µs NTZ to the instant (a ns wall stays one), so the wall localizes in the session zone and it returns
+  `timestamp`, as Spark. `LocalSource` splits instants from walls; overlaps keep the source offset.
 - `cardinality.rs` — r24 SB1 SEC-01 ceilings + SEC-02 conf extension (const
   CAST / arithmetic / abs / coalesce / greatest / least / nullif / CASE /
   arrow_cast / utf8→int / float math / log*/exp/sqrt / bitwise / trivial scalar-subquery fold; depth-bounded).

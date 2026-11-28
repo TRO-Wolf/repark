@@ -22,12 +22,13 @@ Part of FACADE-TESTS-LAYOUT-1 (2026-10-19); rules live in [../map.md](../map.md)
 - [test_ice_tstzns_wall_1.py](test_ice_tstzns_wall_1.py) — ICE-TSTZNS-WALL-1: every write door stores the same instant into ``timestamptz_ns``.
 - [test_ltz_stacked_sign_1.py](test_ltz_stacked_sign_1.py) — WO LTZ-STACKED-SIGN-1 re-verify fold (RN3-1): probe strings round-trip.
 - [test_ltz_store_int_1.py](test_ltz_store_int_1.py) — WO LTZ-STORE-INT-1: an INT stored into a TIMESTAMP column refuses like Spark.
-- [test_ns_truthup_1.py](test_ns_truthup_1.py) — **NS-TRUTHUP-1 (2026-10-26):** the twelve `UPDATE` and `DELETE` nanosecond-cast spellings store or match on UTC and America/New_York (R-010, `test_update_and_delete_lower_the_nanosecond_cast_spellings`); `DESCRIBE TABLE` and `DESCRIBE TABLE EXTENDED` name a nanosecond column `timestamp_ns` or `timestamptz_ns`, with a microsecond v2 control (R-001, `test_describe_shows_the_spec_names_for_nanosecond_columns`).
+- [test_ns_truthup_1.py](test_ns_truthup_1.py) — **NS-TRUTHUP-1 (2026-10-26):** the twelve `UPDATE` and `DELETE` nanosecond-cast spellings store or match on UTC and America/New_York; `DESCRIBE TABLE` and `DESCRIBE TABLE EXTENDED` name a nanosecond column `timestamp_ns` or `timestamptz_ns`, with a microsecond v2 control.
 - [test_ntz_1.py](test_ntz_1.py) — WO NTZ-1 slices 1 to 3: TIMESTAMP_NTZ literals, casts, store and storage.
 - [test_ntz_7_verify.py](test_ntz_7_verify.py) — WO NTZ-1 verifier fold: from_utc_timestamp and to_utc_timestamp keep Spark's TIMESTAMP.
 - [test_ntz_8_verify.py](test_ntz_8_verify.py) — WO NTZ-1 verifier fold part 2: zone-shift calls inside DML keep Spark's instant.
 - [test_ntz_9_verify.py](test_ntz_9_verify.py) — WO NTZ-1 re-verify fold: VALUES cells computed in LTZ store the session wall.
 - [test_timestamp_ltz_explicit_cast_1.py](test_timestamp_ltz_explicit_cast_1.py), [oracle](timestamp_ltz_explicit_cast_1_spark_oracle.json), [recorder](_record_timestamp_ltz_explicit_cast_1.py) — TIMESTAMP-LTZ-EXPLICIT-CAST-1 pins (19 Spark cells).
+- [test_ntz_ltz_widening_1.py](test_ntz_ltz_widening_1.py), [oracle](ntz_ltz_widening_1_spark_oracle.json), [recorder](_record_ntz_ltz_widening_1.py) — NTZ-LTZ-WIDENING-1 pins (13 Spark cells: 3 red on main).
 - [test_ntz_store_doors_1.py](test_ntz_store_doors_1.py) — NTZ-STORE-DOORS-1: every write door stores Spark's TIMESTAMP_NTZ value, partitions included; the six `ow_part` cells pin the partition path's own refusal text (WS2-28).
 - [test_runtime_zone_spellings_1.py](test_runtime_zone_spellings_1.py) — Zone spellings against the batch-17 oracle — SET-ANSI-RUNTIME-1 review follow-up.
 - [test_session_timezone_parity.py](test_session_timezone_parity.py) — Session-timezone differential rows (gap G1) + temporal edges (gap G16) — H-1a split A.

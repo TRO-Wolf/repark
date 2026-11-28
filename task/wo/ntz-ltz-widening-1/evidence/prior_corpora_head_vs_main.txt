@@ -1,0 +1,8 @@
+replay_atk_d1	closed	273
+replay_mine	closed	42
+replay_mine	still-wrong	84
+replay_r	closed	24
+replay_rd1	still-wrong	32
+replay_step0	closed	3
+replay_step0	still-wrong	3
+TOTAL {'closed': 342, 'still-wrong': 119}
