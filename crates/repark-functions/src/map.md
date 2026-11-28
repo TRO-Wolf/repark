@@ -708,7 +708,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   zone-free; each arm is a fixed point (DataFusion re-analyzes at physical planning). NTZ-LTZ-WIDENING-1: only
   `date_trunc` coerces a µs NTZ to the instant (a ns wall stays one), so the wall localizes in the session zone and it returns
   `timestamp`, as Spark. `LocalSource` splits instants from walls; overlaps keep the source offset.
-- `datetime/ntz_ltz_widen.rs` — NTZ-LTZ-WIDENING-1: [datetime/map.md](datetime/map.md).
 - `cardinality.rs` — r24 SB1 SEC-01 ceilings + SEC-02 conf extension (const
   CAST / arithmetic / abs / coalesce / greatest / least / nullif / CASE /
   arrow_cast / utf8→int / float math / log*/exp/sqrt / bitwise / trivial scalar-subquery fold; depth-bounded).
