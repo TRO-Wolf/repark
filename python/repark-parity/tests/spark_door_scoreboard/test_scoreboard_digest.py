@@ -138,7 +138,7 @@ def test_a_hand_edited_stored_file_fails_the_corpus_check(tmp_path: Path) -> Non
 def test_a_machine_path_in_a_stored_answer_is_refused() -> None:
     scrubbed = {**answer(CELL, "spark"), "message": "cannot read <tmp>/part-0.parquet"}
     check_lane("lane", {"c1": CELL}, {"c1": scrubbed})
-    leaked = {**scrubbed, "message": "cannot read file:/tmp/run/part-0.parquet"}
+    leaked = {**scrubbed, "message": "cannot read file:/srv/run/part-0.parquet"}
     with pytest.raises(CorpusError, match="machine path"):
         check_lane("lane", {"c1": CELL}, {"c1": leaked})
 
