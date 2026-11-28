@@ -15,6 +15,9 @@ core is pure pyarrow — no Spark, no JVM — so it runs in routine CI.
 - `src/repark_parity/` — `compare.py` (the comparison core), `__init__.py`, `py.typed`.
 - `tests/` — unit tests for the comparison core **and the dataset generators**; the
   TORTURE-1 both-door suite lives in [tests/torture/](tests/torture/map.md).
+  The scoreboard harness tests live in
+  [tests/spark_door_scoreboard/](tests/spark_door_scoreboard/map.md) (linked here: the tests map is
+  at its line ceiling).
 - `fixtures/` — generated-test fixture sources; the TORTURE-1 generator package
   (`repark_parity.torture`, data never committed except the ruled `data/v3_dv/`
   Spark-written fixture) lives in
@@ -72,6 +75,7 @@ core is pure pyarrow — no Spark, no JVM — so it runs in routine CI.
 | Follow the recorded census procedure | [../../docs/port/census.md](../../docs/port/census.md) |
 | Generate / test torture datasets | [datasets/map.md](datasets/map.md) |
 | Generate / run the TORTURE-1 both-door torture suite | [fixtures/torture/map.md](fixtures/torture/map.md) / `make py-test-torture` |
+| Score the whole Spark door against Spark 4.1.2, or compare two scoreboards | [src/repark_parity/scoreboard/map.md](src/repark_parity/scoreboard/map.md) / [../../.agents/skills/spark-door-scoreboard/SKILL.md](../../.agents/skills/spark-door-scoreboard/SKILL.md) |
 
 ## Pointers
 

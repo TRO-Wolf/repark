@@ -64,6 +64,9 @@ See [../../.claude/map.md](../../.claude/map.md).
   PySpark oracle and classify every divergence (product bug / disposed / stale) before repairing.
   Mandatory first step of a parity-live nightly-red triage; required sweep in any PR that flips a
   Spark-visible default or error contract; periodic pre-release pass.
+- [spark-door-scoreboard/](spark-door-scoreboard/map.md) — replay a package against the recorded
+  Spark 4.1.2 answers of the 2026-11-21 audit corpus, score every cell by class, and compare two
+  scoreboards cell by cell (moved onto Spark, moved off it). The whole-door measurement.
 
 ## I want to...
 
@@ -80,6 +83,7 @@ See [../../.claude/map.md](../../.claude/map.md).
 | Write or review Python under the conventions | [code-quality/SKILL.md](code-quality/SKILL.md) |
 | Review a Rust PR or commit | [rust-code-quality/SKILL.md](rust-code-quality/SKILL.md) |
 | Triage a parity-live red, or flip a Spark-visible default | [audit-repark-parity/SKILL.md](audit-repark-parity/SKILL.md) |
+| Score the whole Spark door, or check a branch moves no cell off Spark | [spark-door-scoreboard/SKILL.md](spark-door-scoreboard/SKILL.md) |
 | Add a new skill | a `<verb-noun>/` directory here with `SKILL.md` (frontmatter + pointers, no engineering policy) and its own `map.md`, plus a Contents row |
 | Read the authoritative contract | [../../AGENTS.md](../../AGENTS.md) |
 
