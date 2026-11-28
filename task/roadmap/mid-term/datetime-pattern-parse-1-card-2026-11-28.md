@@ -3,7 +3,7 @@
 **Rating:** S1 (owner, 2026-11-28). **Base:** main `862d7155a` (product tree of `9df269acb`). **Parent:** the
 FNP-11B parser card D-1 ([fnp-11b ledger](../../ledgers/staging/fnp-11b-ledger.md)), the `java_datetime.rs` row of
 [crates/repark-functions/src/map.md](../../../crates/repark-functions/src/map.md). Scout family F02 of the
-2026-11-28 `dates` lane audit. Evidence: [task/wo/datetime-pattern-parse-1/](../../wo/datetime-pattern-parse-1/map.md).
+2026-11-28 `dates` lane audit. Evidence: [task/wo/datetime-pattern-parse-1/evidence/](../../wo/datetime-pattern-parse-1/evidence/).
 
 ## Defect
 

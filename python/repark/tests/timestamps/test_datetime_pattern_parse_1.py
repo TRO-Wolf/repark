@@ -31,7 +31,9 @@ def _open(cell: dict[str, Any], warehouse: Path) -> ReparkSession:
     return session
 
 
-def _answer(session: ReparkSession, cell: dict[str, Any], text: str | None, pattern: str, table: str) -> Any:
+def _answer(
+    session: ReparkSession, cell: dict[str, Any], text: str | None, pattern: str, table: str
+) -> Any:
     fn = cell["fn"]
     if cell["op"] == "select":
         literal = f"{fn}({_quote(text)}, {_quote(pattern)})"
@@ -39,7 +41,8 @@ def _answer(session: ReparkSession, cell: dict[str, Any], text: str | None, patt
         return [row[0], None if row[1] is None else str(row[1])]
     if cell["op"] == "store_ntz":
         session.sql(f"CREATE TABLE {table} (id INT, v TIMESTAMP_NTZ) USING iceberg")
-        session.sql(f"INSERT INTO {table} SELECT 0, {fn}(s, {_quote(pattern)}) FROM (SELECT {_quote(text)} AS s)")
+        source = f"(SELECT {_quote(text)} AS s)"
+        session.sql(f"INSERT INTO {table} SELECT 0, {fn}(s, {_quote(pattern)}) FROM {source}")
         rows = session.sql(f"SELECT CAST(v AS STRING) FROM {table}").collect()
         return [None if row[0] is None else str(row[0]) for row in rows]
     frame = session.createDataFrame(list(enumerate(cell["texts"])), "id INT, x STRING")
