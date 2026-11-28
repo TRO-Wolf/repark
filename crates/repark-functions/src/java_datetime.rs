@@ -41,6 +41,7 @@ pub(crate) enum JavaToken {
 pub(crate) struct ParsedPattern {
     tokens: Vec<JavaToken>,
     exact: bool,
+    refusal: Option<String>,
 }
 
 impl ParsedPattern {
@@ -152,7 +153,7 @@ pub(crate) fn compile_java_pattern(pattern: &str) -> Result<ParsedPattern> {
              {pattern}. SQLSTATE: 22007"
         )));
     }
-    walk::link(tokens, pattern)
+    Ok(walk::link(tokens, pattern))
 }
 
 pub(crate) fn plan_format_column(formats: &StringArray) -> Result<FormatPlan> {
@@ -209,6 +210,9 @@ pub(crate) fn parse_wall_or_null(
     ansi: bool,
     try_name: &str,
 ) -> Result<Option<NaiveDateTime>> {
+    if let Some(refusal) = &pattern.refusal {
+        return Err(DataFusionError::Execution(refusal.clone()));
+    }
     match parse_wall_text(text, pattern) {
         Ok(wall) => match wall.to_naive() {
             Some(naive) => Ok(Some(naive)),

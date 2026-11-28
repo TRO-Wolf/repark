@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use datafusion::arrow::array::ArrayRef;
+use datafusion::arrow::array::{Array, ArrayRef, new_null_array};
+use datafusion::arrow::datatypes::DataType;
 use datafusion::common::Result;
-use datafusion::error::DataFusionError;
 use datafusion::logical_expr::{ColumnarValue, ScalarFunctionArgs};
 
 use super::{
@@ -29,21 +29,16 @@ pub(super) fn marker(current: char) -> JavaToken {
     }
 }
 
-pub(super) fn link(mut tokens: Vec<JavaToken>, pattern: &str) -> Result<ParsedPattern> {
+pub(super) fn link(mut tokens: Vec<JavaToken>, pattern: &str) -> ParsedPattern {
     let mut open = Vec::new();
     let mut spans = Vec::new();
     for (index, token) in tokens.iter().enumerate() {
         match token {
             JavaToken::Open(_) => open.push(index),
-            JavaToken::Close => {
-                let start = open.pop().ok_or_else(|| {
-                    DataFusionError::Execution(format!(
-                        "{} Fail to recognize '{pattern}' pattern in the DateTimeFormatter.",
-                        week_year_refusal_text()
-                    ))
-                })?;
-                spans.push((start, index + 1));
-            }
+            JavaToken::Close => match open.pop() {
+                Some(start) => spans.push((start, index + 1)),
+                None => return refused(pattern),
+            },
             _ => {}
         }
     }
@@ -58,7 +53,22 @@ pub(super) fn link(mut tokens: Vec<JavaToken>, pattern: &str) -> Result<ParsedPa
     if exact {
         tokens = tokens.into_iter().map(literal_marker).collect();
     }
-    Ok(ParsedPattern { tokens, exact })
+    ParsedPattern {
+        tokens,
+        exact,
+        refusal: None,
+    }
+}
+
+fn refused(pattern: &str) -> ParsedPattern {
+    ParsedPattern {
+        tokens: Vec::new(),
+        exact: true,
+        refusal: Some(format!(
+            "{} Fail to recognize '{pattern}' pattern in the DateTimeFormatter.",
+            week_year_refusal_text()
+        )),
+    }
 }
 
 fn literal_marker(token: JavaToken) -> JavaToken {
@@ -132,6 +142,9 @@ pub(super) fn walk<'text>(
         afternoon: None,
         seen: 0,
     };
+    if pattern.refusal.is_some() {
+        return Err(at(0));
+    }
     let mut saved: Vec<(Cursor<'text>, usize)> = Vec::new();
     let mut index = 0;
     while let Some(token) = pattern.tokens().get(index) {
@@ -290,6 +303,12 @@ pub(crate) fn try_dates_with_format(
     formats: &ArrayRef,
     args: &ScalarFunctionArgs,
 ) -> Result<ColumnarValue> {
+    if input.null_count() == input.len() {
+        return Ok(ColumnarValue::Array(new_null_array(
+            &DataType::Date32,
+            input.len(),
+        )));
+    }
     let mut options = (*args.config_options).clone();
     options
         .extensions
@@ -297,4 +316,152 @@ pub(crate) fn try_dates_with_format(
     let mut quiet = args.clone();
     quiet.config_options = Arc::new(options);
     to_date_with_format(input, formats, &quiet)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::{compile_java_pattern, parse_wall_or_null, parse_wall_text};
+    use super::*;
+
+    fn wall(text: &str, format: &str) -> Result<String, WallFailure> {
+        let pattern = compile_java_pattern(format).expect("fixture pattern compiles");
+        parse_wall_text(text, &pattern).map(|wall| {
+            wall.to_naive()
+                .expect("fixture wall is a real datetime")
+                .to_string()
+        })
+    }
+
+    fn index(text: &str, format: &str) -> usize {
+        match wall(text, format) {
+            Err(WallFailure::AtIndex { position }) => position,
+            other => panic!("{text} / {format} should fail at an index: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn fraction_run_takes_one_to_width_digits() {
+        let f6 = "yyyy-MM-dd HH:mm:ss.SSSSSS";
+        assert_eq!(
+            wall("2024-01-01 03:04:05.9", f6).unwrap(),
+            "2024-01-01 03:04:05.900"
+        );
+        assert_eq!(
+            wall("2024-01-01 03:04:05.12", f6).unwrap(),
+            "2024-01-01 03:04:05.120"
+        );
+        assert_eq!(
+            wall("1969-12-31 23:59:59.5", f6).unwrap(),
+            "1969-12-31 23:59:59.500"
+        );
+        assert_eq!(
+            wall("2024-01-01 03:04:05.12", "yyyy-MM-dd HH:mm:ss.SSSSSSSSS").unwrap(),
+            "2024-01-01 03:04:05.120"
+        );
+        assert_eq!(index("2024-01-01 03:04:05.1234567", f6), 26);
+        assert_eq!(index("2024-01-01 03:04:05.", f6), 20);
+        assert_eq!(index("2024-01-01 03:04:05", f6), 19);
+        assert_eq!(
+            index("2024-01-01 03:04:05.789", "yyyy-MM-dd HH:mm:ss.S"),
+            21
+        );
+    }
+
+    #[test]
+    fn optional_section_is_present_or_absent() {
+        let format = "yyyy-MM-dd[ HH:mm:ss]";
+        assert_eq!(wall("2024-02-29", format).unwrap(), "2024-02-29 00:00:00");
+        assert_eq!(
+            wall("2024-02-29 01:02:03", format).unwrap(),
+            "2024-02-29 01:02:03"
+        );
+        assert_eq!(
+            wall("2024-02-29 01:02:03.5", "yyyy-MM-dd HH:mm:ss[.SSS]").unwrap(),
+            "2024-02-29 01:02:03.500"
+        );
+        assert_eq!(
+            wall("2024-02-29", "yyyy-MM-dd[]").unwrap(),
+            "2024-02-29 00:00:00"
+        );
+    }
+
+    #[test]
+    fn partial_section_rolls_back_and_the_parse_fails() {
+        assert_eq!(index("2024-02-29 01:02", "yyyy-MM-dd[ HH:mm:ss]"), 10);
+        assert_eq!(index("2024-02-29 01:02:03x", "yyyy-MM-dd[ HH:mm:ss]"), 19);
+    }
+
+    #[test]
+    fn sections_nest_and_alternate() {
+        let nested = "yyyy-MM-dd[ HH:mm[:ss]]";
+        assert_eq!(
+            wall("2024-02-29 01:02", nested).unwrap(),
+            "2024-02-29 01:02:00"
+        );
+        assert_eq!(
+            wall("2024-02-29 01:02:03", nested).unwrap(),
+            "2024-02-29 01:02:03"
+        );
+        let alternatives = "[yyyy-MM-dd][dd/MM/yyyy]";
+        assert_eq!(
+            wall("2024-02-29", alternatives).unwrap(),
+            "2024-02-29 00:00:00"
+        );
+        assert_eq!(
+            wall("29/02/2024", alternatives).unwrap(),
+            "2024-02-29 00:00:00"
+        );
+    }
+
+    #[test]
+    fn unclosed_section_runs_to_the_end() {
+        assert_eq!(
+            wall("2024-02-29 01", "yyyy-MM-dd[ HH").unwrap(),
+            "2024-02-29 01:00:00"
+        );
+        assert_eq!(
+            wall("2024-02-29", "yyyy-MM-dd[ HH").unwrap(),
+            "2024-02-29 00:00:00"
+        );
+    }
+
+    #[test]
+    fn stray_close_refuses_and_quoted_brackets_stay_literal() {
+        let pattern = compile_java_pattern("yyyy-MM-dd]").expect("the refusal waits for a row");
+        let error = parse_wall_or_null("2024-02-29", &pattern, false, "try_to_timestamp")
+            .expect_err("a stray ] refuses");
+        assert!(
+            error
+                .to_string()
+                .contains("[INCONSISTENT_BEHAVIOR_CROSS_VERSION.DATETIME_PATTERN_RECOGNITION]"),
+            "{error}"
+        );
+        let second = compile_java_pattern("yyyy-MM-dd[ HH]]").expect("compiles");
+        parse_wall_or_null("2024-02-29 01", &second, true, "try_to_timestamp")
+            .expect_err("a second ] refuses");
+        assert_eq!(
+            wall("2024-02-29[01]", "yyyy-MM-dd'['HH']'").unwrap(),
+            "2024-02-29 01:00:00"
+        );
+    }
+
+    #[test]
+    fn unreadable_tokens_and_greedy_runs_keep_literal_brackets() {
+        assert_eq!(index("2024-01-01", "yyyy-MM-dd[ EEE]"), 10);
+        assert_eq!(index("20240229010203", "yyyyMMdd[HHmmss]"), 8);
+        assert_eq!(index("202402", "[yyyy][MM]"), 0);
+        assert_eq!(
+            wall("20240229 010203", "yyyyMMdd[ HHmmss]").unwrap(),
+            "2024-02-29 01:02:03"
+        );
+    }
+
+    #[test]
+    fn a_section_that_resets_a_parsed_field_fails() {
+        assert_eq!(index("2024-01-05 06", "yyyy-MM-dd[ dd]"), 10);
+        assert_eq!(
+            wall("2024-01-05 05", "yyyy-MM-dd[ dd]").unwrap(),
+            "2024-01-05 00:00:00"
+        );
+    }
 }
