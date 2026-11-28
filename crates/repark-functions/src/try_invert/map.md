@@ -24,7 +24,9 @@ alias of `element_at` in [`../collection.rs`](../collection.rs).
   [`../aggregate.rs`](../aggregate.rs)).
 - `convert.rs` — `try_to_date`, `try_to_number`, `try_to_binary`, `try_to_time`.
   Live Spark 4.1.2 `try_to_time` raises `UNSUPPORTED_TIME_TYPE`; this kernel matches that.
-  `try_to_date` Java patterns default missing month/day to 01 and parse `MMM`/`MMMM`.
+  `try_to_date` with a format parses through the shared Java-pattern parser with ANSI off
+  (DATETIME-PATTERN-PARSE-1, [`../java_datetime/`](../java_datetime/map.md)); its own date-only
+  tokenizer is gone.
   **FN-FIX-1:** non-foldable `try_to_number` format raises `NON_FOLDABLE_INPUT`.
   The number-format grammar and the binary decoders are `pub(crate)` for `strict.rs`.
 - `strict.rs` — **FNP-11B step 5 (2026-09-15):** the raising twins `to_number` /

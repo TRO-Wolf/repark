@@ -17,6 +17,8 @@ use crate::datetime::{invoke_local_dates, localize_wall_micros_in_zone};
 use crate::session_time_zone::session_time_zone_from_options;
 use crate::timestamp_cast::parse_session_zone;
 
+pub(crate) mod walk;
+
 #[derive(Debug)]
 pub(crate) enum JavaToken {
     Year { width: usize },
@@ -31,11 +33,14 @@ pub(crate) enum JavaToken {
     AmPm,
     Literal(char),
     Unsupported,
+    Open(usize),
+    Close,
 }
 
 #[derive(Debug)]
 pub(crate) struct ParsedPattern {
     tokens: Vec<JavaToken>,
+    exact: bool,
 }
 
 impl ParsedPattern {
@@ -44,7 +49,7 @@ impl ParsedPattern {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct Wall {
     pub(crate) year: i32,
     pub(crate) month: u32,
@@ -137,7 +142,7 @@ pub(crate) fn compile_java_pattern(pattern: &str) -> Result<ParsedPattern> {
         if current.is_ascii_alphabetic() {
             tokens.push(JavaToken::Unsupported);
         } else {
-            tokens.push(JavaToken::Literal(current));
+            tokens.push(walk::marker(current));
         }
         index += 1;
     }
@@ -147,7 +152,7 @@ pub(crate) fn compile_java_pattern(pattern: &str) -> Result<ParsedPattern> {
              {pattern}. SQLSTATE: 22007"
         )));
     }
-    Ok(ParsedPattern { tokens })
+    walk::link(tokens, pattern)
 }
 
 pub(crate) fn plan_format_column(formats: &StringArray) -> Result<FormatPlan> {
@@ -180,96 +185,12 @@ pub(crate) fn plan_format_column(formats: &StringArray) -> Result<FormatPlan> {
 }
 
 pub(crate) fn parse_wall_text(text: &str, pattern: &ParsedPattern) -> Result<Wall, WallFailure> {
-    let mut rest = text;
-    let mut consumed = 0usize;
-    let mut wall = Wall {
-        year: 1970,
-        month: 1,
-        day: 1,
-        hour: 0,
-        minute: 0,
-        second: 0,
-        nano: 0,
-    };
-    let mut afternoon: Option<bool> = None;
-    for token in pattern.tokens() {
-        match token {
-            JavaToken::Year { width } => {
-                let (value, taken) = take_year(rest, *width).ok_or(at(consumed))?;
-                wall.year = value;
-                rest = step(rest, taken, &mut consumed);
-            }
-            JavaToken::MonthNumber { width } => {
-                let (value, taken) = take_two_digit_field(rest, *width)
-                    .filter(|(value, _)| (1..=12).contains(value))
-                    .ok_or_else(|| month_failure(rest, *width, consumed))?;
-                wall.month = value;
-                rest = step(rest, taken, &mut consumed);
-            }
-            JavaToken::MonthName { full } => {
-                let (value, taken) = take_month_name(rest, *full).ok_or(at(consumed))?;
-                wall.month = value;
-                rest = step(rest, taken, &mut consumed);
-            }
-            JavaToken::Day { width } => {
-                let (value, taken) = take_two_digit_field(rest, *width)
-                    .filter(|(value, _)| (1..=31).contains(value))
-                    .ok_or_else(|| day_failure(rest, *width, consumed))?;
-                wall.day = value;
-                rest = step(rest, taken, &mut consumed);
-            }
-            JavaToken::Hour24 { width } => {
-                let (value, taken) = take_two_digit_field(rest, *width)
-                    .filter(|(value, _)| *value <= 23)
-                    .ok_or_else(|| hour_failure(rest, *width, consumed, false))?;
-                wall.hour = value;
-                rest = step(rest, taken, &mut consumed);
-            }
-            JavaToken::Hour12 { width } => {
-                let (value, taken) = take_two_digit_field(rest, *width)
-                    .filter(|(value, _)| (1..=12).contains(value))
-                    .ok_or_else(|| hour_failure(rest, *width, consumed, true))?;
-                wall.hour = value;
-                rest = step(rest, taken, &mut consumed);
-            }
-            JavaToken::Minute { width } => {
-                let (value, taken) = take_two_digit_field(rest, *width)
-                    .filter(|(value, _)| *value <= 59)
-                    .ok_or_else(|| minute_failure(rest, *width, consumed))?;
-                wall.minute = value;
-                rest = step(rest, taken, &mut consumed);
-            }
-            JavaToken::Second { width } => {
-                let (value, taken) = take_two_digit_field(rest, *width)
-                    .filter(|(value, _)| *value <= 59)
-                    .ok_or_else(|| second_failure(rest, *width, consumed))?;
-                wall.second = value;
-                rest = step(rest, taken, &mut consumed);
-            }
-            JavaToken::Fraction { width } => {
-                let (value, taken) = take_digits(rest, *width, *width).ok_or(at(consumed))?;
-                wall.nano = fraction_nanos(value, *width).ok_or(at(consumed))?;
-                rest = step(rest, taken, &mut consumed);
-            }
-            JavaToken::AmPm => {
-                afternoon = Some(take_meridiem(rest).ok_or(at(consumed))?);
-                rest = step(rest, 2, &mut consumed);
-            }
-            JavaToken::Literal(expected) => {
-                if !rest.starts_with(*expected) {
-                    return Err(at(consumed));
-                }
-                rest = step(rest, expected.len_utf8(), &mut consumed);
-            }
-            JavaToken::Unsupported => {
-                return Err(at(consumed));
-            }
-        }
+    let walked = walk::walk(text, pattern)?;
+    let mut wall = walked.wall;
+    if !walked.rest.is_empty() {
+        return Err(at(walked.consumed));
     }
-    if !rest.is_empty() {
-        return Err(at(consumed));
-    }
-    if let Some(post_meridiem) = afternoon {
+    if let Some(post_meridiem) = walked.afternoon {
         wall.hour = match (wall.hour, post_meridiem) {
             (12, false) => 0,
             (hour, true) if hour < 12 => hour + 12,
