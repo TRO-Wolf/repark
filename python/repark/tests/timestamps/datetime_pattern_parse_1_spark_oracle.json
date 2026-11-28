@@ -1,0 +1,4003 @@
+{
+ "cells": {
+  "P1-f3_2-to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-01"
+   ],
+   "text": "2024-01-01 03:04:05.25",
+   "zone": "UTC"
+  },
+  "P1-f3_2-to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-01"
+   ],
+   "text": "2024-01-01 03:04:05.25",
+   "zone": "UTC"
+  },
+  "P1-f3_2-to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-01 03:04:05.25"
+   ],
+   "text": "2024-01-01 03:04:05.25",
+   "zone": "UTC"
+  },
+  "P1-f3_2-to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-01 03:04:05.25"
+   ],
+   "text": "2024-01-01 03:04:05.25",
+   "zone": "UTC"
+  },
+  "P1-f3_2-to_timestamp_ntz-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-01-01 03:04:05.25"
+   ],
+   "text": "2024-01-01 03:04:05.25",
+   "zone": "UTC"
+  },
+  "P1-f3_2-to_timestamp_ntz-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-01-01 03:04:05.25"
+   ],
+   "text": "2024-01-01 03:04:05.25",
+   "zone": "UTC"
+  },
+  "P1-f3_2-try_to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-01"
+   ],
+   "text": "2024-01-01 03:04:05.25",
+   "zone": "UTC"
+  },
+  "P1-f3_2-try_to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-01"
+   ],
+   "text": "2024-01-01 03:04:05.25",
+   "zone": "UTC"
+  },
+  "P1-f3_2-try_to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-01 03:04:05.25"
+   ],
+   "text": "2024-01-01 03:04:05.25",
+   "zone": "UTC"
+  },
+  "P1-f3_2-try_to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-01 03:04:05.25"
+   ],
+   "text": "2024-01-01 03:04:05.25",
+   "zone": "UTC"
+  },
+  "P1-f3_2-unix_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1704078245"
+   ],
+   "text": "2024-01-01 03:04:05.25",
+   "zone": "UTC"
+  },
+  "P1-f3_2-unix_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1704078245"
+   ],
+   "text": "2024-01-01 03:04:05.25",
+   "zone": "UTC"
+  },
+  "P1-f6_1-to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-01"
+   ],
+   "text": "2024-01-01 03:04:05.9",
+   "zone": "UTC"
+  },
+  "P1-f6_1-to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-01"
+   ],
+   "text": "2024-01-01 03:04:05.9",
+   "zone": "UTC"
+  },
+  "P1-f6_1-to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-01 03:04:05.9"
+   ],
+   "text": "2024-01-01 03:04:05.9",
+   "zone": "UTC"
+  },
+  "P1-f6_1-to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-01 03:04:05.9"
+   ],
+   "text": "2024-01-01 03:04:05.9",
+   "zone": "UTC"
+  },
+  "P1-f6_1-to_timestamp_ntz-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-01-01 03:04:05.9"
+   ],
+   "text": "2024-01-01 03:04:05.9",
+   "zone": "UTC"
+  },
+  "P1-f6_1-to_timestamp_ntz-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-01-01 03:04:05.9"
+   ],
+   "text": "2024-01-01 03:04:05.9",
+   "zone": "UTC"
+  },
+  "P1-f6_1-try_to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-01"
+   ],
+   "text": "2024-01-01 03:04:05.9",
+   "zone": "UTC"
+  },
+  "P1-f6_1-try_to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-01"
+   ],
+   "text": "2024-01-01 03:04:05.9",
+   "zone": "UTC"
+  },
+  "P1-f6_1-try_to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-01 03:04:05.9"
+   ],
+   "text": "2024-01-01 03:04:05.9",
+   "zone": "UTC"
+  },
+  "P1-f6_1-try_to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-01 03:04:05.9"
+   ],
+   "text": "2024-01-01 03:04:05.9",
+   "zone": "UTC"
+  },
+  "P1-f6_1-unix_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1704078245"
+   ],
+   "text": "2024-01-01 03:04:05.9",
+   "zone": "UTC"
+  },
+  "P1-f6_1-unix_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "P1",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1704078245"
+   ],
+   "text": "2024-01-01 03:04:05.9",
+   "zone": "UTC"
+  },
+  "P2-opt_date-to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-02-29"
+   ],
+   "text": "2024-02-29",
+   "zone": "UTC"
+  },
+  "P2-opt_date-to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-02-29"
+   ],
+   "text": "2024-02-29",
+   "zone": "UTC"
+  },
+  "P2-opt_date-to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-02-29 00:00:00"
+   ],
+   "text": "2024-02-29",
+   "zone": "UTC"
+  },
+  "P2-opt_date-to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-02-29 00:00:00"
+   ],
+   "text": "2024-02-29",
+   "zone": "UTC"
+  },
+  "P2-opt_date-to_timestamp_ntz-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-02-29 00:00:00"
+   ],
+   "text": "2024-02-29",
+   "zone": "UTC"
+  },
+  "P2-opt_date-to_timestamp_ntz-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-02-29 00:00:00"
+   ],
+   "text": "2024-02-29",
+   "zone": "UTC"
+  },
+  "P2-opt_date-try_to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-02-29"
+   ],
+   "text": "2024-02-29",
+   "zone": "UTC"
+  },
+  "P2-opt_date-try_to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-02-29"
+   ],
+   "text": "2024-02-29",
+   "zone": "UTC"
+  },
+  "P2-opt_date-try_to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-02-29 00:00:00"
+   ],
+   "text": "2024-02-29",
+   "zone": "UTC"
+  },
+  "P2-opt_date-try_to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-02-29 00:00:00"
+   ],
+   "text": "2024-02-29",
+   "zone": "UTC"
+  },
+  "P2-opt_date-unix_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1709164800"
+   ],
+   "text": "2024-02-29",
+   "zone": "UTC"
+  },
+  "P2-opt_date-unix_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1709164800"
+   ],
+   "text": "2024-02-29",
+   "zone": "UTC"
+  },
+  "P2-opt_frac_with-to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss[.SSS]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-02-29"
+   ],
+   "text": "2024-02-29 01:02:03.5",
+   "zone": "UTC"
+  },
+  "P2-opt_frac_with-to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss[.SSS]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-02-29"
+   ],
+   "text": "2024-02-29 01:02:03.5",
+   "zone": "UTC"
+  },
+  "P2-opt_frac_with-to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss[.SSS]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-02-29 01:02:03.5"
+   ],
+   "text": "2024-02-29 01:02:03.5",
+   "zone": "UTC"
+  },
+  "P2-opt_frac_with-to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss[.SSS]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-02-29 01:02:03.5"
+   ],
+   "text": "2024-02-29 01:02:03.5",
+   "zone": "UTC"
+  },
+  "P2-opt_frac_with-to_timestamp_ntz-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss[.SSS]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-02-29 01:02:03.5"
+   ],
+   "text": "2024-02-29 01:02:03.5",
+   "zone": "UTC"
+  },
+  "P2-opt_frac_with-to_timestamp_ntz-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss[.SSS]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-02-29 01:02:03.5"
+   ],
+   "text": "2024-02-29 01:02:03.5",
+   "zone": "UTC"
+  },
+  "P2-opt_frac_with-try_to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss[.SSS]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-02-29"
+   ],
+   "text": "2024-02-29 01:02:03.5",
+   "zone": "UTC"
+  },
+  "P2-opt_frac_with-try_to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss[.SSS]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-02-29"
+   ],
+   "text": "2024-02-29 01:02:03.5",
+   "zone": "UTC"
+  },
+  "P2-opt_frac_with-try_to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss[.SSS]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-02-29 01:02:03.5"
+   ],
+   "text": "2024-02-29 01:02:03.5",
+   "zone": "UTC"
+  },
+  "P2-opt_frac_with-try_to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss[.SSS]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-02-29 01:02:03.5"
+   ],
+   "text": "2024-02-29 01:02:03.5",
+   "zone": "UTC"
+  },
+  "P2-opt_frac_with-unix_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss[.SSS]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1709168523"
+   ],
+   "text": "2024-02-29 01:02:03.5",
+   "zone": "UTC"
+  },
+  "P2-opt_frac_with-unix_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss[.SSS]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1709168523"
+   ],
+   "text": "2024-02-29 01:02:03.5",
+   "zone": "UTC"
+  },
+  "P2-stored-witness": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "column": "TIMESTAMP",
+   "fn": "to_timestamp",
+   "kind": "TARGET",
+   "op": "store_rows",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "P2",
+   "runtime": "",
+   "spark": [
+    [
+     0,
+     "2024-02-29 00:00:00"
+    ],
+    [
+     1,
+     "2024-02-29 03:04:05"
+    ],
+    [
+     2,
+     null
+    ]
+   ],
+   "texts": [
+    "2024-02-29",
+    "2024-02-29 03:04:05",
+    null
+   ],
+   "zone": "UTC"
+  },
+  "P3-opt_alt_second-to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "[yyyy-MM-dd][dd/MM/yyyy]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-02-29"
+   ],
+   "text": "29/02/2024",
+   "zone": "UTC"
+  },
+  "P3-opt_alt_second-to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "[yyyy-MM-dd][dd/MM/yyyy]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-02-29"
+   ],
+   "text": "29/02/2024",
+   "zone": "UTC"
+  },
+  "P3-opt_alt_second-to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "[yyyy-MM-dd][dd/MM/yyyy]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-02-29 00:00:00"
+   ],
+   "text": "29/02/2024",
+   "zone": "UTC"
+  },
+  "P3-opt_alt_second-to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "[yyyy-MM-dd][dd/MM/yyyy]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-02-29 00:00:00"
+   ],
+   "text": "29/02/2024",
+   "zone": "UTC"
+  },
+  "P3-opt_alt_second-to_timestamp_ntz-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "[yyyy-MM-dd][dd/MM/yyyy]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-02-29 00:00:00"
+   ],
+   "text": "29/02/2024",
+   "zone": "UTC"
+  },
+  "P3-opt_alt_second-to_timestamp_ntz-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "[yyyy-MM-dd][dd/MM/yyyy]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-02-29 00:00:00"
+   ],
+   "text": "29/02/2024",
+   "zone": "UTC"
+  },
+  "P3-opt_alt_second-try_to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "[yyyy-MM-dd][dd/MM/yyyy]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-02-29"
+   ],
+   "text": "29/02/2024",
+   "zone": "UTC"
+  },
+  "P3-opt_alt_second-try_to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "[yyyy-MM-dd][dd/MM/yyyy]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-02-29"
+   ],
+   "text": "29/02/2024",
+   "zone": "UTC"
+  },
+  "P3-opt_alt_second-try_to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "[yyyy-MM-dd][dd/MM/yyyy]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-02-29 00:00:00"
+   ],
+   "text": "29/02/2024",
+   "zone": "UTC"
+  },
+  "P3-opt_alt_second-try_to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "[yyyy-MM-dd][dd/MM/yyyy]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-02-29 00:00:00"
+   ],
+   "text": "29/02/2024",
+   "zone": "UTC"
+  },
+  "P3-opt_alt_second-unix_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "[yyyy-MM-dd][dd/MM/yyyy]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1709164800"
+   ],
+   "text": "29/02/2024",
+   "zone": "UTC"
+  },
+  "P3-opt_alt_second-unix_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "[yyyy-MM-dd][dd/MM/yyyy]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1709164800"
+   ],
+   "text": "29/02/2024",
+   "zone": "UTC"
+  },
+  "P3-opt_nested_hm-to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm[:ss]]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-02-29"
+   ],
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "P3-opt_nested_hm-to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm[:ss]]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-02-29"
+   ],
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "P3-opt_nested_hm-to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm[:ss]]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-02-29 01:02:00"
+   ],
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "P3-opt_nested_hm-to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm[:ss]]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-02-29 01:02:00"
+   ],
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "P3-opt_nested_hm-to_timestamp_ntz-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm[:ss]]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-02-29 01:02:00"
+   ],
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "P3-opt_nested_hm-to_timestamp_ntz-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm[:ss]]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-02-29 01:02:00"
+   ],
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "P3-opt_nested_hm-try_to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm[:ss]]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-02-29"
+   ],
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "P3-opt_nested_hm-try_to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm[:ss]]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-02-29"
+   ],
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "P3-opt_nested_hm-try_to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm[:ss]]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-02-29 01:02:00"
+   ],
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "P3-opt_nested_hm-try_to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm[:ss]]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-02-29 01:02:00"
+   ],
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "P3-opt_nested_hm-unix_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm[:ss]]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1709168520"
+   ],
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "P3-opt_nested_hm-unix_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm[:ss]]",
+   "row": "P3",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1709168520"
+   ],
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "P4-opt_unclosed-to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH",
+   "row": "P4",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-02-29"
+   ],
+   "text": "2024-02-29 01",
+   "zone": "UTC"
+  },
+  "P4-opt_unclosed-to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH",
+   "row": "P4",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-02-29"
+   ],
+   "text": "2024-02-29 01",
+   "zone": "UTC"
+  },
+  "P4-opt_unclosed-to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH",
+   "row": "P4",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-02-29 01:00:00"
+   ],
+   "text": "2024-02-29 01",
+   "zone": "UTC"
+  },
+  "P4-opt_unclosed-to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH",
+   "row": "P4",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-02-29 01:00:00"
+   ],
+   "text": "2024-02-29 01",
+   "zone": "UTC"
+  },
+  "P4-opt_unclosed-to_timestamp_ntz-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH",
+   "row": "P4",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-02-29 01:00:00"
+   ],
+   "text": "2024-02-29 01",
+   "zone": "UTC"
+  },
+  "P4-opt_unclosed-to_timestamp_ntz-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH",
+   "row": "P4",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-02-29 01:00:00"
+   ],
+   "text": "2024-02-29 01",
+   "zone": "UTC"
+  },
+  "P4-opt_unclosed-try_to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH",
+   "row": "P4",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-02-29"
+   ],
+   "text": "2024-02-29 01",
+   "zone": "UTC"
+  },
+  "P4-opt_unclosed-try_to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH",
+   "row": "P4",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-02-29"
+   ],
+   "text": "2024-02-29 01",
+   "zone": "UTC"
+  },
+  "P4-opt_unclosed-try_to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH",
+   "row": "P4",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-02-29 01:00:00"
+   ],
+   "text": "2024-02-29 01",
+   "zone": "UTC"
+  },
+  "P4-opt_unclosed-try_to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH",
+   "row": "P4",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-02-29 01:00:00"
+   ],
+   "text": "2024-02-29 01",
+   "zone": "UTC"
+  },
+  "P4-opt_unclosed-unix_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH",
+   "row": "P4",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1709168400"
+   ],
+   "text": "2024-02-29 01",
+   "zone": "UTC"
+  },
+  "P4-opt_unclosed-unix_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH",
+   "row": "P4",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1709168400"
+   ],
+   "text": "2024-02-29 01",
+   "zone": "UTC"
+  },
+  "P5-opt_stray_close-to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd]",
+   "row": "P5",
+   "runtime": "",
+   "spark": {
+    "error": "INCONSISTENT_BEHAVIOR_CROSS_VERSION.DATETIME_PATTERN_RECOGNITION",
+    "index": null
+   },
+   "text": "2024-02-29",
+   "zone": "UTC"
+  },
+  "P5-opt_stray_close-to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd]",
+   "row": "P5",
+   "runtime": "",
+   "spark": {
+    "error": "INCONSISTENT_BEHAVIOR_CROSS_VERSION.DATETIME_PATTERN_RECOGNITION",
+    "index": null
+   },
+   "text": "2024-02-29",
+   "zone": "UTC"
+  },
+  "P5-opt_stray_close-to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd]",
+   "row": "P5",
+   "runtime": "",
+   "spark": {
+    "error": "INCONSISTENT_BEHAVIOR_CROSS_VERSION.DATETIME_PATTERN_RECOGNITION",
+    "index": null
+   },
+   "text": "2024-02-29",
+   "zone": "UTC"
+  },
+  "P5-opt_stray_close-to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd]",
+   "row": "P5",
+   "runtime": "",
+   "spark": {
+    "error": "INCONSISTENT_BEHAVIOR_CROSS_VERSION.DATETIME_PATTERN_RECOGNITION",
+    "index": null
+   },
+   "text": "2024-02-29",
+   "zone": "UTC"
+  },
+  "P5-opt_stray_close-try_to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd]",
+   "row": "P5",
+   "runtime": "",
+   "spark": {
+    "error": "INCONSISTENT_BEHAVIOR_CROSS_VERSION.DATETIME_PATTERN_RECOGNITION",
+    "index": null
+   },
+   "text": "2024-02-29",
+   "zone": "UTC"
+  },
+  "P5-opt_stray_close-try_to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd]",
+   "row": "P5",
+   "runtime": "",
+   "spark": {
+    "error": "INCONSISTENT_BEHAVIOR_CROSS_VERSION.DATETIME_PATTERN_RECOGNITION",
+    "index": null
+   },
+   "text": "2024-02-29",
+   "zone": "UTC"
+  },
+  "P5-opt_stray_close-try_to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd]",
+   "row": "P5",
+   "runtime": "",
+   "spark": {
+    "error": "INCONSISTENT_BEHAVIOR_CROSS_VERSION.DATETIME_PATTERN_RECOGNITION",
+    "index": null
+   },
+   "text": "2024-02-29",
+   "zone": "UTC"
+  },
+  "P5-opt_stray_close-try_to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd]",
+   "row": "P5",
+   "runtime": "",
+   "spark": {
+    "error": "INCONSISTENT_BEHAVIOR_CROSS_VERSION.DATETIME_PATTERN_RECOGNITION",
+    "index": null
+   },
+   "text": "2024-02-29",
+   "zone": "UTC"
+  },
+  "P5-opt_stray_close-unix_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd]",
+   "row": "P5",
+   "runtime": "",
+   "spark": {
+    "error": "INCONSISTENT_BEHAVIOR_CROSS_VERSION.DATETIME_PATTERN_RECOGNITION",
+    "index": null
+   },
+   "text": "2024-02-29",
+   "zone": "UTC"
+  },
+  "P5-opt_stray_close-unix_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd]",
+   "row": "P5",
+   "runtime": "",
+   "spark": {
+    "error": "INCONSISTENT_BEHAVIOR_CROSS_VERSION.DATETIME_PATTERN_RECOGNITION",
+    "index": null
+   },
+   "text": "2024-02-29",
+   "zone": "UTC"
+  },
+  "P6-hms_ampm-to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd hh:mm:ss a",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-05"
+   ],
+   "text": "2024-01-05 03:04:05 PM",
+   "zone": "UTC"
+  },
+  "P6-hms_ampm-to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd hh:mm:ss a",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-05"
+   ],
+   "text": "2024-01-05 03:04:05 PM",
+   "zone": "UTC"
+  },
+  "P6-hms_ampm-to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd hh:mm:ss a",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-05 15:04:05"
+   ],
+   "text": "2024-01-05 03:04:05 PM",
+   "zone": "UTC"
+  },
+  "P6-hms_ampm-to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd hh:mm:ss a",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-05 15:04:05"
+   ],
+   "text": "2024-01-05 03:04:05 PM",
+   "zone": "UTC"
+  },
+  "P6-hms_ampm-to_timestamp_ntz-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd hh:mm:ss a",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-01-05 15:04:05"
+   ],
+   "text": "2024-01-05 03:04:05 PM",
+   "zone": "UTC"
+  },
+  "P6-hms_ampm-to_timestamp_ntz-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd hh:mm:ss a",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-01-05 15:04:05"
+   ],
+   "text": "2024-01-05 03:04:05 PM",
+   "zone": "UTC"
+  },
+  "P6-hms_ampm-try_to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd hh:mm:ss a",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-05"
+   ],
+   "text": "2024-01-05 03:04:05 PM",
+   "zone": "UTC"
+  },
+  "P6-hms_ampm-try_to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd hh:mm:ss a",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-05"
+   ],
+   "text": "2024-01-05 03:04:05 PM",
+   "zone": "UTC"
+  },
+  "P6-hms_ampm-try_to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd hh:mm:ss a",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-05 15:04:05"
+   ],
+   "text": "2024-01-05 03:04:05 PM",
+   "zone": "UTC"
+  },
+  "P6-hms_ampm-try_to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd hh:mm:ss a",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-05 15:04:05"
+   ],
+   "text": "2024-01-05 03:04:05 PM",
+   "zone": "UTC"
+  },
+  "P6-hms_ampm-unix_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd hh:mm:ss a",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1704467045"
+   ],
+   "text": "2024-01-05 03:04:05 PM",
+   "zone": "UTC"
+  },
+  "P6-hms_ampm-unix_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd hh:mm:ss a",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1704467045"
+   ],
+   "text": "2024-01-05 03:04:05 PM",
+   "zone": "UTC"
+  },
+  "P6-td_hms-to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-01"
+   ],
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "P6-td_hms-to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-01"
+   ],
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "P6-td_hms-to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-01 03:04:05"
+   ],
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "P6-td_hms-to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-01 03:04:05"
+   ],
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "P6-td_hms-to_timestamp_ntz-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-01-01 03:04:05"
+   ],
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "P6-td_hms-to_timestamp_ntz-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-01-01 03:04:05"
+   ],
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "P6-td_hms-try_to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-01"
+   ],
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "P6-td_hms-try_to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "TARGET",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-01"
+   ],
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "P6-td_hms-try_to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-01 03:04:05"
+   ],
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "P6-td_hms-try_to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-01 03:04:05"
+   ],
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "P6-td_hms-unix_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1704078245"
+   ],
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "P6-td_hms-unix_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss",
+   "row": "P6",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1704078245"
+   ],
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "control-compact-to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyyMMdd",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-05"
+   ],
+   "text": "20240105",
+   "zone": "UTC"
+  },
+  "control-compact-to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyyMMdd",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-05"
+   ],
+   "text": "20240105",
+   "zone": "UTC"
+  },
+  "control-compact-to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyyMMdd",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-05 00:00:00"
+   ],
+   "text": "20240105",
+   "zone": "UTC"
+  },
+  "control-compact-to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyyMMdd",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-05 00:00:00"
+   ],
+   "text": "20240105",
+   "zone": "UTC"
+  },
+  "control-compact-to_timestamp_ntz-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyyMMdd",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-01-05 00:00:00"
+   ],
+   "text": "20240105",
+   "zone": "UTC"
+  },
+  "control-compact-to_timestamp_ntz-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyyMMdd",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-01-05 00:00:00"
+   ],
+   "text": "20240105",
+   "zone": "UTC"
+  },
+  "control-compact-try_to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyyMMdd",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-05"
+   ],
+   "text": "20240105",
+   "zone": "UTC"
+  },
+  "control-compact-try_to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyyMMdd",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-05"
+   ],
+   "text": "20240105",
+   "zone": "UTC"
+  },
+  "control-compact-try_to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyyMMdd",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-05 00:00:00"
+   ],
+   "text": "20240105",
+   "zone": "UTC"
+  },
+  "control-compact-try_to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyyMMdd",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-05 00:00:00"
+   ],
+   "text": "20240105",
+   "zone": "UTC"
+  },
+  "control-compact-unix_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyyMMdd",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1704412800"
+   ],
+   "text": "20240105",
+   "zone": "UTC"
+  },
+  "control-compact-unix_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyyMMdd",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1704412800"
+   ],
+   "text": "20240105",
+   "zone": "UTC"
+  },
+  "control-dmy-to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "dd/MM/yyyy",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-05"
+   ],
+   "text": "05/01/2024",
+   "zone": "UTC"
+  },
+  "control-dmy-to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "dd/MM/yyyy",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-05"
+   ],
+   "text": "05/01/2024",
+   "zone": "UTC"
+  },
+  "control-dmy-to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "dd/MM/yyyy",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-05 00:00:00"
+   ],
+   "text": "05/01/2024",
+   "zone": "UTC"
+  },
+  "control-dmy-to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "dd/MM/yyyy",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-05 00:00:00"
+   ],
+   "text": "05/01/2024",
+   "zone": "UTC"
+  },
+  "control-dmy-to_timestamp_ntz-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "dd/MM/yyyy",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-01-05 00:00:00"
+   ],
+   "text": "05/01/2024",
+   "zone": "UTC"
+  },
+  "control-dmy-to_timestamp_ntz-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "dd/MM/yyyy",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-01-05 00:00:00"
+   ],
+   "text": "05/01/2024",
+   "zone": "UTC"
+  },
+  "control-dmy-try_to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "dd/MM/yyyy",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-05"
+   ],
+   "text": "05/01/2024",
+   "zone": "UTC"
+  },
+  "control-dmy-try_to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "dd/MM/yyyy",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-05"
+   ],
+   "text": "05/01/2024",
+   "zone": "UTC"
+  },
+  "control-dmy-try_to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "dd/MM/yyyy",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-05 00:00:00"
+   ],
+   "text": "05/01/2024",
+   "zone": "UTC"
+  },
+  "control-dmy-try_to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "dd/MM/yyyy",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-05 00:00:00"
+   ],
+   "text": "05/01/2024",
+   "zone": "UTC"
+  },
+  "control-dmy-unix_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "dd/MM/yyyy",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1704412800"
+   ],
+   "text": "05/01/2024",
+   "zone": "UTC"
+  },
+  "control-dmy-unix_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "dd/MM/yyyy",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1704412800"
+   ],
+   "text": "05/01/2024",
+   "zone": "UTC"
+  },
+  "control-f1_3-to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.S",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.789",
+   "zone": "UTC"
+  },
+  "control-f1_3-to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.S",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 21
+   },
+   "text": "2024-01-01 03:04:05.789",
+   "zone": "UTC"
+  },
+  "control-f1_3-to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.S",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.789",
+   "zone": "UTC"
+  },
+  "control-f1_3-to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.S",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 21
+   },
+   "text": "2024-01-01 03:04:05.789",
+   "zone": "UTC"
+  },
+  "control-f1_3-to_timestamp_ntz-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.S",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.789",
+   "zone": "UTC"
+  },
+  "control-f1_3-to_timestamp_ntz-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.S",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 21
+   },
+   "text": "2024-01-01 03:04:05.789",
+   "zone": "UTC"
+  },
+  "control-f1_3-try_to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.S",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.789",
+   "zone": "UTC"
+  },
+  "control-f1_3-try_to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.S",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.789",
+   "zone": "UTC"
+  },
+  "control-f1_3-try_to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.S",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.789",
+   "zone": "UTC"
+  },
+  "control-f1_3-try_to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.S",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.789",
+   "zone": "UTC"
+  },
+  "control-f1_3-unix_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.S",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.789",
+   "zone": "UTC"
+  },
+  "control-f1_3-unix_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.S",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 21
+   },
+   "text": "2024-01-01 03:04:05.789",
+   "zone": "UTC"
+  },
+  "control-f3_4-to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.1234",
+   "zone": "UTC"
+  },
+  "control-f3_4-to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 23
+   },
+   "text": "2024-01-01 03:04:05.1234",
+   "zone": "UTC"
+  },
+  "control-f3_4-to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.1234",
+   "zone": "UTC"
+  },
+  "control-f3_4-to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 23
+   },
+   "text": "2024-01-01 03:04:05.1234",
+   "zone": "UTC"
+  },
+  "control-f3_4-to_timestamp_ntz-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.1234",
+   "zone": "UTC"
+  },
+  "control-f3_4-to_timestamp_ntz-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 23
+   },
+   "text": "2024-01-01 03:04:05.1234",
+   "zone": "UTC"
+  },
+  "control-f3_4-try_to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.1234",
+   "zone": "UTC"
+  },
+  "control-f3_4-try_to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.1234",
+   "zone": "UTC"
+  },
+  "control-f3_4-try_to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.1234",
+   "zone": "UTC"
+  },
+  "control-f3_4-try_to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.1234",
+   "zone": "UTC"
+  },
+  "control-f3_4-unix_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.1234",
+   "zone": "UTC"
+  },
+  "control-f3_4-unix_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSS",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 23
+   },
+   "text": "2024-01-01 03:04:05.1234",
+   "zone": "UTC"
+  },
+  "control-f6_7-to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.1234567",
+   "zone": "UTC"
+  },
+  "control-f6_7-to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 26
+   },
+   "text": "2024-01-01 03:04:05.1234567",
+   "zone": "UTC"
+  },
+  "control-f6_7-to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.1234567",
+   "zone": "UTC"
+  },
+  "control-f6_7-to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 26
+   },
+   "text": "2024-01-01 03:04:05.1234567",
+   "zone": "UTC"
+  },
+  "control-f6_7-to_timestamp_ntz-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.1234567",
+   "zone": "UTC"
+  },
+  "control-f6_7-to_timestamp_ntz-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 26
+   },
+   "text": "2024-01-01 03:04:05.1234567",
+   "zone": "UTC"
+  },
+  "control-f6_7-try_to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.1234567",
+   "zone": "UTC"
+  },
+  "control-f6_7-try_to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.1234567",
+   "zone": "UTC"
+  },
+  "control-f6_7-try_to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.1234567",
+   "zone": "UTC"
+  },
+  "control-f6_7-try_to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.1234567",
+   "zone": "UTC"
+  },
+  "control-f6_7-unix_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.1234567",
+   "zone": "UTC"
+  },
+  "control-f6_7-unix_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 26
+   },
+   "text": "2024-01-01 03:04:05.1234567",
+   "zone": "UTC"
+  },
+  "control-f6_dot-to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.",
+   "zone": "UTC"
+  },
+  "control-f6_dot-to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 20
+   },
+   "text": "2024-01-01 03:04:05.",
+   "zone": "UTC"
+  },
+  "control-f6_dot-to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.",
+   "zone": "UTC"
+  },
+  "control-f6_dot-to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 20
+   },
+   "text": "2024-01-01 03:04:05.",
+   "zone": "UTC"
+  },
+  "control-f6_dot-to_timestamp_ntz-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.",
+   "zone": "UTC"
+  },
+  "control-f6_dot-to_timestamp_ntz-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 20
+   },
+   "text": "2024-01-01 03:04:05.",
+   "zone": "UTC"
+  },
+  "control-f6_dot-try_to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.",
+   "zone": "UTC"
+  },
+  "control-f6_dot-try_to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.",
+   "zone": "UTC"
+  },
+  "control-f6_dot-try_to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.",
+   "zone": "UTC"
+  },
+  "control-f6_dot-try_to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.",
+   "zone": "UTC"
+  },
+  "control-f6_dot-unix_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    null
+   ],
+   "text": "2024-01-01 03:04:05.",
+   "zone": "UTC"
+  },
+  "control-f6_dot-unix_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 20
+   },
+   "text": "2024-01-01 03:04:05.",
+   "zone": "UTC"
+  },
+  "control-f6_none-to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    null
+   ],
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "control-f6_none-to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 19
+   },
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "control-f6_none-to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    null
+   ],
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "control-f6_none-to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 19
+   },
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "control-f6_none-to_timestamp_ntz-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    null
+   ],
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "control-f6_none-to_timestamp_ntz-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 19
+   },
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "control-f6_none-try_to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    null
+   ],
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "control-f6_none-try_to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    null
+   ],
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "control-f6_none-try_to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    null
+   ],
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "control-f6_none-try_to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    null
+   ],
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "control-f6_none-unix_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    null
+   ],
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "control-f6_none-unix_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 19
+   },
+   "text": "2024-01-01 03:04:05",
+   "zone": "UTC"
+  },
+  "control-m1_d1-to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-M-d",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-05"
+   ],
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-m1_d1-to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-M-d",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-05"
+   ],
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-m1_d1-to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-M-d",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-05 00:00:00"
+   ],
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-m1_d1-to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-M-d",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-05 00:00:00"
+   ],
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-m1_d1-to_timestamp_ntz-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-M-d",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-01-05 00:00:00"
+   ],
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-m1_d1-to_timestamp_ntz-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-M-d",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    "2024-01-05 00:00:00"
+   ],
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-m1_d1-try_to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-M-d",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-05"
+   ],
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-m1_d1-try_to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-M-d",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    "2024-01-05"
+   ],
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-m1_d1-try_to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-M-d",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-05 00:00:00"
+   ],
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-m1_d1-try_to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-M-d",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    "2024-01-05 00:00:00"
+   ],
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-m1_d1-unix_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-M-d",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1704412800"
+   ],
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-m1_d1-unix_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-M-d",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    "1704412800"
+   ],
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-mm_short-to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    null
+   ],
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-mm_short-to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 5
+   },
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-mm_short-to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    null
+   ],
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-mm_short-to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 5
+   },
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-mm_short-to_timestamp_ntz-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    null
+   ],
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-mm_short-to_timestamp_ntz-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 5
+   },
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-mm_short-try_to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    null
+   ],
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-mm_short-try_to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    null
+   ],
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-mm_short-try_to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    null
+   ],
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-mm_short-try_to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    null
+   ],
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-mm_short-unix_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    null
+   ],
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-mm_short-unix_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 5
+   },
+   "text": "2024-1-5",
+   "zone": "UTC"
+  },
+  "control-opt_partial-to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    null
+   ],
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "control-opt_partial-to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 10
+   },
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "control-opt_partial-to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    null
+   ],
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "control-opt_partial-to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 10
+   },
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "control-opt_partial-to_timestamp_ntz-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp_ntz",
+    null
+   ],
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "control-opt_partial-to_timestamp_ntz-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 10
+   },
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "control-opt_partial-try_to_date-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    null
+   ],
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "control-opt_partial-try_to_date-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "date",
+    null
+   ],
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "control-opt_partial-try_to_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    null
+   ],
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "control-opt_partial-try_to_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "timestamp",
+    null
+   ],
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "control-opt_partial-unix_timestamp-ansi_false": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "control",
+   "runtime": "",
+   "spark": [
+    "bigint",
+    null
+   ],
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "control-opt_partial-unix_timestamp-ansi_true": {
+   "ansi": "true",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "select",
+   "pat": "yyyy-MM-dd[ HH:mm:ss]",
+   "row": "control",
+   "runtime": "",
+   "spark": {
+    "error": "CANNOT_PARSE_TIMESTAMP",
+    "index": 10
+   },
+   "text": "2024-02-29 01:02",
+   "zone": "UTC"
+  },
+  "ntz-column-store-to_date": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_date",
+   "kind": "PROTECTED",
+   "op": "store_ntz",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "store",
+   "runtime": "",
+   "spark": [
+    "2024-06-15 00:00:00"
+   ],
+   "text": "2024-06-15 12:34:56.500000",
+   "zone": "America/New_York"
+  },
+  "ntz-column-store-to_timestamp": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp",
+   "kind": "PROTECTED",
+   "op": "store_ntz",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "store",
+   "runtime": "",
+   "spark": [
+    "2024-06-15 12:34:56.5"
+   ],
+   "text": "2024-06-15 12:34:56.500000",
+   "zone": "America/New_York"
+  },
+  "ntz-column-store-to_timestamp_ltz": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ltz",
+   "kind": "PROTECTED",
+   "op": "store_ntz",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "store",
+   "runtime": "",
+   "spark": [
+    "2024-06-15 12:34:56.5"
+   ],
+   "text": "2024-06-15 12:34:56.500000",
+   "zone": "America/New_York"
+  },
+  "ntz-column-store-to_timestamp_ntz": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_timestamp_ntz",
+   "kind": "PROTECTED",
+   "op": "store_ntz",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "store",
+   "runtime": "",
+   "spark": [
+    "2024-06-15 12:34:56.5"
+   ],
+   "text": "2024-06-15 12:34:56.500000",
+   "zone": "America/New_York"
+  },
+  "ntz-column-store-to_unix_timestamp": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "to_unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "store_ntz",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "store",
+   "runtime": "",
+   "spark": {
+    "error": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+    "index": null
+   },
+   "text": "2024-06-15 12:34:56.500000",
+   "zone": "America/New_York"
+  },
+  "ntz-column-store-try_to_date": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_date",
+   "kind": "PROTECTED",
+   "op": "store_ntz",
+   "pat": "yyyy-MM-dd",
+   "row": "store",
+   "runtime": "",
+   "spark": [
+    "2024-06-15 00:00:00"
+   ],
+   "text": "2024-06-15",
+   "zone": "America/New_York"
+  },
+  "ntz-column-store-try_to_timestamp": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "PROTECTED",
+   "op": "store_ntz",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "store",
+   "runtime": "",
+   "spark": [
+    "2024-06-15 12:34:56.5"
+   ],
+   "text": "2024-06-15 12:34:56.500000",
+   "zone": "America/New_York"
+  },
+  "ntz-column-store-unix_timestamp": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "unix_timestamp",
+   "kind": "PROTECTED",
+   "op": "store_ntz",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "store",
+   "runtime": "",
+   "spark": {
+    "error": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+    "index": null
+   },
+   "text": "2024-06-15 12:34:56.500000",
+   "zone": "America/New_York"
+  },
+  "twin-built-ntz-store": {
+   "ansi": "false",
+   "built": "TIMESTAMP_NTZ",
+   "fn": "to_timestamp",
+   "kind": "TWIN",
+   "main_twin": [
+    "2024-06-15 16:34:56.5"
+   ],
+   "op": "store_ntz",
+   "pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "row": "twin",
+   "runtime": "",
+   "text": "2024-06-15 12:34:56.5",
+   "twin": "2024-06-15 12:34:56.500000",
+   "zone": "America/New_York"
+  },
+  "twin-runtime-ntz-select": {
+   "ansi": "false",
+   "built": "TIMESTAMP_LTZ",
+   "fn": "try_to_timestamp",
+   "kind": "TWIN",
+   "main_twin": [
+    "timestamp",
+    "2024-06-15 12:34:00"
+   ],
+   "op": "select",
+   "pat": "yyyy-MM-dd HH:mm[:ss]",
+   "row": "twin",
+   "runtime": "TIMESTAMP_NTZ",
+   "text": "2024-06-15 12:34",
+   "twin": "2024-06-15 12:34:00.000000",
+   "twin_pat": "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   "zone": "America/New_York"
+  }
+ },
+ "main": "9df269acb",
+ "measured": "2026-11-28",
+ "spark": "4.1.2",
+ "unit": "DATETIME-PATTERN-PARSE-1"
+}

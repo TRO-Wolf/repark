@@ -1137,7 +1137,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   1-arg path with the format ignored. `to_timestamp` 1-arg malformed strings translate to
   `[CAST_INVALID_INPUT]` under ANSI and NULL otherwise. SQL-door double-quoted pattern
   literals stay a run-16c parser seam (cells 129/130).
-  `java_datetime::tests::*`.
+  `java_datetime::tests::*`. **DATETIME-PATTERN-PARSE-1:** the walk, `[ ]` and 1-to-*n* `S`: [`java_datetime/`](java_datetime/map.md).
   **TYPES-1 (2026-09-05):** `parse_session_zone` is `pub(crate)` for
   `spark_from_unixtime.rs`.
 - `timestamp_ns_cast.rs` — **ICE-TSNS-FLOOR-DOORS-1 (2026-10-14, R-009):** `store_micros(array,

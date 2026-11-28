@@ -79,5 +79,6 @@ The full rows as of 2026-11-20 and 2026-11-27 are in [docs/history/task-wo/](../
 - [try-cast-nonnull-field-1/](try-cast-nonnull-field-1/) — **TRY-CAST-NONNULL-FIELD-1 (S2, 2026-11-24):** 542-cell nullability sweep and delta 1 cells ([evidence/](try-cast-nonnull-field-1/evidence/)).
 - [make-dt-interval-overflow-1/](make-dt-interval-overflow-1/) — **MAKE-DT-INTERVAL-OVERFLOW-1 (S1, 2026-11-25):** 1434 `make_dt_interval` cells on five doors and four sources vs Spark 4.1.2 and main, both ANSI modes ([evidence/](make-dt-interval-overflow-1/evidence/summary.md)).
 - [partitionby-null-write-1/](partitionby-null-write-1/) — **PARTITIONBY-NULL-WRITE-1 (S1, 2026-11-25):** 230-cell step 0 ([evidence/](partitionby-null-write-1/evidence/)).
+- [datetime-pattern-parse-1/](datetime-pattern-parse-1/) — **DATETIME-PATTERN-PARSE-1 (S1, 2026-11-28):** step 0 counts, the 51-lane scoreboard comparison, the NTZ-session store classes and twin check, mutants, cost ([evidence/](datetime-pattern-parse-1/evidence/)).
 
 Up: [../map.md](../map.md).

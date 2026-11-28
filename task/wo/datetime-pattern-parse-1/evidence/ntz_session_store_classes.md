@@ -1,0 +1,27 @@
+| Session | Form | EQUAL | SAME-AS-MAIN | NEW-WRONG | inside family | OTHER-MOVED |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| ltz_built | to_date | 1232 | 0 | 0 | 0 | 0 |
+| ltz_built | to_timestamp | 1232 | 0 | 0 | 0 | 0 |
+| ltz_built | to_timestamp_ltz | 1232 | 0 | 0 | 0 | 0 |
+| ltz_built | to_timestamp_ntz | 1232 | 0 | 0 | 0 | 0 |
+| ltz_built | to_unix_timestamp | 1056 | 176 | 0 | 0 | 0 |
+| ltz_built | try_to_date | 1232 | 0 | 0 | 0 | 0 |
+| ltz_built | try_to_timestamp | 1232 | 0 | 0 | 0 | 0 |
+| ltz_built | unix_timestamp | 1056 | 176 | 0 | 0 | 0 |
+| ntz_built | to_date | 1232 | 0 | 0 | 0 | 0 |
+| ntz_built | to_timestamp | 176 | 240 | 816 | 816 | 0 |
+| ntz_built | to_timestamp_ltz | 704 | 120 | 408 | 0 | 0 |
+| ntz_built | to_timestamp_ntz | 1232 | 0 | 0 | 0 | 0 |
+| ntz_built | to_unix_timestamp | 1232 | 0 | 0 | 0 | 0 |
+| ntz_built | try_to_date | 1232 | 0 | 0 | 0 | 0 |
+| ntz_built | try_to_timestamp | 176 | 240 | 816 | 816 | 0 |
+| ntz_built | unix_timestamp | 1232 | 0 | 0 | 0 | 0 |
+| ntz_runtime | to_date | 1228 | 0 | 4 | 0 | 0 |
+| ntz_runtime | to_timestamp | 664 | 136 | 432 | 0 | 0 |
+| ntz_runtime | to_timestamp_ltz | 1232 | 0 | 0 | 0 | 0 |
+| ntz_runtime | to_timestamp_ntz | 1212 | 8 | 12 | 0 | 0 |
+| ntz_runtime | to_unix_timestamp | 1056 | 176 | 0 | 0 | 0 |
+| ntz_runtime | try_to_date | 1228 | 0 | 4 | 0 | 0 |
+| ntz_runtime | try_to_timestamp | 664 | 136 | 432 | 0 | 0 |
+| ntz_runtime | unix_timestamp | 1056 | 176 | 0 | 0 | 0 |
+| all | all | 25060 | 1584 | 2924 | 1632 | 0 |

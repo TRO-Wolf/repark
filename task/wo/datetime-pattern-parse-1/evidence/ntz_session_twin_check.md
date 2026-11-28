@@ -1,0 +1,11 @@
+| Session | Form | Cells | Pass | Fail |
+| --- | --- | ---: | ---: | ---: |
+| ntz_built | to_timestamp | 816 | 816 | 0 |
+| ntz_built | to_timestamp_ltz | 408 | 408 | 0 |
+| ntz_built | try_to_timestamp | 816 | 816 | 0 |
+| ntz_runtime | to_date | 4 | 4 | 0 |
+| ntz_runtime | to_timestamp | 432 | 432 | 0 |
+| ntz_runtime | to_timestamp_ntz | 12 | 12 | 0 |
+| ntz_runtime | try_to_date | 4 | 4 | 0 |
+| ntz_runtime | try_to_timestamp | 432 | 432 | 0 |
+| all | all | 2924 | 2924 | 0 |
