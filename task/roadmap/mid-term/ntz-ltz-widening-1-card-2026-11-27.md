@@ -26,7 +26,7 @@ literal are a separate design note, held by the orchestrator.
 
 - `datetime.rs::DateTrunc::coerce_types`: a µs `timestamp_ntz` input coerces to the instant, so `date_trunc`
   returns `timestamp`. A `timestamp_ns` wall stays a wall, so a second analysis does not widen it.
-- `ntz_ltz_widen.rs::SparkNtzLtzWiden` runs after the second `type_coercion`. The wall-to-instant cast on
+- `datetime/ntz_ltz_widen.rs::SparkNtzLtzWiden` (with `date_trunc_input`) runs after the second `type_coercion`. The wall-to-instant cast on
   `date_trunc`'s timestamp argument becomes `zone_seam::seam_call`, the session-zone conversion the explicit
   cast uses. A UTC round trip collapses back to its instant.
 - `zone_seam.rs::seam_call` is now `pub(crate)`.
@@ -71,7 +71,7 @@ All counts are in the evidence directory.
 - `python/repark/tests/timestamps/test_ntz_ltz_widening_1.py` holds 13 cells recorded on Spark by
   `_record_ntz_ltz_widening_1.py`. On main, the 3 TARGET cells are red and the 10 PROTECTED cells green; on head
   all 13 are green.
-- `ntz_ltz_widen.rs` has two unit tests:
+- `datetime/ntz_ltz_widen.rs` has two unit tests:
   - Unregistering the rule or reverting the coercion turns `date_trunc_of_a_wall_is_an_instant_on_the_session_calendar` red.
   - `a_wall_only_or_instant_only_union_keeps_its_type` guards the main risk: a union of walls or of instants
     changing type.
