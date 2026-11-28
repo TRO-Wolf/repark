@@ -174,6 +174,10 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   FEXPR-TIMESTAMP-ZONE-1 (2026-10-01, overnight owner-items backlog, #888 re-verify
   10):** `F.expr` TIMESTAMP literals resolved in UTC; fixed by #1420 (2026-11-24). Open: `F.expr`
   still types an NTZ cast or `timestampType=TIMESTAMP_NTZ` literal as `timestamp` (S2 proposed). Unit 3 of #1432: [timestamp-ltz-explicit-cast-1-card-2026-11-27.md](timestamp-ltz-explicit-cast-1-card-2026-11-27.md) (S1).
+- [datetime-pattern-parse-1-card-2026-11-28.md](datetime-pattern-parse-1-card-2026-11-28.md) — **card
+  DATETIME-PATTERN-PARSE-1 (2026-11-28, S1):** the shared Java-pattern parser takes 1 to *n* `S` digits, reads
+  `[ ]` optional sections and refuses a stray `]`; `try_to_date` parses time-bearing patterns. NTZ-session cells
+  are excepted by family (owner's words on the card) and owned by unit 2's NTZ batch.
 - [ml-cv-fold-test-strength-1-card-2026-10-01.md](ml-cv-fold-test-strength-1-card-2026-10-01.md) — **card
   ML-CV-FOLD-TEST-STRENGTH-1 (2026-10-01, overnight owner-items backlog, VE4-2):**
   `test_ml_boost_oracle.py::test_cross_validator_materializes_fold_labels` cannot tell folds that

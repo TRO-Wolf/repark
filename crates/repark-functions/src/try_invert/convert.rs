@@ -658,4 +658,40 @@ mod tests {
             );
         }
     }
+    #[tokio::test]
+    async fn try_to_date_parses_time_bearing_and_year_less_patterns() {
+        let cases = [
+            ("2024-01-01 03:04:05", "yyyy-MM-dd HH:mm:ss", 2024, 1, 1),
+            (
+                "2024-01-05 03:04:05 PM",
+                "yyyy-MM-dd hh:mm:ss a",
+                2024,
+                1,
+                5,
+            ),
+            (
+                "2024-01-01 03:04:05.9",
+                "yyyy-MM-dd HH:mm:ss.SSSSSS",
+                2024,
+                1,
+                1,
+            ),
+            ("01-15", "MM-dd", 1970, 1, 15),
+        ];
+        for (text, pattern, year, month, day) in cases {
+            let sql = format!("SELECT try_to_date('{text}', '{pattern}') AS v");
+            let batches = ctx().sql(&sql).await.unwrap().collect().await.unwrap();
+            let array = batches[0]
+                .column(0)
+                .as_any()
+                .downcast_ref::<Date32Array>()
+                .unwrap();
+            assert!(array.is_valid(0), "{text} / {pattern} was NULL");
+            assert_eq!(
+                Date32Type::to_naive_date_opt(array.value(0)).unwrap(),
+                NaiveDate::from_ymd_opt(year, month, day).unwrap(),
+                "{text} / {pattern}"
+            );
+        }
+    }
 }

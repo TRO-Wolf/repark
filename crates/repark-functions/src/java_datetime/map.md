@@ -38,4 +38,8 @@ out because the parent sits at its 1000-line ceiling.
     off, so a time-bearing pattern parses its time and returns the date, a year-less pattern
     defaults to 1970, and a pattern error still raises. An all-NULL input answers NULL without
     compiling the pattern, as Spark does.
-  - Pins: `java_datetime::walk::tests::*`, `python/repark/tests/test_datetime_pattern_parse.py`.
+  - Pins: `java_datetime::walk::tests::*`, `try_invert::convert::tests::try_to_date_parses_time_bearing_and_year_less_patterns`,
+    and [test_datetime_pattern_parse_1.py](../../../../python/repark/tests/timestamps/test_datetime_pattern_parse_1.py)
+    (Spark 4.1.2 oracle beside it). Card:
+    [datetime-pattern-parse-1-card-2026-11-28.md](../../../../task/roadmap/mid-term/datetime-pattern-parse-1-card-2026-11-28.md);
+    NTZ-session cells are excepted by family there.

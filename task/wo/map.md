@@ -79,5 +79,6 @@ The full rows as of 2026-11-20 and 2026-11-27 are in [docs/history/task-wo/](../
 - [try-cast-nonnull-field-1/](try-cast-nonnull-field-1/) — **TRY-CAST-NONNULL-FIELD-1 (S2, 2026-11-24):** 542-cell nullability sweep and delta 1 cells ([evidence/](try-cast-nonnull-field-1/evidence/)).
 - [make-dt-interval-overflow-1/](make-dt-interval-overflow-1/) — **MAKE-DT-INTERVAL-OVERFLOW-1 (S1, 2026-11-25):** 1434 `make_dt_interval` cells on five doors and four sources vs Spark 4.1.2 and main, both ANSI modes ([evidence/](make-dt-interval-overflow-1/evidence/summary.md)).
 - [partitionby-null-write-1/](partitionby-null-write-1/) — **PARTITIONBY-NULL-WRITE-1 (S1, 2026-11-25):** 230-cell step 0 ([evidence/](partitionby-null-write-1/evidence/)).
+- [DATETIME-PATTERN-PARSE-1](datetime-pattern-parse-1/map.md) — **S1 (owner 2026-11-28):** the Java-pattern parser's fraction runs, `[ ]` sections and `try_to_date`; step 0, NTZ-session store family and twin-check evidence.
 
 Up: [../map.md](../map.md).

@@ -1,0 +1,170 @@
+{
+ "by_row": {
+  "P1": {
+   "head:ACCEPTED": 84,
+   "head:BOTH-REFUSED": 3090,
+   "head:BOTH-REFUSED-DIFF": 6,
+   "head:EQUAL": 21150,
+   "head:REFUSED": 414,
+   "head:WRONG-VALUE": 24,
+   "main:ACCEPTED": 84,
+   "main:BOTH-REFUSED": 2844,
+   "main:BOTH-REFUSED-DIFF": 252,
+   "main:EQUAL": 9960,
+   "main:REFUSED": 3499,
+   "main:WRONG-VALUE": 8129
+  },
+  "P2": {
+   "head:ACCEPTED": 218,
+   "head:BOTH-REFUSED": 1904,
+   "head:BOTH-REFUSED-DIFF": 160,
+   "head:EQUAL": 11677,
+   "head:REFUSED": 1057,
+   "head:WRONG-VALUE": 8,
+   "main:ACCEPTED": 464,
+   "main:BOTH-REFUSED": 1263,
+   "main:BOTH-REFUSED-DIFF": 555,
+   "main:EQUAL": 2811,
+   "main:REFUSED": 3942,
+   "main:WRONG-VALUE": 5989
+  },
+  "P3": {
+   "head:ACCEPTED": 108,
+   "head:BOTH-REFUSED": 816,
+   "head:BOTH-REFUSED-DIFF": 12,
+   "head:EQUAL": 5880,
+   "head:REFUSED": 528,
+   "main:ACCEPTED": 108,
+   "main:BOTH-REFUSED": 570,
+   "main:BOTH-REFUSED-DIFF": 258,
+   "main:EQUAL": 948,
+   "main:REFUSED": 2250,
+   "main:WRONG-VALUE": 3210
+  },
+  "P4": {
+   "head:ACCEPTED": 36,
+   "head:BOTH-REFUSED": 354,
+   "head:BOTH-REFUSED-DIFF": 6,
+   "head:EQUAL": 1878,
+   "head:REFUSED": 174,
+   "main:ACCEPTED": 36,
+   "main:BOTH-REFUSED": 354,
+   "main:BOTH-REFUSED-DIFF": 6,
+   "main:EQUAL": 462,
+   "main:REFUSED": 666,
+   "main:WRONG-VALUE": 924
+  },
+  "P5": {
+   "head:ACCEPTED": 120,
+   "head:BOTH-REFUSED": 1380,
+   "head:BOTH-REFUSED-DIFF": 540,
+   "main:ACCEPTED": 1308,
+   "main:BOTH-REFUSED": 90,
+   "main:BOTH-REFUSED-DIFF": 642
+  },
+  "P6": {
+   "head:ACCEPTED": 102,
+   "head:BOTH-REFUSED": 54,
+   "head:BOTH-REFUSED-DIFF": 48,
+   "head:EQUAL": 678,
+   "head:REFUSED": 30,
+   "main:ACCEPTED": 186,
+   "main:BOTH-REFUSED": 18,
+   "main:EQUAL": 318,
+   "main:REFUSED": 30,
+   "main:WRONG-VALUE": 360
+  },
+  "P6-other": {
+   "head:ACCEPTED": 219,
+   "head:BOTH-REFUSED": 384,
+   "head:BOTH-REFUSED-DIFF": 555,
+   "head:EQUAL": 1908,
+   "head:REFUSED": 204,
+   "head:WRONG-VALUE": 24,
+   "main:ACCEPTED": 219,
+   "main:BOTH-REFUSED": 384,
+   "main:BOTH-REFUSED-DIFF": 555,
+   "main:EQUAL": 1590,
+   "main:REFUSED": 327,
+   "main:WRONG-VALUE": 219
+  },
+  "control": {
+   "head:ACCEPTED": 90,
+   "head:BOTH-REFUSED": 1326,
+   "head:BOTH-REFUSED-DIFF": 492,
+   "head:EQUAL": 5181,
+   "head:REFUSED": 537,
+   "main:ACCEPTED": 90,
+   "main:BOTH-REFUSED": 1326,
+   "main:BOTH-REFUSED-DIFF": 492,
+   "main:EQUAL": 5181,
+   "main:REFUSED": 537
+  },
+  "guard": {
+   "head:ACCEPTED": 534,
+   "head:BOTH-REFUSED": 339,
+   "head:BOTH-REFUSED-DIFF": 687,
+   "head:EQUAL": 2694,
+   "head:REFUSED": 411,
+   "head:WRONG-VALUE": 231,
+   "main:ACCEPTED": 534,
+   "main:BOTH-REFUSED": 339,
+   "main:BOTH-REFUSED-DIFF": 687,
+   "main:EQUAL": 924,
+   "main:REFUSED": 1026,
+   "main:WRONG-VALUE": 1386
+  },
+  "other": {
+   "head:ACCEPTED": 6,
+   "head:BOTH-REFUSED": 129,
+   "head:BOTH-REFUSED-DIFF": 9,
+   "head:EQUAL": 1136,
+   "head:REFUSED": 256,
+   "head:WRONG-VALUE": 12,
+   "main:ACCEPTED": 6,
+   "main:BOTH-REFUSED": 53,
+   "main:BOTH-REFUSED-DIFF": 85,
+   "main:EQUAL": 704,
+   "main:REFUSED": 268,
+   "main:WRONG-VALUE": 432
+  },
+  "zone-letter": {
+   "head:ACCEPTED": 24,
+   "head:BOTH-REFUSED": 72,
+   "head:REFUSED": 612,
+   "head:WRONG-VALUE": 924,
+   "main:ACCEPTED": 24,
+   "main:BOTH-REFUSED": 72,
+   "main:REFUSED": 612,
+   "main:WRONG-VALUE": 924
+  }
+ },
+ "cells": 71532,
+ "head": "40ae3eeac",
+ "main": "9df269acb",
+ "moves": {
+  "changed": 1023,
+  "changed+STORES-WHERE-MAIN-REFUSED": 6,
+  "moved-on": 31819
+ },
+ "score": {
+  "head": {
+   "ACCEPTED": 1541,
+   "BOTH-REFUSED": 9848,
+   "BOTH-REFUSED-DIFF": 2515,
+   "EQUAL": 52182,
+   "REFUSED": 4223,
+   "WRONG-VALUE": 1223
+  },
+  "main": {
+   "ACCEPTED": 3059,
+   "BOTH-REFUSED": 7313,
+   "BOTH-REFUSED-DIFF": 3532,
+   "EQUAL": 22898,
+   "REFUSED": 13157,
+   "WRONG-VALUE": 21573
+  }
+ },
+ "spark": "4.1.2",
+ "unit": "DATETIME-PATTERN-PARSE-1"
+}

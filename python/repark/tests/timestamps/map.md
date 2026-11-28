@@ -27,6 +27,7 @@ Part of FACADE-TESTS-LAYOUT-1 (2026-10-19); rules live in [../map.md](../map.md)
 - [test_ntz_7_verify.py](test_ntz_7_verify.py) — WO NTZ-1 verifier fold: from_utc_timestamp and to_utc_timestamp keep Spark's TIMESTAMP.
 - [test_ntz_8_verify.py](test_ntz_8_verify.py) — WO NTZ-1 verifier fold part 2: zone-shift calls inside DML keep Spark's instant.
 - [test_ntz_9_verify.py](test_ntz_9_verify.py) — WO NTZ-1 re-verify fold: VALUES cells computed in LTZ store the session wall.
+- [test_datetime_pattern_parse_1.py](test_datetime_pattern_parse_1.py), [oracle](datetime_pattern_parse_1_spark_oracle.json) — DATETIME-PATTERN-PARSE-1 pins: 99 TARGET and 148 PROTECTED Spark 4.1.2 cells (P1-P6 through six functions in both ANSI modes, the §1 controls, the stored witness, one default-session `TIMESTAMP_NTZ` store per pattern form) and two NTZ-session twin pins that assert head equals main's answer for the same value.
 - [test_timestamp_ltz_explicit_cast_1.py](test_timestamp_ltz_explicit_cast_1.py), [oracle](timestamp_ltz_explicit_cast_1_spark_oracle.json), [recorder](_record_timestamp_ltz_explicit_cast_1.py) — TIMESTAMP-LTZ-EXPLICIT-CAST-1 pins (19 Spark cells).
 - [test_ntz_store_doors_1.py](test_ntz_store_doors_1.py) — NTZ-STORE-DOORS-1: every write door stores Spark's TIMESTAMP_NTZ value, partitions included; the six `ow_part` cells pin the partition path's own refusal text (WS2-28).
 - [test_runtime_zone_spellings_1.py](test_runtime_zone_spellings_1.py) — Zone spellings against the batch-17 oracle — SET-ANSI-RUNTIME-1 review follow-up.

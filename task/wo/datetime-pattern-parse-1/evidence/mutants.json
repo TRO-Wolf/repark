@@ -1,0 +1,66 @@
+{
+ "M1-exact-width-fraction": {
+  "applied": true,
+  "rc": 101,
+  "killed_by": [
+   "java_datetime::walk::tests::fraction_run_takes_one_to_width_digits",
+   "java_datetime::walk::tests::optional_section_is_present_or_absent",
+   "try_invert::convert::tests::try_to_date_parses_time_bearing_and_year_less_patterns"
+  ],
+  "compile_error": false
+ },
+ "M2-more-digits-than-width": {
+  "applied": true,
+  "rc": 101,
+  "killed_by": [
+   "java_datetime::walk::tests::fraction_run_takes_one_to_width_digits"
+  ],
+  "compile_error": false
+ },
+ "M3-bracket-literal": {
+  "applied": true,
+  "rc": 101,
+  "killed_by": [
+   "java_datetime::walk::tests::a_section_that_resets_a_parsed_field_fails",
+   "java_datetime::walk::tests::optional_section_is_present_or_absent",
+   "java_datetime::walk::tests::partial_section_rolls_back_and_the_parse_fails",
+   "java_datetime::walk::tests::unclosed_section_runs_to_the_end",
+   "java_datetime::walk::tests::sections_nest_and_alternate",
+   "java_datetime::walk::tests::unreadable_tokens_and_greedy_runs_keep_literal_brackets"
+  ],
+  "compile_error": false
+ },
+ "M4-no-rollback": {
+  "applied": true,
+  "rc": 101,
+  "killed_by": [
+   "java_datetime::walk::tests::partial_section_rolls_back_and_the_parse_fails",
+   "java_datetime::walk::tests::a_section_that_resets_a_parsed_field_fails"
+  ],
+  "compile_error": false
+ },
+ "M5-no-nesting": {
+  "applied": true,
+  "rc": 101,
+  "killed_by": [
+   "java_datetime::walk::tests::sections_nest_and_alternate"
+  ],
+  "compile_error": false
+ },
+ "M6-accept-stray-close": {
+  "applied": true,
+  "rc": 101,
+  "killed_by": [
+   "java_datetime::walk::tests::stray_close_refuses_and_quoted_brackets_stay_literal"
+  ],
+  "compile_error": false
+ },
+ "M7-date-only-tokenizer": {
+  "applied": true,
+  "rc": 101,
+  "killed_by": [
+   "try_invert::convert::tests::try_to_date_parses_time_bearing_and_year_less_patterns"
+  ],
+  "compile_error": false
+ }
+}
