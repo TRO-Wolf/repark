@@ -143,7 +143,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   on moto):** an s3a `mode("overwrite")` text write deletes the destination's existing objects
   BEFORE the COPY, so a failed overwrite leaves the destination empty; Spark's commit protocol
   keeps the old data until commit; same on `3d4f2030` and on base.
-- [COALESCE-SHUFFLE-FLAKE-1](coalesce-shuffle-flake-1-card-2026-10-01.md) — **card (2026-10-01, overnight owner-items backlog, #888 re-verify 7):**
+- [COALESCE-SHUFFLE-FLAKE-1](coalesce-shuffle-flake-1-card-2026-10-01.md) — **card (2026-10-01, #888 re-verify 7):**
   an attack3 coalesce/shuffle wrong-result flake, reproduced on base; evidence
   `/tmp/oc-worker/direct/wo/reverify7-nvl/` (evidence location, retained).
 - [JSON-NTZ-NULL-INFERENCE-1](json-ntz-null-inference-1-card-2026-10-01.md) — **card (2026-10-01, overnight owner-items backlog, #889 fold):** a
@@ -173,7 +173,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [fexpr-timestamp-zone-1-card-2026-10-01.md](fexpr-timestamp-zone-1-card-2026-10-01.md) — **card
   FEXPR-TIMESTAMP-ZONE-1 (2026-10-01, overnight owner-items backlog, #888 re-verify
   10):** `F.expr` TIMESTAMP literals resolved in UTC; fixed by #1420 (2026-11-24). Open: `F.expr`
-  still types an NTZ cast or `timestampType=TIMESTAMP_NTZ` literal as `timestamp` (S2 proposed). Unit 3 of #1432: [timestamp-ltz-explicit-cast-1-card-2026-11-27.md](timestamp-ltz-explicit-cast-1-card-2026-11-27.md) (S1).
+  still types an NTZ cast or `timestampType=TIMESTAMP_NTZ` literal as `timestamp` (S2 proposed). Unit 3 of #1432: [TIMESTAMP-LTZ-EXPLICIT-CAST-1](timestamp-ltz-explicit-cast-1-card-2026-11-27.md) (S1); [NTZ-LTZ-WIDENING-1](ntz-ltz-widening-1-card-2026-11-27.md) (S1).
 - [ml-cv-fold-test-strength-1-card-2026-10-01.md](ml-cv-fold-test-strength-1-card-2026-10-01.md) — **card
   ML-CV-FOLD-TEST-STRENGTH-1 (2026-10-01, overnight owner-items backlog, VE4-2):**
   `test_ml_boost_oracle.py::test_cross_validator_materializes_fold_labels` cannot tell folds that
